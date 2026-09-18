@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { TaskList } from "@tiptap/extension-task-list";
@@ -7,6 +7,7 @@ import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "tiptap-markdown";
 import { useStore } from "../store/useStore";
 import { toMarkdown } from "../lib/markdown";
+import { stripExt } from "../lib/fs";
 import { SlashCommand } from "../editor/extensions/SlashCommand";
 import { BlockHandles } from "./BlockHandles";
 import type { SaveStatus } from "../types";
@@ -26,8 +27,35 @@ export function EditorPane() {
   const status = useStore((s) => s.status);
   const markDirty = useStore((s) => s.markDirty);
   const save = useStore((s) => s.save);
+  const renameNote = useStore((s) => s.renameNote);
 
   const [editorDom, setEditorDom] = useState<HTMLDivElement | null>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  const activeNote = notes.find((note) => note.path === activePath);
+  const baseName = activeNote ? stripExt(activeNote.name) : "";
+  const [title, setTitle] = useState(baseName);
+
+  useEffect(() => {
+    setTitle(baseName);
+  }, [activePath, baseName]);
+
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [title, baseName, activePath]);
+
+  function commitTitle() {
+    if (!activePath) return;
+    const next = title.trim();
+    if (!next || next === baseName) {
+      setTitle(baseName);
+      return;
+    }
+    void renameNote(activePath, next);
+  }
 
   const editor = useEditor({
     extensions: [
@@ -51,8 +79,14 @@ export function EditorPane() {
   useEffect(() => {
     if (!editor || !activePath) return;
     editor.commands.setContent(activeContent, { emitUpdate: false });
-    editor.commands.focus("end");
-  }, [editor, activePath, activeContent]);
+    const scroller = editorDom?.closest(".editor-scroll") as HTMLElement | null;
+    if (!scroller) return;
+    scroller.scrollTop = 0;
+    const raf = requestAnimationFrame(() => {
+      scroller.scrollTop = 0;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [editor, activePath, activeContent, editorDom]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -65,22 +99,35 @@ export function EditorPane() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [editor, activePath, save]);
 
-  const activeNote = notes.find((note) => note.path === activePath);
-
   return (
-    <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--bg)]">
-      <div className="flex h-11 shrink-0 items-center justify-end px-4">
-        <span className="text-[12px] text-[var(--text-faint)]">
-          {activePath ? STATUS_LABEL[status] : ""}
+    <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--bg)]">
+      {activePath && (
+        <span className="pointer-events-none absolute right-4 top-3 z-10 text-[12px] text-[var(--text-faint)]">
+          {STATUS_LABEL[status]}
         </span>
-      </div>
+      )}
 
       {activePath ? (
         <div className="editor-scroll flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[720px] px-16 pb-40">
-            <h1 className="mb-2 mt-6 break-words text-[38px] font-bold leading-tight tracking-[-0.01em] text-[var(--text)]">
-              {activeNote?.name ?? ""}
-            </h1>
+          <div className="mx-auto w-full max-w-[720px] px-16 py-20">
+            <textarea
+              ref={titleRef}
+              value={title}
+              rows={1}
+              onChange={(event) => setTitle(event.currentTarget.value)}
+              onBlur={commitTitle}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  event.currentTarget.blur();
+                } else if (event.key === "Escape") {
+                  setTitle(baseName);
+                }
+              }}
+              placeholder="Untitled"
+              spellCheck={false}
+              className="mb-2 block w-full resize-none overflow-hidden bg-transparent text-[38px] font-bold leading-[1.25] tracking-[-0.01em] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)]"
+            />
             <div ref={setEditorDom}>
               <EditorContent editor={editor} />
             </div>

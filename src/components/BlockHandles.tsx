@@ -1,7 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import type { Editor } from "@tiptap/react";
 import {
   blockAt,
+  blockAtY,
   blockBoundaries,
   deleteBlock,
   dropTargetForY,
@@ -10,8 +16,15 @@ import {
   type BlockHover,
 } from "../editor/blockUtils";
 
-type MenuState = { from: number; to: number; top: number; left: number };
-type DragState = { from: number; to: number } | null;
+type MenuState = {
+  from: number;
+  to: number;
+  top: number;
+  left: number;
+  label: string;
+};
+
+type Anchor = Pick<BlockHover, "from" | "to" | "top" | "left" | "label">;
 
 function HandleIcon() {
   return (
@@ -36,7 +49,7 @@ export function BlockHandles({
   const [hover, setHover] = useState<BlockHover | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [dropY, setDropY] = useState<number | null>(null);
-  const drag = useRef<DragState>(null);
+  const dragging = useRef(false);
 
   useEffect(() => {
     if (!editor || !editorDom) return;
@@ -44,37 +57,40 @@ export function BlockHandles({
     const scroller = dom.closest(".editor-scroll") as HTMLElement | null;
 
     function onMove(event: MouseEvent) {
-      if (drag.current || menu) return;
-      setHover(blockAt(editor!, event.clientX, event.clientY));
-    }
-    function onLeave() {
-      if (!menu) setHover(null);
+      if (dragging.current || menu) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest(".block-handle") || target?.closest(".block-menu")) {
+        return;
+      }
+      if (scroller) {
+        const rect = scroller.getBoundingClientRect();
+        if (
+          event.clientX < rect.left ||
+          event.clientX > rect.right ||
+          event.clientY < rect.top ||
+          event.clientY > rect.bottom
+        ) {
+          setHover(null);
+          return;
+        }
+      }
+      setHover((current) => {
+        if (current) {
+          const withinBand =
+            event.clientY >= current.top - 6 &&
+            event.clientY <= current.top + current.height + 6;
+          const inGutter = event.clientX <= current.left + 2;
+          if (withinBand && inGutter) return current;
+        }
+        return (
+          blockAt(editor!, event.clientX, event.clientY) ??
+          blockAtY(editor!, event.clientY)
+        );
+      });
     }
     function onScroll() {
       setHover(null);
       setMenu(null);
-      setDropY(null);
-    }
-    function onDragOver(event: DragEvent) {
-      if (!drag.current) return;
-      event.preventDefault();
-      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-      const target = dropTargetForY(editor!, event.clientY);
-      const targetDom = editor!.view.nodeDOM(target) as HTMLElement | null;
-      const rect = targetDom?.getBoundingClientRect();
-      setDropY(rect ? rect.top : event.clientY);
-    }
-    function onDrop(event: DragEvent) {
-      if (!drag.current) return;
-      event.preventDefault();
-      const target = dropTargetForY(editor!, event.clientY);
-      moveBlockTo(editor!, drag.current.from, drag.current.to, target);
-      drag.current = null;
-      setDropY(null);
-      setHover(null);
-    }
-    function onDragEnd() {
-      drag.current = null;
       setDropY(null);
     }
     function onWindowMouseDown(event: MouseEvent) {
@@ -82,19 +98,11 @@ export function BlockHandles({
       if (!target.closest(".block-menu")) setMenu(null);
     }
 
-    dom.addEventListener("mousemove", onMove);
-    dom.addEventListener("mouseleave", onLeave);
-    dom.addEventListener("dragover", onDragOver);
-    dom.addEventListener("drop", onDrop);
-    window.addEventListener("dragend", onDragEnd);
+    window.addEventListener("mousemove", onMove);
     window.addEventListener("mousedown", onWindowMouseDown);
     scroller?.addEventListener("scroll", onScroll);
     return () => {
-      dom.removeEventListener("mousemove", onMove);
-      dom.removeEventListener("mouseleave", onLeave);
-      dom.removeEventListener("dragover", onDragOver);
-      dom.removeEventListener("drop", onDrop);
-      window.removeEventListener("dragend", onDragEnd);
+      window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mousedown", onWindowMouseDown);
       scroller?.removeEventListener("scroll", onScroll);
     };
@@ -121,6 +129,67 @@ export function BlockHandles({
     setMenu(null);
   }
 
+  function startDrag(event: ReactMouseEvent<HTMLElement>, anchor: Anchor) {
+    if (!editor || event.button !== 0) return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let started = false;
+    let target: number | null = null;
+
+    function endDrag() {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("keydown", onKey);
+      dragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      setDropY(null);
+    }
+
+    function onMove(moveEvent: MouseEvent) {
+      if (!started) {
+        if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) < 4) {
+          return;
+        }
+        started = true;
+        dragging.current = true;
+        document.body.style.cursor = "grabbing";
+        document.body.style.userSelect = "none";
+      }
+      target = dropTargetForY(editor!, moveEvent.clientY);
+      const targetDom = editor!.view.nodeDOM(target) as HTMLElement | null;
+      const rect = targetDom?.getBoundingClientRect();
+      setDropY(rect ? rect.top : moveEvent.clientY);
+    }
+
+    function onUp() {
+      const moved = started;
+      endDrag();
+      if (moved) {
+        if (target !== null) {
+          moveBlockTo(editor!, anchor.from, anchor.to, target);
+        }
+      } else {
+        setMenu({
+          from: anchor.from,
+          to: anchor.to,
+          top: anchor.top,
+          left: anchor.left,
+          label: anchor.label,
+        });
+      }
+    }
+
+    function onKey(keyEvent: KeyboardEvent) {
+      if (keyEvent.key === "Escape") endDrag();
+    }
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("keydown", onKey);
+  }
+
   const handleTop = hover
     ? hover.top + Math.max(0, Math.min(hover.height, 28) - 24) / 2
     : 0;
@@ -131,30 +200,23 @@ export function BlockHandles({
         (() => {
           const anchor = menu ?? hover!;
           return (
-            <button
-              type="button"
-              draggable
-              title="Drag to move, click for menu"
-              onDragStart={(event) => {
-                drag.current = { from: anchor.from, to: anchor.to };
-                if (event.dataTransfer) {
-                  event.dataTransfer.effectAllowed = "move";
-                  event.dataTransfer.setData("text/plain", "");
-                }
-              }}
-              onClick={() =>
-                setMenu({
-                  from: anchor.from,
-                  to: anchor.to,
-                  top: anchor.top,
-                  left: anchor.left,
-                })
-              }
-              className={`block-handle${menu ? " is-active" : ""}`}
-              style={{ top: handleTop, left: anchor.left - 26 }}
-            >
-              <HandleIcon />
-            </button>
+            <>
+              <span
+                className="block-type"
+                style={{ top: handleTop, left: anchor.left - 26 }}
+              >
+                {anchor.label}
+              </span>
+              <button
+                type="button"
+                title="Drag to move, click for menu"
+                onMouseDown={(event) => startDrag(event, anchor)}
+                className={`block-handle${menu ? " is-active" : ""}`}
+                style={{ top: handleTop, left: anchor.left - 26 }}
+              >
+                <HandleIcon />
+              </button>
+            </>
           );
         })()}
 

@@ -283,6 +283,22 @@ body {
   cursor: grabbing;
 }
 
+.block-type {
+  position: fixed;
+  z-index: 39;
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding-right: 8px;
+  transform: translateX(-100%);
+  color: var(--text-faint);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
 .block-menu {
   position: fixed;
   z-index: 50;

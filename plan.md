@@ -35,6 +35,11 @@ Phases 0–8 implemented. `Monocle.app` (4.5 MB) and `Monocle_0.1.0_aarch64.dmg`
   "Scanning…" state. Home (1403 dirs) scans in ~460 ms.
 - Sidebar is now horizontally resizable by dragging its right edge (180–480 px,
   width persisted) and has a refresh button that re-scans the tree.
+- Block hover handle stays put when the pointer moves onto it (window-level
+  mousemove, ignores handle/menu) so blocks can be dragged; hovering shows the
+  block type (Text, H1, List, …) beside the handle.
+- Note titles are editable inline in the editor and rename the file (extension
+  is preserved); sidebar shows full file names including `.md`.
 - Still open: signing/notarization and a custom icon (Phase 8).
 
 ## 2. Stack and rationale

@@ -1,4 +1,5 @@
 import type { Editor } from "@tiptap/react";
+import type { Node as PMNode } from "@tiptap/pm/model";
 
 export type BlockHover = {
   from: number;
@@ -6,7 +7,31 @@ export type BlockHover = {
   top: number;
   left: number;
   height: number;
+  label: string;
 };
+
+export function blockLabel(node: PMNode): string {
+  switch (node.type.name) {
+    case "heading":
+      return `H${node.attrs.level}`;
+    case "paragraph":
+      return "Text";
+    case "bulletList":
+      return "List";
+    case "orderedList":
+      return "List";
+    case "taskList":
+      return "To-do";
+    case "blockquote":
+      return "Quote";
+    case "codeBlock":
+      return "Code";
+    case "horizontalRule":
+      return "Divider";
+    default:
+      return node.type.name;
+  }
+}
 
 export function blockAt(
   editor: Editor,
@@ -30,7 +55,46 @@ export function blockAt(
   if (!dom) return null;
 
   const rect = dom.getBoundingClientRect();
-  return { from, to, top: rect.top, left: rect.left, height: rect.height };
+  return {
+    from,
+    to,
+    top: rect.top,
+    left: rect.left,
+    height: rect.height,
+    label: blockLabel(doc.child(index)),
+  };
+}
+
+export function blockAtY(editor: Editor, clientY: number): BlockHover | null {
+  if (!editor.isInitialized) return null;
+  const doc = editor.state.doc;
+  let pos = 0;
+  let fallback: BlockHover | null = null;
+  let fallbackDist = Infinity;
+
+  for (let i = 0; i < doc.childCount; i += 1) {
+    const node = doc.child(i);
+    const dom = editor.view.nodeDOM(pos) as HTMLElement | null;
+    if (dom) {
+      const rect = dom.getBoundingClientRect();
+      const info: BlockHover = {
+        from: pos,
+        to: pos + node.nodeSize,
+        top: rect.top,
+        left: rect.left,
+        height: rect.height,
+        label: blockLabel(node),
+      };
+      if (clientY >= rect.top && clientY <= rect.bottom) return info;
+      const dist = Math.abs(clientY - (rect.top + rect.height / 2));
+      if (dist < fallbackDist) {
+        fallback = info;
+        fallbackDist = dist;
+      }
+    }
+    pos += node.nodeSize;
+  }
+  return fallback;
 }
 
 export function blockBoundaries(editor: Editor): number[] {

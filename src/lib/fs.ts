@@ -84,7 +84,7 @@ async function walk(dir: string, isRoot = false): Promise<TreeNode[]> {
         ),
       );
     } else if (entry.isFile && MD_EXT.test(entry.name)) {
-      nodes.push({ name: entry.name.replace(MD_EXT, ""), path, kind: "file" });
+      nodes.push({ name: entry.name, path, kind: "file" });
     }
   }
 
@@ -137,6 +137,10 @@ export function ancestorDirs(root: string, filePath: string): string[] {
   return dirs;
 }
 
+export function stripExt(name: string): string {
+  return name.replace(MD_EXT, "");
+}
+
 export function readNote(path: string): Promise<string> {
   return readTextFile(path);
 }
@@ -166,9 +170,10 @@ export async function renameNoteFile(
   newName: string,
 ): Promise<string> {
   const folder = await dirname(path);
-  const target = await join(folder, `${newName}.md`);
+  const base = stripExt(newName.trim());
+  const target = await join(folder, `${base}.md`);
   if (target === path) return path;
-  const uniqueTarget = await uniqueNotePath(folder, newName);
+  const uniqueTarget = await uniqueNotePath(folder, base);
   await rename(path, uniqueTarget);
   return uniqueTarget;
 }
