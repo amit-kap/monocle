@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPane } from "./components/EditorPane";
@@ -15,7 +17,26 @@ function App() {
   const setError = useStore((s) => s.setError);
 
   useEffect(() => {
-    void init();
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        unlisten = await listen<string[]>("open-file", (event) => {
+          const paths = event.payload;
+          if (paths.length > 0) {
+            void useStore.getState().openExternalNote(paths[paths.length - 1]);
+          }
+        });
+        await init();
+        if (!cancelled) await invoke("frontend_ready");
+      } catch {
+        // not running under Tauri
+      }
+    })();
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
   }, [init]);
 
   useEffect(() => {

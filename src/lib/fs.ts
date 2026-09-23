@@ -141,6 +141,11 @@ export function stripExt(name: string): string {
   return name.replace(MD_EXT, "");
 }
 
+export function isInside(root: string, path: string): boolean {
+  const base = root.endsWith("/") ? root.slice(0, -1) : root;
+  return path === base || path.startsWith(`${base}/`);
+}
+
 export function readNote(path: string): Promise<string> {
   return readTextFile(path);
 }

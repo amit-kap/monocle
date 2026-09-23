@@ -204,7 +204,6 @@ In-memory document: TipTap JSON. Disk: markdown string.
 - Inline image upload
 - Multiple windows, tabs, mobile
 - Wiki-style `[[links]]` and backlinks
-- Nested folder tree (flat sidebar for v1)
 
 ## 8. Risks & mitigations
 
@@ -236,7 +235,8 @@ dev: typescript vite @vitejs/plugin-react vitest
 
 ## 11. Decisions (locked)
 
-1. **Sidebar: flat list** for v1. Nested tree deferred.
+1. **Sidebar: recursive folder tree.** Folders first, only `.md` files, empty
+   directories pruned. (Supersedes the original flat-list v1 decision.)
 2. **Explicit save via `⌘S`** only. No autosave in v1; dirty indicator and
    guard against losing unsaved changes on note switch/quit.
 3. **User-chosen folder.** Monocle reads/writes `.md` files in a folder the user

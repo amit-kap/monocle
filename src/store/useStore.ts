@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { confirm } from "@tauri-apps/plugin-dialog";
+import { dirname } from "@tauri-apps/api/path";
 import type { NoteFile, SaveStatus, TreeNode } from "../types";
 import * as fs from "../lib/fs";
 
@@ -21,6 +22,7 @@ type State = {
   refresh: () => Promise<void>;
   toggleDir: (path: string) => void;
   openNote: (path: string) => Promise<void>;
+  openExternalNote: (path: string) => Promise<void>;
   createNote: (dir?: string) => Promise<void>;
   renameNote: (path: string, name: string) => Promise<void>;
   deleteNote: (path: string) => Promise<void>;
@@ -116,6 +118,27 @@ export const useStore = create<State>((set, get) => ({
     } catch (error) {
       set({ error: String(error) });
     }
+  },
+
+  openExternalNote: async (path) => {
+    const { folder } = get();
+    if (!folder || !fs.isInside(folder, path)) {
+      if (get().status === "dirty" && !(await confirmDiscard())) return;
+      const dir = await dirname(path);
+      localStorage.setItem(LAST_FOLDER_KEY, dir);
+      set({
+        folder: dir,
+        tree: [],
+        notes: [],
+        expanded: new Set<string>(),
+        selectedDir: null,
+        activePath: null,
+        activeContent: "",
+        status: "idle",
+      });
+      await get().refresh();
+    }
+    await get().openNote(path);
   },
 
   createNote: async (dir) => {
