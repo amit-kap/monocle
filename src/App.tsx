@@ -28,10 +28,11 @@ function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [createNote]);
 
+  const activeName = notes.find((note) => note.path === activePath)?.name ?? null;
+
   useEffect(() => {
-    const name = notes.find((note) => note.path === activePath)?.name;
-    void getCurrentWindow().setTitle(name ? `${name} — Monocle` : "Monocle");
-  }, [activePath, notes]);
+    void getCurrentWindow().setTitle(activeName ?? "Monocle");
+  }, [activeName]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -51,7 +52,15 @@ function App() {
   }, []);
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden">
+    <div className="relative flex h-full w-full overflow-hidden pt-7">
+      <div
+        data-tauri-drag-region
+        className="absolute inset-x-0 top-0 z-30 flex h-7 items-center justify-center border-b border-[var(--border)]"
+      >
+        <span className="pointer-events-none max-w-[60%] truncate text-[13px] font-medium text-[var(--text-muted)]">
+          {activeName ?? "Monocle"}
+        </span>
+      </div>
       <Sidebar />
       <EditorPane />
       {error && (

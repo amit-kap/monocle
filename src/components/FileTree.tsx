@@ -13,13 +13,13 @@ type Handlers = {
   onDelete: (path: string) => void;
 };
 
-function ChevronIcon() {
+function ChevronIcon({ className }: { className?: string }) {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path
-        d="M6 4l4 4-4 4"
+        d="M9 18l6-6-6-6"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -27,40 +27,83 @@ function ChevronIcon() {
   );
 }
 
-function FileIcon() {
+function FolderIcon({ className }: { className?: string }) {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path
-        d="M4 2.5h5l3 3v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1Z"
+        d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
         stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-      <path d="M9 2.5v3h3" stroke="currentColor" strokeWidth="1.2" />
-    </svg>
-  );
-}
-
-function PencilIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M11.1 2.9a1.3 1.3 0 0 1 1.9 1.9l-6.6 6.6-2.5.6.6-2.5 6.6-6.6Z"
-        stroke="currentColor"
-        strokeWidth="1.3"
+        strokeWidth="1.8"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
   );
 }
 
-function TrashIcon() {
+function FileIcon({ className }: { className?: string }) {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path
-        d="M3 4.5h10M6.5 4.5V3.4A.9.9 0 0 1 7.4 2.5h1.2a.9.9 0 0 1 .9.9v1.1M4.2 4.5l.6 8a1 1 0 0 0 1 .9h4.4a1 1 0 0 0 1-.9l.6-8"
+        d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
         stroke="currentColor"
-        strokeWidth="1.3"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 2v4a2 2 0 0 0 2 2h4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PencilIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M12 20h9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M3 6h18"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -72,33 +115,28 @@ function FolderRow({
   node,
   depth,
   open,
-  selected,
   onToggle,
 }: {
   node: TreeNode;
   depth: number;
   open: boolean;
-  selected: boolean;
   onToggle: (path: string) => void;
 }) {
   return (
     <div
       onClick={() => onToggle(node.path)}
-      className={`flex h-7 cursor-default items-center gap-1 rounded-[var(--radius)] pr-2 text-[13px] ${
-        selected
-          ? "bg-[var(--bg-hover)] text-[var(--text)]"
-          : "text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
-      }`}
-      style={{ paddingLeft: 6 + depth * 14 }}
+      className="group/folder flex cursor-default items-center gap-2 rounded-[var(--radius)] py-1.5 pr-2 text-[13px] hover:bg-[var(--bg-hover)]"
+      style={{ paddingLeft: 8 + depth * 12 }}
     >
-      <span
-        className={`grid h-4 w-4 shrink-0 place-items-center transition-transform ${
-          open ? "rotate-90" : ""
-        }`}
-      >
-        <ChevronIcon />
+      <span className="flex shrink-0 items-center gap-1.5 text-[var(--text-muted)] group-hover/folder:text-[var(--text)]">
+        <ChevronIcon
+          className={`size-3 transition-transform ${open ? "rotate-90" : ""}`}
+        />
+        <FolderIcon className="size-3.5" />
       </span>
-      <span className="min-w-0 flex-1 truncate font-medium">{node.name}</span>
+      <span className="min-w-0 flex-1 truncate font-medium text-[var(--text)]">
+        {node.name}
+      </span>
     </div>
   );
 }
@@ -138,12 +176,13 @@ function FileRow({
   return (
     <div
       onClick={() => !editing && onOpen(node.path)}
-      className={`group flex h-7 cursor-default items-center gap-1 rounded-[var(--radius)] pr-2 text-[13px] ${
+      data-active={active}
+      className={`group/file flex cursor-default items-center gap-2 rounded-[var(--radius)] py-1.5 pr-2 text-[13px] ${
         active
           ? "bg-[var(--bg-active)] text-[var(--text)]"
           : "text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
       }`}
-      style={{ paddingLeft: 6 + depth * 14 }}
+      style={{ paddingLeft: 9 + depth * 12 }}
     >
       {editing ? (
         <input
@@ -159,9 +198,7 @@ function FileRow({
         />
       ) : (
         <>
-          <span className="grid h-4 w-4 shrink-0 place-items-center text-[var(--text-faint)]">
-            <FileIcon />
-          </span>
+          <FileIcon className="size-4 shrink-0 text-[var(--text-faint)] group-hover/file:text-[var(--text)]" />
           <span
             className="min-w-0 flex-1 truncate"
             onDoubleClick={() => {
@@ -171,29 +208,35 @@ function FileRow({
           >
             {node.name}
           </span>
-          <button
-            type="button"
-            title="Rename"
-            onClick={(event) => {
-              event.stopPropagation();
-              setDraft(node.name);
-              setEditing(true);
-            }}
-            className="hidden h-5 w-5 shrink-0 place-items-center rounded text-[var(--text-faint)] hover:bg-[var(--bg-active)] hover:text-[var(--text)] group-hover:grid"
+          <span
+            className={`ml-auto flex items-center gap-0 ${
+              active ? "opacity-100" : "opacity-0 group-hover/file:opacity-100"
+            }`}
           >
-            <PencilIcon />
-          </button>
-          <button
-            type="button"
-            title="Delete"
-            onClick={(event) => {
-              event.stopPropagation();
-              void handleDelete();
-            }}
-            className="hidden h-5 w-5 shrink-0 place-items-center rounded text-[var(--text-faint)] hover:bg-[var(--bg-active)] hover:text-[var(--text)] group-hover:grid"
-          >
-            <TrashIcon />
-          </button>
+            <button
+              type="button"
+              title="Rename"
+              onClick={(event) => {
+                event.stopPropagation();
+                setDraft(node.name);
+                setEditing(true);
+              }}
+              className="grid size-6 shrink-0 place-items-center rounded text-[var(--text-faint)] hover:bg-[var(--bg-active)] hover:text-[var(--text)]"
+            >
+              <PencilIcon className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              title="Delete"
+              onClick={(event) => {
+                event.stopPropagation();
+                void handleDelete();
+              }}
+              className="grid size-6 shrink-0 place-items-center rounded text-[var(--text-faint)] hover:bg-[var(--bg-active)] hover:text-[var(--text)]"
+            >
+              <TrashIcon className="size-3.5" />
+            </button>
+          </span>
         </>
       )}
     </div>
@@ -206,7 +249,7 @@ export function FileTree({
   ...handlers
 }: { nodes: TreeNode[]; depth?: number } & Handlers) {
   return (
-    <>
+    <div className="flex flex-col gap-0.5">
       {nodes.map((node) => {
         if (node.kind === "dir") {
           const open = handlers.forceExpand || handlers.expanded.has(node.path);
@@ -216,11 +259,16 @@ export function FileTree({
                 node={node}
                 depth={depth}
                 open={open}
-                selected={node.path === handlers.selectedDir}
                 onToggle={handlers.onToggle}
               />
               {open && node.children && (
-                <FileTree nodes={node.children} depth={depth + 1} {...handlers} />
+                <div className="tree-children ps-1.5">
+                  <FileTree
+                    nodes={node.children}
+                    depth={depth + 1}
+                    {...handlers}
+                  />
+                </div>
               )}
             </div>
           );
@@ -237,6 +285,6 @@ export function FileTree({
           />
         );
       })}
-    </>
+    </div>
   );
 }

@@ -20,6 +20,11 @@ come up. Keep entries short: `- [ ] **Title** — what/why. (area)`.
 - [ ] **Noisy-but-benign logs** — `readDir failed` for protected dirs (e.g. Photos
   Library) and the `IPC custom protocol failed … postMessage` warning. (cleanup)
 - [ ] **Version not surfaced** — no version/About anywhere in the UI. (polish)
+- [ ] **Red close button doesn't quit** — clicking the red 'X' on the app frame
+  does not close the app. (macOS integration)
+- [ ] **Open With should select the file** — right-click a file → "Open With" →
+  Monocle should open the app with that file selected in the sidebar. (macOS
+  integration)
 
 ## Deferred features
 

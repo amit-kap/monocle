@@ -146,18 +146,16 @@ export function Sidebar() {
         ref={headerRef}
         className="relative flex h-11 shrink-0 items-center justify-between px-3"
       >
-        <span className="truncate text-[13px] font-medium text-[var(--text-muted)]">
-          {folder ? baseName(folder) : "Monocle"}
-        </span>
+        <button
+          type="button"
+          title="Root folder"
+          onClick={() => (folder ? setFolderMenu((open) => !open) : chooseFolder())}
+          className="flex min-w-0 items-center gap-1.5 rounded-[var(--radius)] px-1.5 py-1 text-[13px] font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+        >
+          <FolderIcon />
+          <span className="truncate">{folder ? baseName(folder) : "Monocle"}</span>
+        </button>
         <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            title="Root folder"
-            onClick={() => (folder ? setFolderMenu((open) => !open) : chooseFolder())}
-            className="grid h-6 w-6 place-items-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
-          >
-            <FolderIcon />
-          </button>
           <button
             type="button"
             title="Refresh"
@@ -179,7 +177,7 @@ export function Sidebar() {
         </div>
 
         {folderMenu && folder && (
-          <div className="block-menu" style={{ position: "absolute", right: 8, top: 40 }}>
+          <div className="block-menu" style={{ position: "absolute", left: 8, top: 40 }}>
             <button
               type="button"
               className="block-menu-item"
