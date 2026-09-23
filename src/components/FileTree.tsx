@@ -9,6 +9,7 @@ type Handlers = {
   forceExpand: boolean;
   onToggle: (path: string) => void;
   onOpen: (path: string) => void;
+  onAddNote: (path: string) => void;
   onRename: (path: string, name: string) => void;
   onDelete: (path: string) => void;
 };
@@ -55,6 +56,20 @@ function FileIcon({ className }: { className?: string }) {
         d="M14 2v4a2 2 0 0 0 2 2h4"
         stroke="currentColor"
         strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M5 12h14M12 5v14"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -116,11 +131,13 @@ function FolderRow({
   depth,
   open,
   onToggle,
+  onAddNote,
 }: {
   node: TreeNode;
   depth: number;
   open: boolean;
   onToggle: (path: string) => void;
+  onAddNote: (path: string) => void;
 }) {
   return (
     <div
@@ -137,6 +154,17 @@ function FolderRow({
       <span className="min-w-0 flex-1 truncate font-medium text-[var(--text)]">
         {node.name}
       </span>
+      <button
+        type="button"
+        title="New note"
+        onClick={(event) => {
+          event.stopPropagation();
+          onAddNote(node.path);
+        }}
+        className="grid size-5 shrink-0 place-items-center rounded text-[var(--text-faint)] opacity-0 hover:bg-[var(--bg-active)] hover:text-[var(--text)] group-hover/folder:opacity-100"
+      >
+        <PlusIcon className="size-3.5" />
+      </button>
     </div>
   );
 }
@@ -260,6 +288,7 @@ export function FileTree({
                 depth={depth}
                 open={open}
                 onToggle={handlers.onToggle}
+                onAddNote={handlers.onAddNote}
               />
               {open && node.children && (
                 <div className="tree-children ps-1.5">

@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPane } from "./components/EditorPane";
+import { ThemeSelector } from "./components/ThemeSelector";
 import { useStore } from "./store/useStore";
 
 function App() {
@@ -52,14 +53,17 @@ function App() {
   }, []);
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden pt-7">
+    <div className="relative flex h-full w-full overflow-hidden pt-9">
       <div
         data-tauri-drag-region
-        className="absolute inset-x-0 top-0 z-30 flex h-7 items-center justify-center border-b border-[var(--border)]"
+        className="absolute inset-x-0 top-0 z-30 flex h-9 items-center justify-center border-b border-[var(--border)]"
       >
         <span className="pointer-events-none max-w-[60%] truncate text-[13px] font-medium text-[var(--text-muted)]">
           {activeName ?? "Monocle"}
         </span>
+      </div>
+      <div className="absolute right-3 top-0 z-40 flex h-9 items-center">
+        <ThemeSelector />
       </div>
       <Sidebar />
       <EditorPane />

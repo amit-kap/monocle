@@ -61,6 +61,20 @@ function RefreshIcon({ spinning }: { spinning?: boolean }) {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="M10.5 10.5 14 14"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 480;
 const WIDTH_KEY = "monocle:sidebarWidth";
@@ -82,6 +96,7 @@ export function Sidebar() {
   const refresh = useStore((s) => s.refresh);
 
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [folderMenu, setFolderMenu] = useState(false);
   const [width, setWidth] = useState(() => {
     const saved = Number(localStorage.getItem(WIDTH_KEY));
@@ -116,12 +131,17 @@ export function Sidebar() {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
         event.preventDefault();
-        searchRef.current?.focus();
+        setSearchOpen(true);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus();
+    else setQuery("");
+  }, [searchOpen]);
 
   useEffect(() => {
     if (!folderMenu) return;
@@ -174,6 +194,19 @@ export function Sidebar() {
           >
             <PlusIcon />
           </button>
+          <button
+            type="button"
+            title="Search notes"
+            onClick={() => setSearchOpen((open) => !open)}
+            disabled={!folder || tree.length === 0}
+            className={`grid h-6 w-6 place-items-center rounded hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:opacity-30 disabled:hover:bg-transparent ${
+              searchOpen
+                ? "bg-[var(--bg-active)] text-[var(--text)]"
+                : "text-[var(--text-muted)]"
+            }`}
+          >
+            <SearchIcon />
+          </button>
         </div>
 
         {folderMenu && folder && (
@@ -202,12 +235,15 @@ export function Sidebar() {
         )}
       </div>
 
-      {folder && tree.length > 0 && (
+      {searchOpen && folder && tree.length > 0 && (
         <div className="px-2 pb-2">
           <input
             ref={searchRef}
             value={query}
             onChange={(event) => setQuery(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setSearchOpen(false);
+            }}
             placeholder="Search notes"
             className="w-full rounded-[var(--radius)] border border-transparent bg-[var(--bg-active)] px-2 py-1 text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-[var(--accent)]"
           />
@@ -249,6 +285,7 @@ export function Sidebar() {
           forceExpand={searching}
           onToggle={toggleDir}
           onOpen={(path) => void openNote(path)}
+          onAddNote={(path) => void createNote(path)}
           onRename={(path, name) => void renameNote(path, name)}
           onDelete={(path) => void deleteNote(path)}
         />

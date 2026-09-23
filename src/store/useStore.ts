@@ -21,7 +21,7 @@ type State = {
   refresh: () => Promise<void>;
   toggleDir: (path: string) => void;
   openNote: (path: string) => Promise<void>;
-  createNote: () => Promise<void>;
+  createNote: (dir?: string) => Promise<void>;
   renameNote: (path: string, name: string) => Promise<void>;
   deleteNote: (path: string) => Promise<void>;
   markDirty: () => void;
@@ -118,20 +118,21 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
-  createNote: async () => {
+  createNote: async (dir) => {
     const { folder, selectedDir } = get();
     if (!folder) return;
     if (get().status === "dirty" && !(await confirmDiscard())) return;
-    const target = selectedDir ?? folder;
+    const target = dir ?? selectedDir ?? folder;
     try {
       const path = await fs.createNoteFile(target);
       const expanded = new Set(get().expanded);
-      if (selectedDir) expanded.add(selectedDir);
+      if (target !== folder) expanded.add(target);
       await get().refresh();
       set({
         activePath: path,
         activeContent: "",
         status: "idle",
+        selectedDir: target,
         expanded,
       });
     } catch (error) {
