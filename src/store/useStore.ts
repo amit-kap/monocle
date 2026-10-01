@@ -14,6 +14,9 @@ type State = {
   selectedDir: string | null;
   activePath: string | null;
   activeContent: string;
+  // Bumped whenever activeContent is (re)loaded into the editor. Renames
+  // change activePath without bumping it, so they don't reset the buffer.
+  loadId: number;
   status: SaveStatus;
   error: string | null;
   loading: boolean;
@@ -46,6 +49,7 @@ export const useStore = create<State>((set, get) => ({
   selectedDir: null,
   activePath: null,
   activeContent: "",
+  loadId: 0,
   status: "idle",
   error: null,
   loading: false,
@@ -70,6 +74,7 @@ export const useStore = create<State>((set, get) => ({
         selectedDir: null,
         activePath: null,
         activeContent: "",
+        loadId: get().loadId + 1,
         status: "idle",
       });
       await get().refresh();
@@ -111,6 +116,7 @@ export const useStore = create<State>((set, get) => ({
       set({
         activePath: path,
         activeContent: content,
+        loadId: get().loadId + 1,
         status: "idle",
         error: null,
         expanded: next,
@@ -134,6 +140,7 @@ export const useStore = create<State>((set, get) => ({
         selectedDir: null,
         activePath: null,
         activeContent: "",
+        loadId: get().loadId + 1,
         status: "idle",
       });
       await get().refresh();
@@ -154,6 +161,7 @@ export const useStore = create<State>((set, get) => ({
       set({
         activePath: path,
         activeContent: "",
+        loadId: get().loadId + 1,
         status: "idle",
         selectedDir: target,
         expanded,
@@ -179,7 +187,12 @@ export const useStore = create<State>((set, get) => ({
       const wasActive = get().activePath === path;
       await get().refresh();
       if (wasActive) {
-        set({ activePath: null, activeContent: "", status: "idle" });
+        set({
+          activePath: null,
+          activeContent: "",
+          loadId: get().loadId + 1,
+          status: "idle",
+        });
       }
     } catch (error) {
       set({ error: String(error) });

@@ -9,6 +9,7 @@ import { useStore } from "../store/useStore";
 import { toMarkdown } from "../lib/markdown";
 import { stripExt } from "../lib/fs";
 import { SlashCommand } from "../editor/extensions/SlashCommand";
+import { loadDocument } from "../editor/loadDocument";
 import { BlockHandles } from "./BlockHandles";
 import type { SaveStatus } from "../types";
 
@@ -23,7 +24,7 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
 export function EditorPane() {
   const notes = useStore((s) => s.notes);
   const activePath = useStore((s) => s.activePath);
-  const activeContent = useStore((s) => s.activeContent);
+  const loadId = useStore((s) => s.loadId);
   const status = useStore((s) => s.status);
   const markDirty = useStore((s) => s.markDirty);
   const save = useStore((s) => s.save);
@@ -77,8 +78,11 @@ export function EditorPane() {
   });
 
   useEffect(() => {
+    // Keyed on loadId, not activePath: renaming the open note must not
+    // replace the buffer with the content loaded when it was opened.
+    const { activePath, activeContent } = useStore.getState();
     if (!editor || !activePath) return;
-    editor.commands.setContent(activeContent, { emitUpdate: false });
+    loadDocument(editor, activeContent);
     const scroller = editorDom?.closest(".editor-scroll") as HTMLElement | null;
     if (!scroller) return;
     scroller.scrollTop = 0;
@@ -86,7 +90,7 @@ export function EditorPane() {
       scroller.scrollTop = 0;
     });
     return () => cancelAnimationFrame(raf);
-  }, [editor, activePath, activeContent, editorDom]);
+  }, [editor, loadId, editorDom]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
