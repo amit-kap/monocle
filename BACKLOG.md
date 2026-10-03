@@ -2,20 +2,46 @@
 
 Tracks known issues, limitations, and deferred work. Add new items here as they
 come up. Keep entries short: `- [ ] **Title** — what/why. (area)`.
+Remove items once they're done; git history is the record.
 
 ## Open issues
 
-- [ ] **Block drag reliability** — custom pointer drag + sticky hover implemented;
-  still needs real-world confirmation that grabbing is consistent. (editor)
-- [ ] **No caret on note open** — auto-focus was removed to stop the scroll jump,
-  so opening a note leaves no caret until you click. (editor)
+Sorted by difficulty, easiest first.
+
+### Easy
+
+- [ ] **IPC fallback warning** — `IPC custom protocol failed … postMessage` is
+  logged by Tauri itself, not our code. Harmless; look into it only if IPC
+  misbehaves. (cleanup)
+
+### Medium
+
+- [ ] **Code blocks not styled as code** — code blocks don't render in a mono
+  font and have no syntax highlighting. The mono font renders in the Chromium
+  dev preview, so check the Tauri (WebKit) build specifically. Needs a lowlight-based code block
+  extension, a highlight theme for light/dark, and a check that the language
+  survives markdown round-trip. (editor)
+- [ ] **Missing spaces between words** — words in text paragraphs are sometimes
+  rendered joined together with no space. Cause unknown; needs a repro first
+  (likely markdown parsing of soft line breaks). (editor)
 - [ ] **Markdown round-trip fixtures** — tests for headings, nested lists, tasks,
   code, quotes, links are still not written. (testing)
-- [ ] **Noisy-but-benign logs** — `readDir failed` for protected dirs (e.g. Photos
-  Library) and the `IPC custom protocol failed … postMessage` warning. (cleanup)
-- [ ] **Version not surfaced** — no version/About anywhere in the UI. (polish)
-- [ ] **Red close button doesn't quit** — clicking the red 'X' on the app frame
-  does not close the app. (macOS integration)
+
+### Hard
+
+- [ ] **Audit all markdown components** — verify every markdown element renders
+  and round-trips correctly (headings, lists, nested lists, tasks, code, quotes,
+  links, inline marks, dividers, etc.). May require new extensions (tables,
+  images, strikethrough) and pairs with the fixtures item. (editor)
+- [ ] **Drag handles on nested items** — only top-level blocks are draggable, so
+  a whole list moves as one; every block, including individual list items,
+  should get its own handle and be draggable. Needs hover detection, drop
+  targets, and move logic rewritten for nested positions. (editor)
+
+## Feature requests
+
+- [ ] **Wider / adjustable content column** — the center column in the main viewer
+  feels narrow; make it wider and/or let the user control its width. (UI)
 
 ## Deferred features
 
@@ -27,20 +53,3 @@ come up. Keep entries short: `- [ ] **Title** — what/why. (area)`.
 - [ ] Wiki-style `[[links]]` and backlinks.
 - [ ] Code signing & notarization (not distributing yet).
 - [ ] Windows / Linux builds.
-
-## Done (recent)
-
-- [x] Open `.md` files from Finder via "Open With" — Rust `RunEvent::Opened` is
-  routed to the UI (with a cold-start buffer); files outside the current root
-  switch the workspace to their folder and open selected. (macOS integration)
-- [x] Appearance selector (System / Light / Dark) in a custom overlay title bar;
-  choice persists and syncs the native Tauri theme. (UI)
-- [x] File tree restyle: folder/file icons, taller rows, hover actions, expand
-  animation; folder-hover "new note" action. (UI)
-- [x] Search toggle in the sidebar header (⌘P opens, Esc closes). (UI)
-- [x] Custom app icon.
-- [x] `.md` / `.markdown` file association (`CFBundleDocumentTypes`) + LaunchServices registration.
-- [x] Editable inline note title that renames the file (extension preserved).
-- [x] Sidebar resizable (persisted width) + refresh button.
-- [x] Block type label shown beside the hover handle.
-- [x] Editor layout: removed dead top strip, top/bottom padding balanced.

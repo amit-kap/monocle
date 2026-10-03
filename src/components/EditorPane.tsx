@@ -83,6 +83,9 @@ export function EditorPane() {
     const { activePath, activeContent } = useStore.getState();
     if (!editor || !activePath) return;
     loadDocument(editor, activeContent);
+    // ProseMirror focuses with preventScroll, so this doesn't cause the old
+    // scroll jump; the scrollTop reset below still applies.
+    editor.commands.focus("start", { scrollIntoView: false });
     const scroller = editorDom?.closest(".editor-scroll") as HTMLElement | null;
     if (!scroller) return;
     scroller.scrollTop = 0;

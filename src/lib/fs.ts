@@ -61,7 +61,7 @@ async function walk(dir: string, isRoot = false): Promise<TreeNode[]> {
   try {
     entries = await readDir(dir);
   } catch (error) {
-    console.warn("[monocle] readDir failed:", dir, String(error));
+    // Unreadable subfolders (e.g. the Photos Library) are expected; skip them.
     if (isRoot) throw error;
     return [];
   } finally {

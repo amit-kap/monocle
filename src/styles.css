@@ -187,13 +187,22 @@ body {
   gap: 8px;
 }
 .tiptap ul[data-type="taskList"] li > label {
-  margin-top: 5px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 1.6em;
   user-select: none;
 }
 .tiptap ul[data-type="taskList"] li > div {
   flex: 1;
+  min-width: 0;
+}
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  color: var(--text-faint);
+  text-decoration: line-through;
 }
 .tiptap input[type="checkbox"] {
+  margin: 0;
   width: 16px;
   height: 16px;
   accent-color: var(--accent);

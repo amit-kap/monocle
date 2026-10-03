@@ -5,6 +5,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import type { Editor } from "@tiptap/react";
+import type { Transaction } from "@tiptap/pm/state";
 import {
   blockAt,
   blockAtY,
@@ -98,13 +99,23 @@ export function BlockHandles({
       if (!target.closest(".block-menu")) setMenu(null);
     }
 
+    // Block positions and rects go stale on any edit (e.g. deleting a block
+    // with Backspace), so hide the handle until the mouse moves again.
+    function onTransaction({ transaction }: { transaction: Transaction }) {
+      if (!transaction.docChanged || dragging.current) return;
+      setHover(null);
+      setMenu(null);
+    }
+
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mousedown", onWindowMouseDown);
     scroller?.addEventListener("scroll", onScroll);
+    editor.on("transaction", onTransaction);
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mousedown", onWindowMouseDown);
       scroller?.removeEventListener("scroll", onScroll);
+      editor.off("transaction", onTransaction);
     };
   }, [editor, editorDom, menu]);
 
