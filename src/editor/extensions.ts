@@ -2,6 +2,7 @@ import { StarterKit } from "@tiptap/starter-kit";
 import { Image } from "@tiptap/extension-image";
 import { MarkdownTable } from "./extensions/MarkdownTable";
 import { CodeBlock } from "./extensions/CodeBlock";
+import { LocalImages } from "./extensions/LocalImages";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -48,5 +49,6 @@ export const appExtensions = [
   SoftBreakSpace,
   TaskListTight,
   CodeBlock,
+  LocalImages,
   SlashCommand,
 ];

@@ -10,6 +10,8 @@ import {
   storeWidth,
 } from "../lib/layout";
 import { appExtensions } from "../editor/extensions";
+import { setImageBaseDir } from "../editor/extensions/LocalImages";
+import { noteDir } from "../lib/imagePath";
 import { loadDocument } from "../editor/loadDocument";
 import { BlockHandles } from "./BlockHandles";
 import type { SaveStatus } from "../types";
@@ -115,6 +117,11 @@ export function EditorPane() {
     });
     return () => cancelAnimationFrame(raf);
   }, [editor, loadId, editorDom]);
+
+  useEffect(() => {
+    // Relative image paths in a note are relative to the note's own folder.
+    setImageBaseDir(noteDir(activePath));
+  }, [activePath]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
