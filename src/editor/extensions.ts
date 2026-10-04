@@ -1,6 +1,7 @@
 import { StarterKit } from "@tiptap/starter-kit";
 import { Image } from "@tiptap/extension-image";
 import { MarkdownTable } from "./extensions/MarkdownTable";
+import { CodeBlock } from "./extensions/CodeBlock";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -21,6 +22,8 @@ export const appExtensions = [
     // words together: "p<u>under</u>lain" saves as "punderlain". Leaving the
     // mark out keeps ⌘U from silently eating text.
     underline: false,
+    // Replaced below by the lowlight-backed version.
+    codeBlock: false,
   }),
   // Without this, `![alt](img.png)` is dropped from the document on load and
   // the image is gone from the file on the next save. Relative paths don't
@@ -44,5 +47,6 @@ export const appExtensions = [
   }),
   SoftBreakSpace,
   TaskListTight,
+  CodeBlock,
   SlashCommand,
 ];

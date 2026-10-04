@@ -14,6 +14,22 @@
   --radius: 6px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  /* Code highlighting. Tokens only, so the same rules serve both themes. */
+  --code-fg: #24292f;
+  --code-gutter: #6e7781;
+  --code-bg: #f6f8fa;
+  --code-border: #d0d7de;
+  --code-keyword: #cf222e;
+  --code-string: #0a3069;
+  --code-number: #0550ae;
+  --code-comment: #6e7781;
+  --code-function: #8250df;
+  --code-type: #953800;
+  --code-variable: #24292f;
+  --code-punctuation: #57606a;
+  --code-tag: #116329;
+  --code-attr: #0550ae;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,6 +44,20 @@
     --text-faint: #6f6f6f;
     --border: #2f2f2f;
     --accent: #529cca;
+    --code-fg: #e6edf3;
+    --code-gutter: #8b949e;
+    --code-bg: #161616;
+    --code-border: #30363d;
+    --code-keyword: #ff7b72;
+    --code-string: #a5d6ff;
+    --code-number: #79c0ff;
+    --code-comment: #8b949e;
+    --code-function: #d2a8ff;
+    --code-type: #ffa657;
+    --code-variable: #e6edf3;
+    --code-punctuation: #8b949e;
+    --code-tag: #7ee787;
+    --code-attr: #79c0ff;
   }
 }
 
@@ -42,6 +72,20 @@
   --text-faint: #6f6f6f;
   --border: #2f2f2f;
   --accent: #529cca;
+  --code-fg: #e6edf3;
+  --code-gutter: #8b949e;
+  --code-bg: #161616;
+  --code-border: #30363d;
+  --code-keyword: #ff7b72;
+  --code-string: #a5d6ff;
+  --code-number: #79c0ff;
+  --code-comment: #8b949e;
+  --code-function: #d2a8ff;
+  --code-type: #ffa657;
+  --code-variable: #e6edf3;
+  --code-punctuation: #8b949e;
+  --code-tag: #7ee787;
+  --code-attr: #79c0ff;
 }
 
 * {
@@ -149,20 +193,89 @@ body {
 }
 
 .tiptap pre {
+  position: relative;
   margin: 0.6em 0;
   padding: 14px 16px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--code-border);
   border-radius: var(--radius);
-  background: var(--bg-sidebar);
+  background: var(--code-bg);
+  color: var(--code-fg);
   font-family: var(--font-mono);
   font-size: 0.85em;
   line-height: 1.5;
+  tab-size: 2;
   overflow-x: auto;
 }
 .tiptap pre code {
   background: none;
   padding: 0;
+  color: inherit;
   font-size: inherit;
+}
+
+/* highlight.js token classes, mapped onto the theme variables above. */
+.tiptap pre code .hljs-comment,
+.tiptap pre code .hljs-quote {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.tiptap pre code .hljs-keyword,
+.tiptap pre code .hljs-selector-tag,
+.tiptap pre code .hljs-literal,
+.tiptap pre code .hljs-doctag,
+.tiptap pre code .hljs-formula {
+  color: var(--code-keyword);
+}
+.tiptap pre code .hljs-string,
+.tiptap pre code .hljs-regexp,
+.tiptap pre code .hljs-addition,
+.tiptap pre code .hljs-meta .hljs-string {
+  color: var(--code-string);
+}
+.tiptap pre code .hljs-number,
+.tiptap pre code .hljs-symbol,
+.tiptap pre code .hljs-bullet,
+.tiptap pre code .hljs-link {
+  color: var(--code-number);
+}
+.tiptap pre code .hljs-title,
+.tiptap pre code .hljs-title.function_,
+.tiptap pre code .hljs-section,
+.tiptap pre code .hljs-name {
+  color: var(--code-function);
+}
+.tiptap pre code .hljs-type,
+.tiptap pre code .hljs-class .hljs-title,
+.tiptap pre code .hljs-title.class_,
+.tiptap pre code .hljs-built_in,
+.tiptap pre code .hljs-params {
+  color: var(--code-type);
+}
+.tiptap pre code .hljs-attr,
+.tiptap pre code .hljs-attribute,
+.tiptap pre code .hljs-variable,
+.tiptap pre code .hljs-template-variable,
+.tiptap pre code .hljs-property,
+.tiptap pre code .hljs-selector-attr,
+.tiptap pre code .hljs-selector-pseudo {
+  color: var(--code-attr);
+}
+.tiptap pre code .hljs-tag {
+  color: var(--code-tag);
+}
+.tiptap pre code .hljs-meta,
+.tiptap pre code .hljs-punctuation,
+.tiptap pre code .hljs-operator {
+  color: var(--code-punctuation);
+}
+.tiptap pre code .hljs-deletion {
+  color: var(--code-keyword);
+}
+.tiptap pre code .hljs-emphasis {
+  font-style: italic;
+}
+.tiptap pre code .hljs-strong {
+  font-weight: 600;
 }
 
 .tiptap hr {
