@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useStore } from "../store/useStore";
 import { filterTree } from "../lib/fs";
+import { SIDEBAR, clampWidth, readWidth, storeWidth } from "../lib/layout";
 import { FileTree } from "./FileTree";
 
 function baseName(path: string): string {
@@ -75,9 +76,6 @@ function SearchIcon() {
   );
 }
 
-const MIN_WIDTH = 180;
-const MAX_WIDTH = 480;
-const WIDTH_KEY = "monocle:sidebarWidth";
 
 export function Sidebar() {
   const folder = useStore((s) => s.folder);
@@ -98,22 +96,19 @@ export function Sidebar() {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [folderMenu, setFolderMenu] = useState(false);
-  const [width, setWidth] = useState(() => {
-    const saved = Number(localStorage.getItem(WIDTH_KEY));
-    return saved >= MIN_WIDTH && saved <= MAX_WIDTH ? saved : 240;
-  });
+  const [width, setWidth] = useState(() => readWidth(SIDEBAR, localStorage));
   const headerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    localStorage.setItem(WIDTH_KEY, String(width));
+    storeWidth(SIDEBAR, localStorage, width);
   }, [width]);
 
   function startResize(startX: number) {
     const startWidth = width;
     function onMove(event: MouseEvent) {
       const next = startWidth + (event.clientX - startX);
-      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, next)));
+      setWidth(clampWidth(next, SIDEBAR.min, SIDEBAR.max));
     }
     function onUp() {
       window.removeEventListener("mousemove", onMove);

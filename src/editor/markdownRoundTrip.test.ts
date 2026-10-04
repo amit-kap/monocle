@@ -64,12 +64,18 @@ const FIXTURES: Array<{ name: string; input: string; expected: string }> = [
   {
     name: "task list",
     input: "- [ ] todo\n- [x] done\n",
-    expected: "- [ ] todo\n\n- [x] done",
+    expected: "- [ ] todo\n- [x] done",
   },
   {
     name: "nested task list",
     input: "- [ ] parent\n  - [x] child\n",
-    expected: "- [ ] parent\n\n  - [x] child",
+    expected: "- [ ] parent\n  - [x] child",
+  },
+  {
+    // An author who wrote blank lines between tasks meant them; stay loose.
+    name: "loose task list stays loose",
+    input: "- [ ] todo\n\n- [x] done\n",
+    expected: "- [ ] todo\n\n- [x] done",
   },
 
   // Quotes
@@ -128,6 +134,66 @@ const FIXTURES: Array<{ name: string; input: string; expected: string }> = [
 
   // Dividers
   { name: "horizontal rule", input: "---\n", expected: "---" },
+
+  // Tables
+  {
+    name: "table",
+    input: "| a | b |\n| --- | --- |\n| 1 | 2 |\n",
+    expected: "| a | b |\n| --- | --- |\n| 1 | 2 |\n",
+  },
+  {
+    name: "table with three rows",
+    input: "| h1 | h2 |\n| --- | --- |\n| a | b |\n| c | d |\n",
+    expected: "| h1 | h2 |\n| --- | --- |\n| a | b |\n| c | d |\n",
+  },
+  {
+    name: "table with one column",
+    input: "| a |\n| --- |\n| 1 |\n",
+    expected: "| a |\n| --- |\n| 1 |\n",
+  },
+  {
+    // Alignment was parsed but never written back, so the first save flattened
+    // every column to `---`.
+    name: "table with column alignment",
+    input: "| a | b | c |\n| :--- | ---: | :---: |\n| 1 | 2 | 3 |\n",
+    expected: "| a | b | c |\n| :--- | ---: | :---: |\n| 1 | 2 | 3 |\n",
+  },
+  {
+    name: "table with empty cells",
+    input: "| a | b |\n| --- | --- |\n|  |  |\n",
+    expected: "| a | b |\n| --- | --- |\n|  |  |\n",
+  },
+  {
+    name: "table with marks in cells",
+    input: "| a | b |\n| --- | --- |\n| **x** | `y` |\n",
+    expected: "| a | b |\n| --- | --- |\n| **x** | `y` |\n",
+  },
+  {
+    name: "table with a link in a cell",
+    input: "| a |\n| --- |\n| [l](https://a.co) |\n",
+    expected: "| a |\n| --- |\n| [l](https://a.co) |\n",
+  },
+  {
+    // A bare pipe used to split one cell into two and reshape the table.
+    name: "table cell containing a pipe",
+    input: "| a |\n| --- |\n| x \\| y |\n",
+    expected: "| a |\n| --- |\n| x \\| y |\n",
+  },
+  {
+    name: "two tables separated by a blank line",
+    input: "| a |\n| --- |\n| 1 |\n\n| b |\n| --- |\n| 2 |\n",
+    expected: "| a |\n| --- |\n| 1 |\n\n| b |\n| --- |\n| 2 |\n",
+  },
+  {
+    name: "table in a quote",
+    input: "> | a |\n> | --- |\n> | 1 |\n",
+    expected: "> | a |\n> | --- |\n> | 1 |\n",
+  },
+  {
+    name: "table between paragraphs",
+    input: "before\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n\nafter\n",
+    expected: "before\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n\nafter",
+  },
 
   // Images. Markdown allows an image anywhere in a sentence, so these are the
   // cases that used to either delete the image or weld it to neighbouring text.
@@ -303,7 +369,6 @@ const FIXTURES: Array<{ name: string; input: string; expected: string }> = [
       "2. second",
       "",
       "- [ ] open task",
-      "",
       "- [x] closed task",
       "",
       "> A quote that is long enough to wrap",
@@ -356,12 +421,6 @@ describe("markdown round-trip keeps every word", () => {
 // accidental. These are the loose ends the markdown-component audit has to
 // resolve; each is lossy or noisy, none is silently destructive.
 describe("known round-trip gaps", () => {
-  it("flattens tables to bare text — no table extension is registered", () => {
-    const editor = makeTestEditor("| a | b |\n| - | - |\n| 1 | 2 |\n");
-    expect(toMarkdown(editor)).toBe("ab12");
-    editor.destroy();
-  });
-
   it("escapes raw HTML instead of parsing it, including <u>", () => {
     const editor = makeTestEditor("<div>block</div>\n");
     expect(toMarkdown(editor)).toBe("&lt;div&gt;block&lt;/div&gt;");
@@ -375,9 +434,10 @@ describe("known round-trip gaps", () => {
     underlined.destroy();
   });
 
-  it("loosens task lists, inserting a blank line between items", () => {
+  it("keeps a task list tight, so saves do not churn the file", () => {
     const editor = makeTestEditor("- [ ] a\n- [x] b\n");
-    expect(toMarkdown(editor)).toBe("- [ ] a\n\n- [x] b");
+    expect(toMarkdown(editor)).toBe("- [ ] a\n- [x] b");
+    expect(editor.getAttributes("taskList").tight).toBe(true);
     editor.destroy();
   });
 });
