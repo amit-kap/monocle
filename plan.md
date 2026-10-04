@@ -40,6 +40,20 @@ Phases 0–8 implemented. `Monocle.app` (4.5 MB) and `Monocle_0.1.0_aarch64.dmg`
   block type (Text, H1, List, …) beside the handle.
 - Note titles are editable inline in the editor and rename the file (extension
   is preserved); sidebar shows full file names including `.md`.
+- **Markdown round-trip fixtures written** (`src/editor/markdownRoundTrip.test.ts`):
+  every node and mark, exact-output plus idempotency, plus a word-integrity
+  check that catches welded-together text. The shared extension stack now lives
+  in `src/editor/extensions.ts` so the editor pane and the fixtures cannot drift.
+- **Fixed: words welded together across soft line breaks.** A wrapped line whose
+  text ended in an inline mark lost the only space between the words, and the
+  damage was written back to disk — `Some **bold**` ⏎ `next line` saved as
+  `Some **bold**next line`. Cause was tiptap-markdown emitting the soft break as
+  `"\n"`, then deleting any newline that followed an inline element.
+  `SoftBreakSpace` emits a real space instead.
+- **Fixed: ⌘U silently deleted text.** StarterKit v3 ships an underline mark that
+  markdown cannot express and tiptap-markdown cannot serialize, so the mark was
+  dropped along with the spaces around it: `p<u>under</u>lain` saved as
+  `punderlain`. The mark is now switched off in StarterKit.
 - Still open: signing/notarization and a custom icon (Phase 8).
 
 ## 2. Stack and rationale
@@ -153,7 +167,7 @@ monocle/
 - [x] Serialize TipTap JSON → `.md` on save
 - [x] **Explicit save** via `⌘S`; dirty indicator when the buffer differs from disk
 - [x] Guard before switching notes or quitting (unsaved-changes guard)
-- [ ] Round-trip test fixtures (headings, nested lists, tasks, code, quotes, links)
+- [x] Round-trip test fixtures (headings, nested lists, tasks, code, quotes, links)
 - **Done when:** `⌘S` writes valid markdown and edits survive reload.
 
 ### Phase 6 — Notion affordances
@@ -209,7 +223,7 @@ In-memory document: TipTap JSON. Disk: markdown string.
 
 | Risk | Mitigation |
 |---|---|
-| Markdown ↔ TipTap round-trip fidelity | Fixture tests (still TODO); restricted to StarterKit node set |
+| Markdown ↔ TipTap round-trip fidelity | Fixture tests in `markdownRoundTrip.test.ts` pin every node/mark; known gaps tracked in `BACKLOG.md`. Images and tables are the outstanding losses |
 | Drag-to-reorder block handles are custom ProseMirror work | Isolated in `blockUtils.ts` + `BlockHandles.tsx` |
 | Rust first-build time | One-time cost; UI hot-reloads without recompiling |
 | WKWebView (Safari engine) quirks | Tested in `tauri dev`; avoided Chromium-only CSS |
@@ -218,7 +232,7 @@ In-memory document: TipTap JSON. Disk: markdown string.
 
 ## 9. Verification
 
-- **Unit:** Vitest for `lib/markdown.ts` round-trips and store reducers — *not yet written*.
+- **Unit:** Vitest for markdown round-trips and store reducers — 162 tests, `npm test`.
 - **Manual QA:** sidebar lifecycle, editing gestures, slash menu, block handles, save.
 - **Build check:** `npm run tauri build` succeeds and the app opens a real folder.
 

@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { StarterKit } from "@tiptap/starter-kit";
-import { TaskList } from "@tiptap/extension-task-list";
-import { TaskItem } from "@tiptap/extension-task-item";
-import { Placeholder } from "@tiptap/extensions";
-import { Markdown } from "tiptap-markdown";
 import { useStore } from "../store/useStore";
 import { toMarkdown } from "../lib/markdown";
 import { stripExt } from "../lib/fs";
-import { SlashCommand } from "../editor/extensions/SlashCommand";
+import { appExtensions } from "../editor/extensions";
 import { loadDocument } from "../editor/loadDocument";
 import { BlockHandles } from "./BlockHandles";
 import type { SaveStatus } from "../types";
@@ -59,19 +54,7 @@ export function EditorPane() {
   }
 
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Placeholder.configure({ placeholder: "Write something…" }),
-      Markdown.configure({
-        html: false,
-        tightLists: true,
-        linkify: false,
-        breaks: false,
-      }),
-      SlashCommand,
-    ],
+    extensions: appExtensions,
     content: "",
     editorProps: { attributes: { class: "tiptap" } },
     onUpdate: () => markDirty(),
