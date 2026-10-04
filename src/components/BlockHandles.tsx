@@ -9,11 +9,11 @@ import type { Transaction } from "@tiptap/pm/state";
 import {
   blockAt,
   blockAtY,
-  blockBoundaries,
   deleteBlock,
   dropTargetForY,
   duplicateBlock,
   moveBlockTo,
+  moveSibling,
   type BlockHover,
 } from "../editor/blockUtils";
 
@@ -129,14 +129,7 @@ export function BlockHandles({
 
   function move(from: number, to: number, direction: -1 | 1) {
     if (!editor) return;
-    const doc = editor.state.doc;
-    const index = doc.resolve(from).index(0);
-    const boundaries = blockBoundaries(editor);
-    if (direction === -1 && index > 0) {
-      moveBlockTo(editor, from, to, boundaries[index - 1]);
-    } else if (direction === 1 && index < doc.childCount - 1) {
-      moveBlockTo(editor, from, to, boundaries[index + 2]);
-    }
+    moveSibling(editor, from, to, direction);
     setMenu(null);
   }
 
@@ -147,6 +140,8 @@ export function BlockHandles({
     const startY = event.clientY;
     let started = false;
     let target: number | null = null;
+    // Captured before the move: after a deletion the node's position changes.
+    const dragged = editor.state.doc.nodeAt(anchor.from) ?? null;
 
     function endDrag() {
       window.removeEventListener("mousemove", onMove);
@@ -168,8 +163,9 @@ export function BlockHandles({
         document.body.style.cursor = "grabbing";
         document.body.style.userSelect = "none";
       }
-      target = dropTargetForY(editor!, moveEvent.clientY);
-      const targetDom = editor!.view.nodeDOM(target) as HTMLElement | null;
+      target = dropTargetForY(editor!, moveEvent.clientY, dragged);
+      const targetDom =
+        target === null ? null : (editor!.view.nodeDOM(target) as HTMLElement | null);
       const rect = targetDom?.getBoundingClientRect();
       setDropY(rect ? rect.top : moveEvent.clientY);
     }
