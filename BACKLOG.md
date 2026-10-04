@@ -8,63 +8,73 @@ Remove items once they're done; git history is the record.
 
 Sorted by difficulty, easiest first.
 
-### Easy
+### Needs a manual check
 
-- [ ] **IPC fallback warning** — `IPC custom protocol failed … postMessage` is
-  logged by Tauri itself, not our code. Harmless; look into it only if IPC
-  misbehaves. (cleanup)
+- [ ] **Confirm images actually paint** — implemented, but not verified in the
+  running app. Notes now resolve their relative image paths against the note's
+  own folder and serve them through Tauri's asset protocol, leaving the markdown
+  untouched. Verified by unit tests: path resolution, the DOM rewrite, that the
+  document is never mutated, and that the rewrite re-resolves after switching
+  notes; the Rust side compiles and the config is valid. *Not* verified: the
+  pixels. This machine has no screen-recording or accessibility permission, so I
+  could not look at a window. Open a note with a local image and confirm it
+  shows. (editor)
 
-### Medium
-
-- [ ] **Code blocks not styled as code** — code blocks don't render in a mono
-  font and have no syntax highlighting. The mono font renders in the Chromium
-  dev preview, so check the Tauri (WebKit) build specifically. Needs a lowlight-based code block
-  extension, a highlight theme for light/dark, and a check that the language
-  survives markdown round-trip. (editor)
-  *Round-trip fixtures now confirm the language attribute does survive
-  (`` ```ts `` in, `` ```ts `` out), so highlighting has what it needs.*
-- [ ] **Images don't display** — images now survive a load/save round-trip
-  (`![alt](img.png)` is kept, including mid-sentence, in lists, in quotes, and
-  as data URIs), but nothing renders: a relative path like `assets/img.png`
-  resolves against the webview origin, not the note's folder, so the browser
-  shows its broken-image glyph. Needs the note's directory threaded into the
-  image node's `src` plus Tauri asset protocol and a CSP change. Only `https:`
-  and `data:` sources display today. Styling a *failed* load (rather than an
-  empty `src`) also needs an `error` listener. (editor)
+  Known limits, for whoever checks: the asset scope is `$HOME/**` and
+  `/Volumes/**`, so a folder outside those round-trips its markdown but will not
+  display its images. `https:` and `data:` sources always display. A failed load
+  still shows the browser's broken-image glyph; styling that needs an `error`
+  listener. (editor)
 
 ### Hard
 
-- [ ] **Audit all markdown components** — the round-trip fixtures in
-  `src/editor/markdownRoundTrip.test.ts` now cover every node and mark and pin
-  the remaining gaps. Confirmed losses, worst first:
-  - **Tables are flattened to bare text.** `| a | b |` loads as the paragraph
-    `ab`. Real content loss. Needs a table extension; `prosemirror-tables` is
-    already present transitively but has no TipTap wrapper installed.
-  - **Task lists loosen on every save.** `- [ ] a` / `- [x] b` round-trips
-    with a blank line inserted between the items, so the list becomes loose and
-    every save churns the diff.
-  - **Raw HTML is escaped, not parsed.** `<div>x</div>` becomes
-    `&lt;div&gt;x&lt;/div&gt;` and `<u>x</u>` likewise; markdown has no
-    underline syntax. Underline is disabled in the editor for the same reason.
-  (editor)
-- [ ] **Drag handles on nested items** — only top-level blocks are draggable, so
-  a whole list moves as one; every block, including individual list items,
-  should get its own handle and be draggable. Needs hover detection, drop
-  targets, and move logic rewritten for nested positions. (editor)
+- [ ] **Raw HTML is escaped, not parsed** — `<div>x</div>` becomes
+  `&lt;div&gt;x&lt;/div&gt;`, and `<u>x</u>` likewise. This is deliberate, not an
+  oversight: markdown has no underline syntax, and accepting raw HTML would let
+  a note inject arbitrary markup and CSS into the app. Underline is disabled in
+  the editor for the same reason — while it was live, ⌘U deleted the words around
+  it on save. Revisit only alongside a sanitiser and a CSP; do not just flip
+  `html: true`. (editor)
 
 ## Feature requests
-
-- [ ] **Wider / adjustable content column** — the center column in the main viewer
-  feels narrow; make it wider and/or let the user control its width. (UI)
-
-## Deferred features
 
 - [ ] Autosave (currently explicit `⌘S` only).
 - [ ] External file-change watching (e.g. `notify`).
 - [ ] Multiple windows / tabs.
 - [ ] Inserting images into a note (picking a file, drag-drop, paste).
-  Displaying existing images is separate and tracked above.
-- [ ] Tables, databases, kanban, embeds.
+  *Displaying* existing images is separate and now implemented.
+- [ ] Databases, kanban, embeds. (Tables are supported; see `plan.md`.)
 - [ ] Wiki-style `[[links]]` and backlinks.
 - [ ] Code signing & notarization (not distributing yet).
 - [ ] Windows / Linux builds.
+
+## Closed
+
+Recently finished, kept here until the next release so the reasoning survives.
+
+- **Markdown round-trip fixtures** — 100+ fixtures in
+  `src/editor/markdownRoundTrip.test.ts` covering every node and mark, with
+  exact-output, idempotency and word-integrity assertions.
+- **Words welded together across soft line breaks** — a wrapped line ending in
+  an inline mark lost the only space between two words, and the damage was saved
+  to disk. Fixed in `SoftBreakSpace`.
+- **⌘U deleted text** — StarterKit's underline mark cannot be serialized, so the
+  mark and the spaces around it were dropped on save. Mark disabled.
+- **Images deleted from files** — `![alt](img.png)` was dropped on load. Fixed
+  by registering the Image extension *inline*.
+- **Tables flattened to `ab`** — no table extension was registered. Fixed, along
+  with two serializer defects it exposed: bare pipes split one cell into two,
+  and column alignment was parsed but never written back.
+- **Task lists loosened on every save** — `tightLists` never reached
+  prosemirror-markdown and `taskList` was missing from `MarkdownTightLists`.
+  Fixed by `TaskListTight`.
+- **Code blocks not highlighted** — lowlight with a CSS-variable theme for
+  light and dark.
+- **Narrow content column** — resizable, persisted, default 860px.
+- **Drag handles on nested items** — every list item at any depth is its own
+  draggable block.
+- **IPC fallback warning** — verified not to occur. The message comes from
+  Tauri's own `scripts/ipc-protocol.js`, which warns that the custom-protocol IPC
+  failed and is falling back to `postMessage`; it is a `console.warn` and IPC
+  keeps working. A full `tauri dev` run produces zero occurrences, so the entry
+  was stale. Nothing to fix.

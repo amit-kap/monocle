@@ -12,8 +12,8 @@ The app builds to a `.app`/`.dmg` under ~25 MB.
 
 ## Status
 
-Phases 0–8 implemented. `Monocle.app` (4.5 MB) and `Monocle_0.1.0_aarch64.dmg`
-(2.2 MB) build and launch. Notable deltas from the plan:
+Phases 0–8 implemented, and the whole open backlog worked through. `Monocle.app`
+and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
 
 - TipTap **v3** (not v2) — `tiptap-markdown` requires it.
 - Save is **explicit (⌘S)** per the locked decision; autosave deferred.
@@ -63,7 +63,31 @@ Phases 0–8 implemented. `Monocle.app` (4.5 MB) and `Monocle_0.1.0_aarch64.dmg`
   list item entirely. `allowBase64` is on so pasted data URIs aren't dropped
   either. Images survive a round-trip but do not yet *display*: relative paths
   need the note's directory plus Tauri's asset protocol (see BACKLOG).
-- Still open: signing/notarization and a custom icon (Phase 8).
+- **Tables load and round-trip** (they used to collapse to the paragraph `ab`).
+  Registering the table extension exposed two defects in tiptap-markdown's own
+  serializer: a bare pipe inside a cell split it into two cells, and column
+  alignment was parsed into each header cell but never written back. The
+  override has to *extend* the `table` extension, because tiptap-markdown
+  resolves a node's markdown spec by extension name.
+- **Task lists stay tight**, so a save no longer inserts a blank line between
+  items. tiptap-markdown never passes `tightLists` to prosemirror-markdown;
+  bullet and ordered lists were tight only because `MarkdownTightLists` registers
+  a `tight` attribute on them, and `taskList` was missing from that list.
+- **Code blocks are highlighted** with lowlight's common grammars. Token colours
+  come from CSS custom properties, so highlighting follows the light/dark themes
+  instead of shipping two JS themes. Costs +230 kB raw / +67 kB gzipped.
+- **The content column is resizable** and persists, default 860px rather than a
+  fixed 720px; drag its right edge, double-click to reset. Bounds and persistence
+  live in `lib/layout.ts`, shared with the sidebar.
+- **Every nested block is draggable.** A block is a direct child of the document
+  or a list item at any depth. Crossing a list boundary converts rather than
+  refusing, since a list item is not a legal child of the document.
+- **Images are served through the asset protocol** (needs the `protocol-asset`
+  Cargo feature). Relative paths resolve against the note's folder; the document
+  is never mutated, so the note still saves the author's own paths.
+- Raw HTML stays escaped (`html: false`) on purpose — see BACKLOG for why.
+- Still open: signing/notarization and a custom icon (Phase 8), and a manual
+  look at image rendering (see BACKLOG).
 
 ## 2. Stack and rationale
 
@@ -232,7 +256,7 @@ In-memory document: TipTap JSON. Disk: markdown string.
 
 | Risk | Mitigation |
 |---|---|
-| Markdown ↔ TipTap round-trip fidelity | Fixture tests in `markdownRoundTrip.test.ts` pin every node/mark and assert no visible word is lost; tables are the outstanding loss |
+| Markdown ↔ TipTap round-trip fidelity | Fixture tests in `markdownRoundTrip.test.ts` pin every node/mark and assert no visible word is lost. Raw HTML is escaped by choice (BACKLOG) |
 | Drag-to-reorder block handles are custom ProseMirror work | Isolated in `blockUtils.ts` + `BlockHandles.tsx` |
 | Rust first-build time | One-time cost; UI hot-reloads without recompiling |
 | WKWebView (Safari engine) quirks | Tested in `tauri dev`; avoided Chromium-only CSS |
@@ -241,8 +265,12 @@ In-memory document: TipTap JSON. Disk: markdown string.
 
 ## 9. Verification
 
-- **Unit:** Vitest for markdown round-trips and store reducers — 162 tests, `npm test`.
-- **Manual QA:** sidebar lifecycle, editing gestures, slash menu, block handles, save.
+- **Unit:** 340 Vitest tests, `npm test`. Covers markdown round-trip
+  (100+ fixtures), code highlighting, image path resolution, pane widths, the
+  store, and nested block moves.
+- **Manual QA:** sidebar lifecycle, editing gestures, slash menu, block handles,
+  save. **Needed:** someone should look at a note containing a local image —
+  that path could not be verified here.
 - **Build check:** `npm run tauri build` succeeds and the app opens a real folder.
 
 ## 10. Dependencies
@@ -251,8 +279,10 @@ In-memory document: TipTap JSON. Disk: markdown string.
 @tauri-apps/api @tauri-apps/plugin-fs @tauri-apps/plugin-dialog
 @tiptap/react @tiptap/starter-kit @tiptap/pm @tiptap/extensions
 @tiptap/extension-task-list @tiptap/extension-task-item @tiptap/extension-image
+@tiptap/extension-table @tiptap/extension-table-row @tiptap/extension-table-header
+@tiptap/extension-table-cell @tiptap/extension-code-block-lowlight
 @tiptap/suggestion
-tiptap-markdown zustand
+tiptap-markdown lowlight zustand
 tailwindcss @tailwindcss/vite
 dev: typescript vite @vitejs/plugin-react vitest
 ```
