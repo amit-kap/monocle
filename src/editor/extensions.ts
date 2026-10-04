@@ -1,4 +1,5 @@
 import { StarterKit } from "@tiptap/starter-kit";
+import { Image } from "@tiptap/extension-image";
 import { TaskList } from "@tiptap/extension-task-list";
 import { TaskItem } from "@tiptap/extension-task-item";
 import { Placeholder } from "@tiptap/extensions";
@@ -16,6 +17,11 @@ export const appExtensions = [
     // mark out keeps ⌘U from silently eating text.
     underline: false,
   }),
+  // Without this, `![alt](img.png)` is dropped from the document on load and
+  // the image is gone from the file on the next save. Relative paths don't
+  // resolve to anything in the webview yet, so these render as placeholders —
+  // but the markdown survives, which is the point for now.
+  Image.configure({ inline: true, allowBase64: true }),
   TaskList,
   TaskItem.configure({ nested: true }),
   Placeholder.configure({ placeholder: "Write something…" }),

@@ -129,6 +129,77 @@ const FIXTURES: Array<{ name: string; input: string; expected: string }> = [
   // Dividers
   { name: "horizontal rule", input: "---\n", expected: "---" },
 
+  // Images. Markdown allows an image anywhere in a sentence, so these are the
+  // cases that used to either delete the image or weld it to neighbouring text.
+  {
+    name: "image alone",
+    input: "![alt](img.png)\n",
+    expected: "![alt](img.png)",
+  },
+  {
+    name: "image in a subfolder",
+    input: "![alt](assets/img.png)\n",
+    expected: "![alt](assets/img.png)",
+  },
+  {
+    name: "image with an absolute path",
+    input: "![alt](/Users/me/img.png)\n",
+    expected: "![alt](/Users/me/img.png)",
+  },
+  {
+    name: "image with a title",
+    input: '![alt](img.png "The title")\n',
+    expected: '![alt](img.png "The title")',
+  },
+  { name: "image with no alt text", input: "![](img.png)\n", expected: "![](img.png)" },
+  {
+    name: "image from a url",
+    input: "![alt](https://example.com/a.png)\n",
+    expected: "![alt](https://example.com/a.png)",
+  },
+  {
+    name: "image as a data uri",
+    input: "![alt](data:image/png;base64,iVBORw0KGgo=)\n",
+    expected: "![alt](data:image/png;base64,iVBORw0KGgo=)",
+  },
+  {
+    name: "percent-encoded image path",
+    input: "![alt](my%20image.png)\n",
+    expected: "![alt](my%20image.png)",
+  },
+  {
+    name: "image mid-sentence",
+    input: "text ![alt](img.png) more\n",
+    expected: "text ![alt](img.png) more",
+  },
+  {
+    name: "two images",
+    input: "![a](1.png)\n\n![b](2.png)\n",
+    expected: "![a](1.png)\n\n![b](2.png)",
+  },
+  {
+    name: "image in a list item",
+    input: "- ![alt](img.png)\n",
+    expected: "- ![alt](img.png)",
+  },
+  {
+    name: "image in a quote",
+    input: "> ![alt](img.png)\n",
+    expected: "> ![alt](img.png)",
+  },
+  {
+    name: "image path containing parentheses",
+    input: "![alt](a(1).png)\n",
+    expected: "![alt](a\\(1\\).png)",
+  },
+  {
+    // An unescaped space is not a valid image path, so markdown-it is right to
+    // leave this as literal text. Pinned so it stays literal text.
+    name: "image path with a raw space stays literal",
+    input: "![alt](my image.png)\n",
+    expected: "!\\[alt\\](my image.png)",
+  },
+
   // Line breaks
   { name: "hard break", input: "one  \ntwo\n", expected: "one\\\ntwo" },
   {
@@ -264,19 +335,20 @@ describe("markdown round-trip fixtures", () => {
   });
 });
 
-describe("markdown round-trip keeps text intact", () => {
+describe("markdown round-trip keeps every word", () => {
   it.each(FIXTURES)("$name", ({ input, expected }) => {
-    // Guards the class of bug where words get glued together: compare the
-    // visible words of input and output, ignoring markdown syntax and
-    // whitespace differences.
-    const words = (md: string) =>
-      md
-        .replace(/```[\s\S]*?```/g, " ")
-        .replace(/[*_`~[\]()#>-]/g, " ")
-        .split(/\s+/)
-        .filter(Boolean);
+    // The invariant behind the welded-text bugs: the words a reader sees must
+    // be identical before and after a save. Comparing rendered text rather
+    // than markdown means this catches a mark or node whose serializer is
+    // missing, since that drops content outright.
+    const visibleText = (md: string) => {
+      const editor = makeTestEditor(md);
+      const text = editor.state.doc.textContent;
+      editor.destroy();
+      return text.replace(/\s+/g, " ").trim();
+    };
 
-    expect(words(toMarkdown(makeTestEditor(input)))).toEqual(words(expected));
+    expect(visibleText(expected)).toBe(visibleText(input));
   });
 });
 
@@ -284,12 +356,6 @@ describe("markdown round-trip keeps text intact", () => {
 // accidental. These are the loose ends the markdown-component audit has to
 // resolve; each is lossy or noisy, none is silently destructive.
 describe("known round-trip gaps", () => {
-  it("drops images entirely — no Image extension is registered", () => {
-    const editor = makeTestEditor("![alt](img.png)\n");
-    expect(toMarkdown(editor)).toBe("");
-    editor.destroy();
-  });
-
   it("flattens tables to bare text — no table extension is registered", () => {
     const editor = makeTestEditor("| a | b |\n| - | - |\n| 1 | 2 |\n");
     expect(toMarkdown(editor)).toBe("ab12");

@@ -177,6 +177,24 @@ body {
   cursor: pointer;
 }
 
+/* Images are inline nodes, because in markdown an image can sit mid-sentence.
+   One alone in a paragraph is still a paragraph, so lift it back out to a
+   block so a standalone figure doesn't sit on the text baseline.
+
+   Relative paths don't resolve in the webview yet, so these normally fall back
+   to the browser's broken-image glyph plus their alt text. Styling a failed
+   load needs an `error` listener, which lands with the asset-protocol work. */
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+  vertical-align: bottom;
+}
+
+.tiptap p > img:only-child {
+  display: block;
+  margin: 0.6em auto;
+}
+
 .tiptap ul[data-type="taskList"] {
   list-style: none;
   padding-left: 0.2em;

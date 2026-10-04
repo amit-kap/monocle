@@ -54,6 +54,15 @@ Phases 0–8 implemented. `Monocle.app` (4.5 MB) and `Monocle_0.1.0_aarch64.dmg`
   markdown cannot express and tiptap-markdown cannot serialize, so the mark was
   dropped along with the spaces around it: `p<u>under</u>lain` saved as
   `punderlain`. The mark is now switched off in StarterKit.
+- **Fixed: images were deleted from the file.** `![alt](img.png)` was dropped
+  from the document on load, so opening a note with an image and saving it
+  destroyed the image. `@tiptap/extension-image` is now registered *inline*,
+  which matters: markdown allows an image mid-sentence, and the block-level
+  default hoisted it out of its paragraph and welded it to the neighbouring
+  text (`text ![a](i.png) more` saved as `text\n\n![a](i.png)more`) or out of its
+  list item entirely. `allowBase64` is on so pasted data URIs aren't dropped
+  either. Images survive a round-trip but do not yet *display*: relative paths
+  need the note's directory plus Tauri's asset protocol (see BACKLOG).
 - Still open: signing/notarization and a custom icon (Phase 8).
 
 ## 2. Stack and rationale
@@ -223,7 +232,7 @@ In-memory document: TipTap JSON. Disk: markdown string.
 
 | Risk | Mitigation |
 |---|---|
-| Markdown ↔ TipTap round-trip fidelity | Fixture tests in `markdownRoundTrip.test.ts` pin every node/mark; known gaps tracked in `BACKLOG.md`. Images and tables are the outstanding losses |
+| Markdown ↔ TipTap round-trip fidelity | Fixture tests in `markdownRoundTrip.test.ts` pin every node/mark and assert no visible word is lost; tables are the outstanding loss |
 | Drag-to-reorder block handles are custom ProseMirror work | Isolated in `blockUtils.ts` + `BlockHandles.tsx` |
 | Rust first-build time | One-time cost; UI hot-reloads without recompiling |
 | WKWebView (Safari engine) quirks | Tested in `tauri dev`; avoided Chromium-only CSS |
@@ -241,7 +250,8 @@ In-memory document: TipTap JSON. Disk: markdown string.
 ```
 @tauri-apps/api @tauri-apps/plugin-fs @tauri-apps/plugin-dialog
 @tiptap/react @tiptap/starter-kit @tiptap/pm @tiptap/extensions
-@tiptap/extension-task-list @tiptap/extension-task-item @tiptap/suggestion
+@tiptap/extension-task-list @tiptap/extension-task-item @tiptap/extension-image
+@tiptap/suggestion
 tiptap-markdown zustand
 tailwindcss @tailwindcss/vite
 dev: typescript vite @vitejs/plugin-react vitest

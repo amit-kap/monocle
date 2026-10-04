@@ -23,16 +23,23 @@ Sorted by difficulty, easiest first.
   survives markdown round-trip. (editor)
   *Round-trip fixtures now confirm the language attribute does survive
   (`` ```ts `` in, `` ```ts `` out), so highlighting has what it needs.*
+- [ ] **Images don't display** — images now survive a load/save round-trip
+  (`![alt](img.png)` is kept, including mid-sentence, in lists, in quotes, and
+  as data URIs), but nothing renders: a relative path like `assets/img.png`
+  resolves against the webview origin, not the note's folder, so the browser
+  shows its broken-image glyph. Needs the note's directory threaded into the
+  image node's `src` plus Tauri asset protocol and a CSP change. Only `https:`
+  and `data:` sources display today. Styling a *failed* load (rather than an
+  empty `src`) also needs an `error` listener. (editor)
 
 ### Hard
 
 - [ ] **Audit all markdown components** — the round-trip fixtures in
   `src/editor/markdownRoundTrip.test.ts` now cover every node and mark and pin
   the remaining gaps. Confirmed losses, worst first:
-  - **Images are deleted from the file.** `![alt](img.png)` loads as an empty
-    document; there is no Image extension. Real content loss.
   - **Tables are flattened to bare text.** `| a | b |` loads as the paragraph
-    `ab`. Real content loss. Needs a table extension.
+    `ab`. Real content loss. Needs a table extension; `prosemirror-tables` is
+    already present transitively but has no TipTap wrapper installed.
   - **Task lists loosen on every save.** `- [ ] a` / `- [x] b` round-trips
     with a blank line inserted between the items, so the list becomes loose and
     every save churns the diff.
@@ -55,7 +62,8 @@ Sorted by difficulty, easiest first.
 - [ ] Autosave (currently explicit `⌘S` only).
 - [ ] External file-change watching (e.g. `notify`).
 - [ ] Multiple windows / tabs.
-- [ ] Inline image upload.
+- [ ] Inserting images into a note (picking a file, drag-drop, paste).
+  Displaying existing images is separate and tracked above.
 - [ ] Tables, databases, kanban, embeds.
 - [ ] Wiki-style `[[links]]` and backlinks.
 - [ ] Code signing & notarization (not distributing yet).
