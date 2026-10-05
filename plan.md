@@ -62,7 +62,7 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   text (`text ![a](i.png) more` saved as `text\n\n![a](i.png)more`) or out of its
   list item entirely. `allowBase64` is on so pasted data URIs aren't dropped
   either. Images survive a round-trip but do not yet *display*: relative paths
-  need the note's directory plus Tauri's asset protocol (see BACKLOG).
+  need the note's directory plus Tauri's asset protocol.
 - **Tables load and round-trip** (they used to collapse to the paragraph `ab`).
   Registering the table extension exposed two defects in tiptap-markdown's own
   serializer: a bare pipe inside a cell split it into two cells, and column
@@ -87,7 +87,31 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   is never mutated, so the note still saves the author's own paths. Confirmed by
   hand in 0.4.0: same-folder, subfolder, mid-sentence, absolute and remote
   sources all render, and saving leaves the markdown untouched.
-- Raw HTML stays escaped (`html: false`) on purpose — see BACKLOG for why.
+### Why raw HTML is escaped
+
+`Markdown` runs with `html: false`, so `<div>x</div>` in a note is saved as
+`&lt;div&gt;x&lt;/div&gt;` and `<u>x</u>` likewise. This is deliberate.
+
+Markdown has no underline syntax, and tiptap-markdown has no underline mark spec,
+so an underline cannot round-trip. Worse, while StarterKit's underline mark was
+registered, ⌘U applied it and the serializer dropped the mark *and the spaces
+around it* — `p<u>under</u>lain` saved as `punderlain`, silently deleting the
+word "under". The mark is now switched off, and ⌘U does nothing.
+
+For general HTML, accepting it would let any note inject arbitrary markup and CSS
+into the app's own document. Revisit only alongside a sanitiser and a CSP — do
+not just flip `html: true`.
+
+### Known limits
+
+- **Image asset scope is `$HOME/**` and `/Volumes/**`.** Tauri v2 has no runtime
+  scope API, so it must be static. A folder outside those two round-trips its
+  markdown perfectly but will not display its images. `https:` and `data:`
+  sources always display, since they bypass the asset protocol entirely.
+- **A failed image load shows the browser's broken-image glyph.** CSS cannot
+  detect a failed load, only an empty `src`, so styling this needs an `error`
+  listener on the image node.
+- **Autosave is not implemented** — saving is explicit (⌘S) by a locked decision.
 - Still open: signing/notarization and a custom icon (Phase 8).
 
 ## 2. Stack and rationale
@@ -257,7 +281,7 @@ In-memory document: TipTap JSON. Disk: markdown string.
 
 | Risk | Mitigation |
 |---|---|
-| Markdown ↔ TipTap round-trip fidelity | Fixture tests in `markdownRoundTrip.test.ts` pin every node/mark and assert no visible word is lost. Raw HTML is escaped by choice (BACKLOG) |
+| Markdown ↔ TipTap round-trip fidelity | Fixture tests in `markdownRoundTrip.test.ts` pin every node/mark and assert no visible word is lost. Raw HTML is escaped by choice — see *Why raw HTML is escaped* above |
 | Drag-to-reorder block handles are custom ProseMirror work | Isolated in `blockUtils.ts` + `BlockHandles.tsx` |
 | Rust first-build time | One-time cost; UI hot-reloads without recompiling |
 | WKWebView (Safari engine) quirks | Tested in `tauri dev`; avoided Chromium-only CSS |
