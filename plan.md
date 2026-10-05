@@ -84,10 +84,11 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   refusing, since a list item is not a legal child of the document.
 - **Images are served through the asset protocol** (needs the `protocol-asset`
   Cargo feature). Relative paths resolve against the note's folder; the document
-  is never mutated, so the note still saves the author's own paths.
+  is never mutated, so the note still saves the author's own paths. Confirmed by
+  hand in 0.4.0: same-folder, subfolder, mid-sentence, absolute and remote
+  sources all render, and saving leaves the markdown untouched.
 - Raw HTML stays escaped (`html: false`) on purpose — see BACKLOG for why.
-- Still open: signing/notarization and a custom icon (Phase 8), and a manual
-  look at image rendering (see BACKLOG).
+- Still open: signing/notarization and a custom icon (Phase 8).
 
 ## 2. Stack and rationale
 
@@ -269,8 +270,10 @@ In-memory document: TipTap JSON. Disk: markdown string.
   (100+ fixtures), code highlighting, image path resolution, pane widths, the
   store, and nested block moves.
 - **Manual QA:** sidebar lifecycle, editing gestures, slash menu, block handles,
-  save. **Needed:** someone should look at a note containing a local image —
-  that path could not be verified here.
+  save. Image display and save-safety were confirmed by hand in 0.4.0; dragging
+  blocks with a real pointer and the column-resize gesture are still only
+  covered indirectly (move logic by unit test, hover and drop targets against
+  real layout).
 - **Build check:** `npm run tauri build` succeeds and the app opens a real folder.
 
 ## 10. Dependencies

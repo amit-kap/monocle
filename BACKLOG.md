@@ -6,35 +6,11 @@ Remove items once they're done; git history is the record.
 
 ## Open issues
 
-Sorted by difficulty, easiest first.
-
-### Needs a manual check
-
-- [ ] **Confirm images actually paint** — implemented, but not verified in the
-  running app. Notes now resolve their relative image paths against the note's
-  own folder and serve them through Tauri's asset protocol, leaving the markdown
-  untouched. Verified by unit tests: path resolution, the DOM rewrite, that the
-  document is never mutated, and that the rewrite re-resolves after switching
-  notes; the Rust side compiles and the config is valid. *Not* verified: the
-  pixels. This machine has no screen-recording or accessibility permission, so I
-  could not look at a window. Open a note with a local image and confirm it
-  shows. (editor)
-
-  Known limits, for whoever checks: the asset scope is `$HOME/**` and
-  `/Volumes/**`, so a folder outside those round-trips its markdown but will not
-  display its images. `https:` and `data:` sources always display. A failed load
-  still shows the browser's broken-image glyph; styling that needs an `error`
-  listener. (editor)
+Nothing outstanding. Newly discovered items go below.
 
 ### Hard
 
-- [ ] **Raw HTML is escaped, not parsed** — `<div>x</div>` becomes
-  `&lt;div&gt;x&lt;/div&gt;`, and `<u>x</u>` likewise. This is deliberate, not an
-  oversight: markdown has no underline syntax, and accepting raw HTML would let
-  a note inject arbitrary markup and CSS into the app. Underline is disabled in
-  the editor for the same reason — while it was live, ⌘U deleted the words around
-  it on save. Revisit only alongside a sanitiser and a CSP; do not just flip
-  `html: true`. (editor)
+_(none)_
 
 ## Feature requests
 
@@ -51,6 +27,18 @@ Sorted by difficulty, easiest first.
 ## Closed
 
 Recently finished, kept here until the next release so the reasoning survives.
+
+- **Image rendering confirmed** — verified by hand in the installed 0.4.0 app
+  against a note with images in the same folder, a subfolder, mid-sentence, an
+  absolute path and a remote URL; all render, and the inline one sits on the
+  text baseline. Then ⌘S, and the file on disk still held `diagram.png` and
+  friends — the asset-protocol rewrite touches only the rendered element, never
+  the document. Note-switching (a stale asset URL pointing at the previous
+  note's folder) is covered by unit test but was not exercised by hand.
+  Limits that remain, by design: the asset scope is `$HOME/**` and
+  `/Volumes/**`, so a folder outside those round-trips its markdown but will not
+  display its images; `https:` and `data:` always display; a failed load shows
+  the browser's broken-image glyph, and styling that needs an `error` listener.
 
 - **Markdown round-trip fixtures** — 100+ fixtures in
   `src/editor/markdownRoundTrip.test.ts` covering every node and mark, with
