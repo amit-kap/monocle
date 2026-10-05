@@ -7,7 +7,7 @@ vi.mock("@tauri-apps/api/core", () => ({
     `asset://localhost${encodeURIComponent(path)}`,
 }));
 
-import { makeTestEditor } from "./testEditor";
+import { makeTestEditor, onDisk } from "./testEditor";
 import { toMarkdown } from "../lib/markdown";
 import {
   applyImageSources,
@@ -74,7 +74,7 @@ describe("local image sources", () => {
     const before = JSON.stringify(editor.getJSON());
     applyImageSources(editor.view.dom as HTMLElement);
     expect(JSON.stringify(editor.getJSON())).toBe(before);
-    expect(toMarkdown(editor)).toBe(NOTE.replace(/\n$/, ""));
+    expect(toMarkdown(editor)).toBe(onDisk(NOTE));
     editor.destroy();
   });
 

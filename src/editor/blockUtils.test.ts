@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeTestEditor } from "./testEditor";
+import { makeTestEditor, onDisk } from "./testEditor";
 import { toMarkdown } from "../lib/markdown";
 import {
   canInsertAt,
@@ -119,7 +119,7 @@ describe("moveBlockTo", () => {
     const items = movableBlocks(editor.state.doc).filter((b) => b.depth === 1);
     const second = items[1];
     moveBlockTo(editor, second.from, second.to, items[0].from);
-    expect(toMarkdown(editor)).toBe("intro\n\n- two\n- one\n\noutro");
+    expect(toMarkdown(editor)).toBe(onDisk("intro\n\n- two\n- one\n\noutro"));
     editor.destroy();
   });
 
@@ -130,7 +130,7 @@ describe("moveBlockTo", () => {
     moveBlockTo(editor, first.from, first.to, 0);
     // A listItem cannot be a child of the document, so the drag converts it to
     // a paragraph rather than being refused.
-    expect(toMarkdown(editor)).toBe("one\n\nintro\n\n- two");
+    expect(toMarkdown(editor)).toBe(onDisk("one\n\nintro\n\n- two"));
     editor.destroy();
   });
 
@@ -142,7 +142,7 @@ describe("moveBlockTo", () => {
     const item = movableBlocks(editor.state.doc).find((b) => b.depth === 1)!;
     moveBlockTo(editor, para.from, para.to, item.from);
     // Dropping *at* an item means above it, which is where the drop line shows.
-    expect(toMarkdown(editor)).toBe("- intro\n- one\n\ntail");
+    expect(toMarkdown(editor)).toBe(onDisk("- intro\n- one\n\ntail"));
     editor.destroy();
   });
 
@@ -151,7 +151,7 @@ describe("moveBlockTo", () => {
     const item = movableBlocks(editor.state.doc).find((b) => b.depth === 1)!;
     moveBlockTo(editor, item.from, item.to, 0);
     // An emptied bulletList is not a valid document, so it must be gone.
-    expect(toMarkdown(editor)).toBe("only\n\nintro\n\noutro");
+    expect(toMarkdown(editor)).toBe(onDisk("only\n\nintro\n\noutro"));
     editor.destroy();
   });
 
@@ -168,7 +168,7 @@ describe("moveBlockTo", () => {
     const editor = makeTestEditor("- [ ] a\n- [x] b\n");
     const items = movableBlocks(editor.state.doc).filter((b) => b.depth === 1);
     moveBlockTo(editor, items[1].from, items[1].to, items[0].from);
-    expect(toMarkdown(editor)).toBe("- [x] b\n- [ ] a");
+    expect(toMarkdown(editor)).toBe(onDisk("- [x] b\n- [ ] a"));
     editor.destroy();
   });
 
@@ -176,7 +176,7 @@ describe("moveBlockTo", () => {
     const editor = makeTestEditor("- parent\n  - child\n- other\n");
     const items = movableBlocks(editor.state.doc).filter((b) => b.depth === 1);
     moveBlockTo(editor, items[0].from, items[0].to, items[1].to);
-    expect(toMarkdown(editor)).toBe("- other\n- parent\n  - child");
+    expect(toMarkdown(editor)).toBe(onDisk("- other\n- parent\n  - child"));
     editor.destroy();
   });
 });
@@ -186,7 +186,7 @@ describe("moveSibling", () => {
     const editor = makeTestEditor("a\n\nb\n\nc\n");
     const blocksList = movableBlocks(editor.state.doc);
     moveSibling(editor, blocksList[1].from, blocksList[1].to, -1);
-    expect(toMarkdown(editor)).toBe("b\n\na\n\nc");
+    expect(toMarkdown(editor)).toBe(onDisk("b\n\na\n\nc"));
     editor.destroy();
   });
 
@@ -194,7 +194,7 @@ describe("moveSibling", () => {
     const editor = makeTestEditor("a\n\nb\n\nc\n");
     const blocksList = movableBlocks(editor.state.doc);
     moveSibling(editor, blocksList[1].from, blocksList[1].to, 1);
-    expect(toMarkdown(editor)).toBe("a\n\nc\n\nb");
+    expect(toMarkdown(editor)).toBe(onDisk("a\n\nc\n\nb"));
     editor.destroy();
   });
 
@@ -211,7 +211,7 @@ describe("moveSibling", () => {
     const editor = makeTestEditor("head\n\n- a\n- b\n\ntail\n");
     const items = movableBlocks(editor.state.doc).filter((b) => b.depth === 1);
     moveSibling(editor, items[1].from, items[1].to, -1);
-    expect(toMarkdown(editor)).toBe("head\n\n- b\n- a\n\ntail");
+    expect(toMarkdown(editor)).toBe(onDisk("head\n\n- b\n- a\n\ntail"));
     editor.destroy();
   });
 

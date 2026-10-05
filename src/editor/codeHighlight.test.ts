@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeTestEditor } from "./testEditor";
+import { makeTestEditor, onDisk } from "./testEditor";
 import { toMarkdown } from "../lib/markdown";
 import { resolveLanguage } from "./extensions/CodeBlock";
 
@@ -43,13 +43,13 @@ describe("code highlighting", () => {
 
   it("does not break on a language it does not know", () => {
     const editor = makeTestEditor(["```nosuchlang", "stuff", "```"].join("\n"));
-    expect(toMarkdown(editor)).toBe("```nosuchlang\nstuff\n```");
+    expect(toMarkdown(editor)).toBe(onDisk("```nosuchlang\nstuff\n```"));
     editor.destroy();
   });
 
   it("keeps the language on the fence through a save", () => {
     const editor = makeTestEditor(["```ts", "const x = 1;", "```"].join("\n"));
-    expect(toMarkdown(editor)).toBe("```ts\nconst x = 1;\n```");
+    expect(toMarkdown(editor)).toBe(onDisk("```ts\nconst x = 1;\n```"));
     editor.destroy();
   });
 
@@ -57,7 +57,7 @@ describe("code highlighting", () => {
     const editor = makeTestEditor(
       ["```typescript", "const x = 1;", "```"].join("\n"),
     );
-    expect(toMarkdown(editor)).toBe("```typescript\nconst x = 1;\n```");
+    expect(toMarkdown(editor)).toBe(onDisk("```typescript\nconst x = 1;\n```"));
     editor.destroy();
   });
 

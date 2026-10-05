@@ -5,3 +5,12 @@ import { appExtensions } from "./extensions";
 export function makeTestEditor(content = ""): Editor {
   return new Editor({ extensions: appExtensions, content });
 }
+
+/**
+ * What lands on disk for a given markdown body. `toMarkdown` appends the
+ * trailing newline, so expectations are written without it and wrapped here.
+ */
+export function onDisk(markdown: string): string {
+  if (markdown.length === 0 || markdown.endsWith("\n")) return markdown;
+  return `${markdown}\n`;
+}

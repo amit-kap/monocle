@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toMarkdown } from "../lib/markdown";
-import { makeTestEditor } from "./testEditor";
+import { makeTestEditor, onDisk } from "./testEditor";
 
 describe("editor setup", () => {
   it("mounts the shared extension stack", () => {
@@ -51,7 +51,7 @@ describe("editor setup", () => {
 
   it("keeps the markdown storage reachable for saving", () => {
     const editor = makeTestEditor("text");
-    expect(toMarkdown(editor)).toBe("text");
+    expect(toMarkdown(editor)).toBe(onDisk("text"));
     editor.destroy();
   });
 });

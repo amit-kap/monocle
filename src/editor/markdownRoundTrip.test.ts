@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toMarkdown } from "../lib/markdown";
-import { makeTestEditor } from "./testEditor";
+import { makeTestEditor, onDisk } from "./testEditor";
 
 // Each fixture pins two things:
 //
@@ -387,7 +387,7 @@ const FIXTURES: Array<{ name: string; input: string; expected: string }> = [
 describe("markdown round-trip fixtures", () => {
   it.each(FIXTURES)("$name", ({ input, expected }) => {
     const editor = makeTestEditor(input);
-    expect(toMarkdown(editor)).toBe(expected);
+    expect(toMarkdown(editor)).toBe(onDisk(expected));
     editor.destroy();
   });
 
@@ -395,7 +395,7 @@ describe("markdown round-trip fixtures", () => {
     // Saving an already-saved note must not change the file again, and the
     // document itself must be structurally identical.
     const editor = makeTestEditor(expected);
-    expect(toMarkdown(editor)).toBe(expected);
+    expect(toMarkdown(editor)).toBe(onDisk(expected));
     editor.destroy();
   });
 });
@@ -423,20 +423,20 @@ describe("markdown round-trip keeps every word", () => {
 describe("known round-trip gaps", () => {
   it("escapes raw HTML instead of parsing it, including <u>", () => {
     const editor = makeTestEditor("<div>block</div>\n");
-    expect(toMarkdown(editor)).toBe("&lt;div&gt;block&lt;/div&gt;");
+    expect(toMarkdown(editor)).toBe(onDisk("&lt;div&gt;block&lt;/div&gt;"));
     editor.destroy();
 
     // The underline mark is switched off in appExtensions precisely because
     // it cannot survive a save; if this ever starts passing, the mark has been
     // re-enabled and needs a serializer.
     const underlined = makeTestEditor("<u>under</u>\n");
-    expect(toMarkdown(underlined)).toBe("&lt;u&gt;under&lt;/u&gt;");
+    expect(toMarkdown(underlined)).toBe(onDisk("&lt;u&gt;under&lt;/u&gt;"));
     underlined.destroy();
   });
 
   it("keeps a task list tight, so saves do not churn the file", () => {
     const editor = makeTestEditor("- [ ] a\n- [x] b\n");
-    expect(toMarkdown(editor)).toBe("- [ ] a\n- [x] b");
+    expect(toMarkdown(editor)).toBe(onDisk("- [ ] a\n- [x] b"));
     expect(editor.getAttributes("taskList").tight).toBe(true);
     editor.destroy();
   });
@@ -478,7 +478,7 @@ describe("every mark survives a save", () => {
   it.each(marks)("$name", ({ name, attrs, syntax }) => {
     const editor = makeTestEditor();
     editor.commands.setContent(markedDoc(name, attrs));
-    expect(toMarkdown(editor)).toBe(`before ${syntax("marked")} after`);
+    expect(toMarkdown(editor)).toBe(onDisk(`before ${syntax("marked")} after`));
     editor.destroy();
   });
 
@@ -511,7 +511,7 @@ describe("every block type survives a save", () => {
   it.each(blocks)("$name serializes to markdown", ({ doc, expected }) => {
     const editor = makeTestEditor();
     editor.commands.setContent({ type: "doc", content: [doc] });
-    expect(toMarkdown(editor)).toBe(expected);
+    expect(toMarkdown(editor)).toBe(onDisk(expected));
     editor.destroy();
   });
 
