@@ -112,12 +112,28 @@ function rectFor(editor: Editor, block: BlockRef): DOMRect | null {
   return dom ? dom.getBoundingClientRect() : null;
 }
 
-function toHover(block: BlockRef, rect: DOMRect): BlockHover {
+/**
+ * Where the handle column starts. A bullet or number is drawn in the list's
+ * padding, just left of the item's box, so the handle measures from the list's
+ * edge instead to clear the marker, with a little slack because two-digit
+ * numbers ("10.") spill past the padding. To-do items draw their checkbox
+ * inside the item, so they keep their own edge.
+ */
+const MARKER_SLACK = 6;
+
+function gutterLeft(editor: Editor, block: BlockRef, rect: DOMRect): number {
+  if (block.node.type.name !== "listItem") return rect.left;
+  const dom = editor.view.nodeDOM(block.from) as HTMLElement | null;
+  const list = dom?.parentElement;
+  return list ? list.getBoundingClientRect().left - MARKER_SLACK : rect.left;
+}
+
+function toHover(editor: Editor, block: BlockRef, rect: DOMRect): BlockHover {
   return {
     from: block.from,
     to: block.to,
     top: rect.top,
-    left: rect.left,
+    left: gutterLeft(editor, block, rect),
     height: rect.height,
     label: blockLabel(block.node),
     depth: block.depth,
@@ -160,9 +176,9 @@ export function blockAt(
   if (!best || !bestRect) {
     const rect = rectFor(editor, block);
     if (!rect) return null;
-    return toHover(block, rect);
+    return toHover(editor, block, rect);
   }
-  return toHover(best, bestRect);
+  return toHover(editor, best, bestRect);
 }
 
 export function blockAtY(editor: Editor, clientY: number): BlockHover | null {
@@ -188,12 +204,12 @@ export function blockAtY(editor: Editor, clientY: number): BlockHover | null {
 
     const dist = Math.abs(clientY - (rect.top + rect.height / 2));
     if (dist < nearestDist) {
-      nearest = toHover(block, rect);
+      nearest = toHover(editor, block, rect);
       nearestDist = dist;
     }
   }
 
-  if (deepest && deepestRect) return toHover(deepest, deepestRect);
+  if (deepest && deepestRect) return toHover(editor, deepest, deepestRect);
   return nearest;
 }
 

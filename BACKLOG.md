@@ -14,9 +14,6 @@ the reasoning behind the decisions.
   failed load, so this needs an `error` listener on the image node that swaps in
   a placeholder carrying the path, so a typo'd filename is visible and fixable.
   (editor)
-- [ ] **List item drag handle hidden by bullet** — while block-dragging a list
-  item, its drag handle sits under the item's bullet/number marker, so it can't
-  be seen. (editor)
 - [ ] **Hover label missing on some blocks** — every block type should show its
   element name on the left when hovered; make sure none are left out. (editor)
 
