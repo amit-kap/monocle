@@ -287,7 +287,10 @@ body {
 .tiptap table {
   margin: 0.8em 0;
   width: 100%;
-  border-collapse: collapse;
+  /* Separate borders: under `collapse` the radius is ignored and the outer
+     border straddles the edge, so `overflow: hidden` clips it away. */
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -298,7 +301,9 @@ body {
 .tiptap td {
   position: relative;
   padding: 7px 10px;
-  border: 1px solid var(--border);
+  border: none;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   vertical-align: top;
   text-align: left;
 }
@@ -308,17 +313,11 @@ body {
   font-weight: 600;
 }
 
-/* Trailing and leading border lines come from the table's own border, so the
-   outer edges would double up next to the corner radii. */
-.tiptap tr:first-child th {
-  border-top: none;
-}
-.tiptap tr:last-child td {
+/* Each cell draws only its right and bottom lines; the outer edges come from
+   the table's own border, so the last column and row drop theirs. */
+.tiptap tr:last-child > th,
+.tiptap tr:last-child > td {
   border-bottom: none;
-}
-.tiptap th:first-child,
-.tiptap td:first-child {
-  border-left: none;
 }
 .tiptap th:last-child,
 .tiptap td:last-child {
