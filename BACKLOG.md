@@ -7,15 +7,7 @@ the reasoning behind the decisions.
 
 ## Open issues
 
-### Medium
-
-- [ ] **Failed image loads look broken** — an image whose file is missing shows
-  the browser's broken-image glyph. CSS can only detect an empty `src`, not a
-  failed load, so this needs an `error` listener on the image node that swaps in
-  a placeholder carrying the path, so a typo'd filename is visible and fixable.
-  (editor)
-- [ ] **Hover label missing on some blocks** — every block type should show its
-  element name on the left when hovered; make sure none are left out. (editor)
+(none)
 
 ## Feature requests
 
