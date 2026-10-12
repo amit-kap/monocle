@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeTestEditor, onDisk } from "./testEditor";
 import { toMarkdown } from "../lib/markdown";
 import {
+  blockLabel,
   canInsertAt,
   movableBlocks,
   moveBlockTo,
@@ -85,6 +86,67 @@ describe("movableBlocks", () => {
   it("handles an ordered list", () => {
     const found = blocks("1. a\n2. b\n");
     expect(found.filter((b) => b.depth === 1)).toHaveLength(2);
+  });
+});
+
+const EVERY_BLOCK = [
+  "# Title",
+  "",
+  "para",
+  "",
+  "> quote",
+  "",
+  "```js",
+  "code",
+  "```",
+  "",
+  "---",
+  "",
+  "- a",
+  "",
+  "1. b",
+  "",
+  "- [ ] c",
+  "",
+  "| x |",
+  "| --- |",
+  "| 1 |",
+  "",
+  "![pic](a.png)",
+].join("\n");
+
+describe("blockLabel", () => {
+  it("labels every top-level block a note can hold", () => {
+    const editor = makeTestEditor(EVERY_BLOCK);
+    const labels = movableBlocks(editor.state.doc)
+      .filter((b) => b.depth === 0)
+      .map((b) => blockLabel(b.node));
+    expect(labels).toEqual([
+      "H1",
+      "Text",
+      "Quote",
+      "Code",
+      "Divider",
+      "List",
+      "List",
+      "To-do",
+      "Table",
+      "Image",
+    ]);
+    editor.destroy();
+  });
+
+  it("has a friendly label for every block node type in the schema", () => {
+    const editor = makeTestEditor();
+    const blockTypes = Object.values(editor.schema.nodes).filter(
+      (t) => t.isBlock && t.name !== "doc",
+    );
+    for (const type of blockTypes) {
+      const node = type.createAndFill();
+      expect(node, type.name).not.toBeNull();
+      expect(blockLabel(node!), type.name).not.toBe(type.name);
+    }
+    editor.destroy();
   });
 });
 

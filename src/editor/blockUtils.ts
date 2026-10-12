@@ -27,6 +27,11 @@ export function blockLabel(node: PMNode): string {
     case "heading":
       return `H${node.attrs.level}`;
     case "paragraph":
+      // An image sits inline in its paragraph, so the image's own label can
+      // only ever show through the paragraph that wraps it.
+      if (node.childCount === 1 && node.firstChild?.type.name === "image") {
+        return "Image";
+      }
       return "Text";
     case "bulletList":
     case "orderedList":
@@ -44,6 +49,11 @@ export function blockLabel(node: PMNode): string {
       return "Divider";
     case "table":
       return "Table";
+    case "tableRow":
+      return "Row";
+    case "tableCell":
+    case "tableHeader":
+      return "Cell";
     case "image":
       return "Image";
     default:
