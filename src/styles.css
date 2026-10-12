@@ -352,14 +352,18 @@ body {
    class counts element children only and ignores text, so it matches an image
    in the middle of a sentence rather than one alone in its paragraph.
 
-   Relative paths don't resolve in the webview yet, so these normally fall back
-   to the browser's broken-image glyph plus their alt text. Styling a failed
-   load needs an `error` listener, which lands with the asset-protocol work. */
+   A failed load gets .image-failed from LocalImages, which swaps the src for
+   an inline SVG placeholder showing the path — styling can't do that, since a
+   WebKit <img> won't render pseudo-element content. */
 .tiptap img {
   display: inline;
   max-width: 100%;
   height: auto;
   vertical-align: bottom;
+}
+
+.tiptap img.image-failed {
+  display: inline-block;
 }
 
 .tiptap ul[data-type="taskList"] {

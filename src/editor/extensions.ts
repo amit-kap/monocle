@@ -27,9 +27,9 @@ export const appExtensions = [
     codeBlock: false,
   }),
   // Without this, `![alt](img.png)` is dropped from the document on load and
-  // the image is gone from the file on the next save. Relative paths don't
-  // resolve to anything in the webview yet, so these render as placeholders —
-  // but the markdown survives, which is the point for now.
+  // the image is gone from the file on the next save. LocalImages resolves
+  // relative paths through the asset protocol and swaps failures for a
+  // placeholder that shows the path.
   Image.configure({ inline: true, allowBase64: true }),
   // Without these, a markdown table is parsed as loose text and rewritten as
   // the paragraph "ab" on the next save, destroying the table.

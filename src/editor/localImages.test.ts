@@ -115,6 +115,74 @@ describe("local image sources", () => {
     editor.destroy();
   });
 
+  it("swaps a failed load for a placeholder carrying the path", () => {
+    const editor = makeTestEditor("![x](missing.png)\n");
+    applyImageSources(editor.view.dom as HTMLElement);
+
+    const [img] = images(editor);
+    img.dispatchEvent(new Event("error"));
+
+    expect(img.classList.contains("image-failed")).toBe(true);
+    const src = decodeURIComponent(img.getAttribute("src")!);
+    expect(src).toContain("data:image/svg+xml");
+    expect(src).toContain("missing.png");
+    // The author's path survives in data-src, so a later pass can re-resolve.
+    expect(img.getAttribute("data-src")).toBe("missing.png");
+    editor.destroy();
+  });
+
+  it("marks remote failures too", () => {
+    const editor = makeTestEditor("![x](https://example.com/gone.png)\n");
+    applyImageSources(editor.view.dom as HTMLElement);
+
+    const [img] = images(editor);
+    img.dispatchEvent(new Event("error"));
+
+    expect(img.classList.contains("image-failed")).toBe(true);
+    expect(decodeURIComponent(img.getAttribute("src")!)).toContain(
+      "https://example.com/gone.png",
+    );
+    editor.destroy();
+  });
+
+  it("leaves the note's markdown untouched when an image fails", () => {
+    const editor = makeTestEditor("![x](missing.png)\n");
+    applyImageSources(editor.view.dom as HTMLElement);
+    images(editor)[0].dispatchEvent(new Event("error"));
+
+    expect(toMarkdown(editor)).toBe(onDisk("![x](missing.png)"));
+    editor.destroy();
+  });
+
+  it("clears the failure mark when a pass resolves the source again", () => {
+    const editor = makeTestEditor("![x](diagram.png)\n");
+    const dom = editor.view.dom as HTMLElement;
+    applyImageSources(dom);
+
+    const img = images(editor)[0];
+    img.dispatchEvent(new Event("error"));
+    expect(img.classList.contains("image-failed")).toBe(true);
+
+    applyImageSources(dom);
+    expect(img.classList.contains("image-failed")).toBe(false);
+    expect(img.getAttribute("src")).toContain("asset://localhost");
+    editor.destroy();
+  });
+
+  it("does not mistake the placeholder for the author's source", () => {
+    const editor = makeTestEditor("![x](missing.png)\n");
+    const dom = editor.view.dom as HTMLElement;
+    applyImageSources(dom);
+
+    const img = images(editor)[0];
+    img.dispatchEvent(new Event("error"));
+    img.dispatchEvent(new Event("error"));
+    applyImageSources(dom);
+
+    expect(img.getAttribute("data-src")).toBe("missing.png");
+    editor.destroy();
+  });
+
   it("leaves relative paths alone when no note is open", () => {
     setImageBaseDir(null);
     const editor = makeTestEditor("![x](diagram.png)\n");
