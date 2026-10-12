@@ -13,10 +13,18 @@ vi.mock("../lib/fs", async (importOriginal) => {
 });
 
 const { useStore } = await import("./useStore");
+const fs = await import("../lib/fs");
+const readTree = vi.mocked(fs.readTree);
 
 describe("useStore", () => {
   beforeEach(() => {
-    useStore.setState({ folder: "/notes", status: "idle", activePath: null });
+    readTree.mockClear();
+    useStore.setState({
+      folder: "/notes",
+      status: "idle",
+      activePath: null,
+      notes: [],
+    });
   });
 
   it("bumps loadId when a note is opened", async () => {
@@ -36,5 +44,29 @@ describe("useStore", () => {
     expect(state.activePath).toBe("/notes/Renamed.md");
     expect(state.loadId).toBe(loadId);
     expect(state.status).toBe("dirty");
+  });
+
+  it("rescans when 'Open With' names a file the list doesn't know", async () => {
+    readTree.mockResolvedValueOnce([
+      { name: "New.md", path: "/notes/New.md", kind: "file" },
+    ]);
+
+    await useStore.getState().openExternalNote("/notes/New.md");
+
+    expect(useStore.getState().notes).toEqual([
+      { name: "New.md", path: "/notes/New.md" },
+    ]);
+    expect(useStore.getState().activePath).toBe("/notes/New.md");
+  });
+
+  it("opens a known file without rescanning", async () => {
+    useStore.setState({
+      notes: [{ name: "A.md", path: "/notes/A.md" }],
+    });
+
+    await useStore.getState().openExternalNote("/notes/A.md");
+
+    expect(readTree).not.toHaveBeenCalled();
+    expect(useStore.getState().activePath).toBe("/notes/A.md");
   });
 });

@@ -144,6 +144,10 @@ export const useStore = create<State>((set, get) => ({
         status: "idle",
       });
       await get().refresh();
+    } else if (!get().notes.some((note) => note.path === path)) {
+      // A file the last scan didn't see opens fine by path, but rescan first
+      // so it shows up in the sidebar too.
+      await get().refresh();
     }
     await get().openNote(path);
   },
