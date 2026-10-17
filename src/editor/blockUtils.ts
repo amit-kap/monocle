@@ -61,6 +61,23 @@ export function blockLabel(node: PMNode): string {
   }
 }
 
+export type TurnIntoKind = "paragraph" | 1 | 2 | 3;
+
+export type TurnIntoOption = {
+  kind: TurnIntoKind;
+  label: string;
+  /** The `blockLabel()` of a block this option produces, to mark the current one. */
+  matches: string;
+};
+
+/** The block types the handle's menu can convert a block into. */
+export const TURN_INTO: TurnIntoOption[] = [
+  { kind: "paragraph", label: "Text", matches: "Text" },
+  { kind: 1, label: "Heading 1", matches: "H1" },
+  { kind: 2, label: "Heading 2", matches: "H2" },
+  { kind: 3, label: "Heading 3", matches: "H3" },
+];
+
 function isListItem(node: PMNode): boolean {
   return node.type.name === "listItem" || node.type.name === "taskItem";
 }

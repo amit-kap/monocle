@@ -7,6 +7,7 @@ import {
   movableBlocks,
   moveBlockTo,
   moveSibling,
+  TURN_INTO,
 } from "./blockUtils";
 
 // Layout-dependent helpers (blockAt, blockAtY, dropTargetForY) read
@@ -145,6 +146,20 @@ describe("blockLabel", () => {
       const node = type.createAndFill();
       expect(node, type.name).not.toBeNull();
       expect(blockLabel(node!), type.name).not.toBe(type.name);
+    }
+    editor.destroy();
+  });
+
+  it("marks the block each handle-menu option produces", () => {
+    const editor = makeTestEditor();
+    for (const option of TURN_INTO) {
+      const node =
+        option.kind === "paragraph"
+          ? editor.schema.nodes.paragraph.createAndFill()!
+          : editor.schema.nodes.heading.createAndFill({ level: option.kind })!;
+      // The menu's check is driven by this label matching the hovered block's,
+      // so the two must agree with what turnInto() actually applies.
+      expect(blockLabel(node), option.label).toBe(option.matches);
     }
     editor.destroy();
   });

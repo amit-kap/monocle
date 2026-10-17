@@ -14,7 +14,9 @@ import {
   duplicateBlock,
   moveBlockTo,
   moveSibling,
+  TURN_INTO,
   type BlockHover,
+  type TurnIntoKind,
 } from "../editor/blockUtils";
 
 type MenuState = {
@@ -119,7 +121,7 @@ export function BlockHandles({
     };
   }, [editor, editorDom, menu]);
 
-  function turnInto(from: number, kind: "paragraph" | 1 | 2 | 3) {
+  function turnInto(from: number, kind: TurnIntoKind) {
     if (!editor) return;
     const chain = editor.chain().focus().setNodeSelection(from);
     if (kind === "paragraph") chain.setParagraph().run();
@@ -207,23 +209,15 @@ export function BlockHandles({
         (() => {
           const anchor = menu ?? hover!;
           return (
-            <>
-              <span
-                className="block-type"
-                style={{ top: handleTop, left: anchor.left - 26 }}
-              >
-                {anchor.label}
-              </span>
-              <button
-                type="button"
-                title="Drag to move, click for menu"
-                onMouseDown={(event) => startDrag(event, anchor)}
-                className={`block-handle${menu ? " is-active" : ""}`}
-                style={{ top: handleTop, left: anchor.left - 26 }}
-              >
-                <HandleIcon />
-              </button>
-            </>
+            <button
+              type="button"
+              title="Drag to move, click for menu"
+              onMouseDown={(event) => startDrag(event, anchor)}
+              className={`block-handle${menu ? " is-active" : ""}`}
+              style={{ top: handleTop, left: anchor.left - 26 }}
+            >
+              <HandleIcon />
+            </button>
           );
         })()}
 
@@ -232,35 +226,38 @@ export function BlockHandles({
           className="block-menu"
           style={{ top: menu.top + 26, left: menu.left - 26 }}
         >
-          <div className="block-menu-label">Turn into</div>
-          <button
-            type="button"
-            className="block-menu-item"
-            onClick={() => turnInto(menu.from, "paragraph")}
-          >
-            Text
-          </button>
-          <button
-            type="button"
-            className="block-menu-item"
-            onClick={() => turnInto(menu.from, 1)}
-          >
-            Heading 1
-          </button>
-          <button
-            type="button"
-            className="block-menu-item"
-            onClick={() => turnInto(menu.from, 2)}
-          >
-            Heading 2
-          </button>
-          <button
-            type="button"
-            className="block-menu-item"
-            onClick={() => turnInto(menu.from, 3)}
-          >
-            Heading 3
-          </button>
+          <div className="block-menu-label">{menu.label}</div>
+          {TURN_INTO.map((option) => {
+            const current = option.matches === menu.label;
+            return (
+              <button
+                key={option.label}
+                type="button"
+                className="block-menu-item"
+                onClick={() => turnInto(menu.from, option.kind)}
+              >
+                {option.label}
+                {current && (
+                  <svg
+                    className="block-menu-check"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 16 16"
+                    aria-hidden
+                  >
+                    <path
+                      d="M3.5 8.5l3 3 6.5-7.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
           <div className="block-menu-sep" />
           <button
             type="button"

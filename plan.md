@@ -47,8 +47,8 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   width persisted, hairline at rest like the content column's edges) and has a
   refresh button that re-scans the tree.
 - Block hover handle stays put when the pointer moves onto it (window-level
-  mousemove, ignores handle/menu) so blocks can be dragged; hovering shows the
-  block type (Text, H1, List, …) beside the handle, inside the column's gutter.
+  mousemove, ignores handle/menu) so blocks can be dragged; the block's type
+  (Text, H1, List, …) now heads its menu instead of sitting beside the handle.
 - Note titles are editable inline in the editor and rename the file (extension
   is preserved); sidebar shows full file names including `.md`.
 - **Markdown round-trip fixtures written** (`src/editor/markdownRoundTrip.test.ts`):
@@ -121,11 +121,11 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
 - **⌘P walks its results without leaving the box**: ↑/↓ move a highlight that is
   scrolled into view, Enter opens the highlighted note and hands the caret to the
   editor, and Esc or a click closes the search.
-- **The block type label stays inside the column.** The gutter is 80px (was 64)
-  and the label is capped at what that leaves, so "Divider" no longer runs out
-  past the hairline; anything longer ellipsizes. The three numbers that hold this
-  together (the article's padding, the handle's 26px offset, the label's cap) are
-  noted wherever each is set.
+- **The block type moved into the handle's menu.** The label used to sit beside
+  the handle, which forced a wide gutter and an ellipsis cap to keep it off the
+  column's hairline. The menu now names the block in its header (the same label),
+  with the matching option checked, so the gutter is back to 40px — enough for the
+  24px handle, which starts 26px left of the text — and the label cannot collide.
 ### Why raw HTML is escaped
 
 `Markdown` runs with `html: false`, so `<div>x</div>` in a note is saved as

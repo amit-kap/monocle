@@ -496,30 +496,6 @@ body {
   cursor: grabbing;
 }
 
-.block-type {
-  position: fixed;
-  z-index: 39;
-  display: block;
-  height: 24px;
-  line-height: 24px;
-  /* The label is right-aligned to the handle, which starts 26px left of the
-     text; the column's hairline is another 80px out (the article's padding).
-     Capping the width keeps the label inside that gutter — anything longer
-     ellipsizes instead of sitting on the line. Those numbers live in
-     EditorPane (px-20), BlockHandles (the 26px offset) and here. */
-  max-width: 48px;
-  padding-right: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transform: translateX(-100%);
-  color: var(--text-faint);
-  font-family: var(--font-sans);
-  font-size: 11px;
-  white-space: nowrap;
-  pointer-events: none;
-  user-select: none;
-}
-
 .block-menu {
   position: fixed;
   z-index: 50;
@@ -558,6 +534,11 @@ body {
 
 .block-menu-item:hover {
   background: var(--bg-active);
+}
+
+.block-menu-check {
+  margin-left: auto;
+  color: var(--accent);
 }
 
 .block-menu-item.is-danger {

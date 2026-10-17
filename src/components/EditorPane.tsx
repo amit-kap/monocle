@@ -173,9 +173,9 @@ export function EditorPane() {
           ))}
           <div className="editor-scroll flex-1 overflow-y-auto">
             <div
-              /* 80px of gutter, not 64: the block handle and the type label
-                 beside it need the room (see .block-type in styles.css). */
-              className="mx-auto w-full px-20 py-20"
+              /* 40px of gutter: enough for the 24px handle, which starts 26px
+                 left of the text. The column's hairline is 40px out. */
+              className="mx-auto w-full px-10 py-20"
               style={{ maxWidth: contentWidth }}
             >
               <textarea
