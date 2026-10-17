@@ -2,11 +2,16 @@ import { useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { confirm } from "@tauri-apps/plugin-dialog";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPane } from "./components/EditorPane";
 import { ThemeSelector } from "./components/ThemeSelector";
+import { UnsavedChangesDialog } from "./components/UnsavedChangesDialog";
+import { bufferMarkdown } from "./lib/editorBuffer";
 import { useStore } from "./store/useStore";
+import {
+  askUnsavedChanges,
+  useUnsavedPrompt,
+} from "./store/useUnsavedPrompt";
 
 function App() {
   const init = useStore((s) => s.init);
@@ -42,6 +47,8 @@ function App() {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
+        // The unsaved-changes prompt owns the keyboard while it is open.
+        if (useUnsavedPrompt.getState().pending) return;
         event.preventDefault();
         void createNote();
       }
@@ -58,14 +65,29 @@ function App() {
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
-    void getCurrentWindow()
+    let answered = false;
+    const appWindow = getCurrentWindow();
+    void appWindow
       .onCloseRequested(async (event) => {
-        if (useStore.getState().status !== "dirty") return;
-        const discard = await confirm(
-          "You have unsaved changes. Quit without saving?",
-          { title: "Unsaved changes", kind: "warning" },
+        // Second pass, after the user picked save or discard: let it close.
+        if (answered) return;
+        const { status, activePath, save } = useStore.getState();
+        if (status !== "dirty") return;
+        // Hold the window open before awaiting the prompt; the callback returns
+        // to Rust long before the user answers.
+        event.preventDefault();
+        const choice = await askUnsavedChanges(
+          activePath?.split(/[\\/]/).pop() ?? null,
         );
-        if (!discard) event.preventDefault();
+        if (choice === "cancel") return;
+        if (choice === "save") {
+          const markdown = bufferMarkdown();
+          if (markdown === null) return;
+          await save(markdown);
+          if (useStore.getState().status === "error") return;
+        }
+        answered = true;
+        await appWindow.destroy();
       })
       .then((fn) => {
         unlisten = fn;
@@ -88,6 +110,7 @@ function App() {
       </div>
       <Sidebar />
       <EditorPane />
+      <UnsavedChangesDialog />
       {error && (
         <button
           type="button"

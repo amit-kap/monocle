@@ -14,6 +14,7 @@ import {
 } from "../lib/layout";
 import { appExtensions } from "../editor/extensions";
 import { setImageBaseDir } from "../editor/extensions/LocalImages";
+import { setBufferSerializer } from "../lib/editorBuffer";
 import { noteDir } from "../lib/imagePath";
 import { loadDocument } from "../editor/loadDocument";
 import { BlockHandles } from "./BlockHandles";
@@ -123,6 +124,13 @@ export function EditorPane() {
     // Relative image paths in a note are relative to the note's own folder.
     setImageBaseDir(noteDir(activePath));
   }, [activePath]);
+
+  useEffect(() => {
+    // Let the unsaved-changes prompt save this buffer on the user's behalf.
+    if (!editor) return;
+    setBufferSerializer(() => toMarkdown(editor));
+    return () => setBufferSerializer(null);
+  }, [editor]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {

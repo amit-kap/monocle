@@ -1,8 +1,9 @@
 import { create } from "zustand";
-import { confirm } from "@tauri-apps/plugin-dialog";
 import { dirname } from "@tauri-apps/api/path";
 import type { NoteFile, SaveStatus, TreeNode } from "../types";
 import * as fs from "../lib/fs";
+import { bufferMarkdown } from "../lib/editorBuffer";
+import { askUnsavedChanges } from "./useUnsavedPrompt";
 
 const LAST_FOLDER_KEY = "monocle:lastFolder";
 
@@ -34,11 +35,26 @@ type State = {
   setError: (message: string | null) => void;
 };
 
+function noteLabel(path: string | null): string | null {
+  if (!path) return null;
+  return path.split(/[\\/]/).pop() || null;
+}
+
+/**
+ * Settle unsaved edits before replacing or closing the open note. Returns
+ * whether the caller may proceed. Choosing "save" saves the editor's buffer, and
+ * a failed save holds the note open rather than dropping the edits.
+ */
 async function confirmDiscard(): Promise<boolean> {
-  return confirm("You have unsaved changes. Discard them?", {
-    title: "Unsaved changes",
-    kind: "warning",
-  });
+  const state = useStore.getState();
+  const choice = await askUnsavedChanges(noteLabel(state.activePath));
+  if (choice === "cancel") return false;
+  if (choice === "discard") return true;
+  const markdown = bufferMarkdown();
+  // No editor mounted means nothing can write the buffer: keep the note.
+  if (markdown === null) return false;
+  await state.save(markdown);
+  return useStore.getState().status !== "error";
 }
 
 export const useStore = create<State>((set, get) => ({
