@@ -8,6 +8,7 @@ vi.mock("../lib/fs", async (importOriginal) => {
     readTree: vi.fn(async () => []),
     readNote: vi.fn(async () => "original"),
     writeNote: vi.fn(async () => {}),
+    createNoteFile: vi.fn(async () => "/notes/Untitled.md"),
     deleteNoteFile: vi.fn(async () => {}),
     renameNoteFile: vi.fn(async () => "/notes/Renamed.md"),
   };
@@ -39,6 +40,7 @@ function resetStore(): void {
     activeContent: "",
     status: "idle",
     error: null,
+    editorFocusRequest: 0,
   });
 }
 
@@ -86,6 +88,22 @@ describe("useStore", () => {
 
     expect(readTree).not.toHaveBeenCalled();
     expect(useStore.getState().activePath).toBe("/notes/A.md");
+  });
+
+  it("leaves the caret alone when a note is opened from the list", async () => {
+    await useStore.getState().openNote("/notes/A.md");
+    expect(useStore.getState().editorFocusRequest).toBe(0);
+  });
+
+  it("asks for the caret when a file is opened from outside the app", async () => {
+    await useStore.getState().openExternalNote("/notes/A.md");
+    expect(useStore.getState().editorFocusRequest).toBe(1);
+  });
+
+  it("asks for the caret for a brand-new note", async () => {
+    await useStore.getState().createNote();
+    expect(useStore.getState().activePath).toBe("/notes/Untitled.md");
+    expect(useStore.getState().editorFocusRequest).toBe(1);
   });
 });
 

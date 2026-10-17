@@ -18,6 +18,7 @@ import { setBufferSerializer } from "../lib/editorBuffer";
 import { noteDir } from "../lib/imagePath";
 import { loadDocument } from "../editor/loadDocument";
 import { BlockHandles } from "./BlockHandles";
+import { ResizeHandle } from "./ResizeHandle";
 import type { SaveStatus } from "../types";
 
 const STATUS_LABEL: Record<SaveStatus, string> = {
@@ -108,9 +109,10 @@ export function EditorPane() {
     const { activePath, activeContent } = useStore.getState();
     if (!editor || !activePath) return;
     loadDocument(editor, activeContent);
-    // ProseMirror focuses with preventScroll, so this doesn't cause the old
-    // scroll jump; the scrollTop reset below still applies.
-    editor.commands.focus("start", { scrollIntoView: false });
+    // Deliberately no focus() here: keeping the caret out of the note means
+    // arrow keys keep working in whatever the user had focused — the sidebar
+    // tree, say. Opens that do want the caret (⌘N, ⌘P, a file from outside)
+    // ask for it through the store.
     const scroller = editorDom?.closest(".editor-scroll") as HTMLElement | null;
     if (!scroller) return;
     scroller.scrollTop = 0;
@@ -119,6 +121,14 @@ export function EditorPane() {
     });
     return () => cancelAnimationFrame(raf);
   }, [editor, loadId, editorDom]);
+
+  const editorFocusRequest = useStore((s) => s.editorFocusRequest);
+
+  useEffect(() => {
+    if (!editorFocusRequest) return;
+    // ProseMirror focuses with preventScroll, so this doesn't jump the view.
+    editor?.commands.focus("start", { scrollIntoView: false });
+  }, [editor, editorFocusRequest]);
 
   useEffect(() => {
     // Relative image paths in a note are relative to the note's own folder.
@@ -154,22 +164,18 @@ export function EditorPane() {
       {activePath ? (
         <>
           {(["left", "right"] as const).map((side) => (
-            <div
+            <ResizeHandle
               key={side}
-              onMouseDown={(event) => startColumnResize(side, event)}
-              onDoubleClick={() => setContentWidth(CONTENT.default)}
-              title="Drag to resize, double-click to reset"
-              className="group absolute top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize"
               style={{ left: columnEdgeLeft(contentWidth, side) }}
-            >
-              {/* A persistent hairline, so the column's edges stay discoverable;
-                  the 4px parent is just the grab area. */}
-              <div className="pointer-events-none mx-auto h-full w-px bg-[var(--border)] group-hover:bg-[var(--accent)]" />
-            </div>
+              onResizeStart={(event) => startColumnResize(side, event)}
+              onReset={() => setContentWidth(CONTENT.default)}
+            />
           ))}
           <div className="editor-scroll flex-1 overflow-y-auto">
             <div
-              className="mx-auto w-full px-16 py-20"
+              /* 80px of gutter, not 64: the block handle and the type label
+                 beside it need the room (see .block-type in styles.css). */
+              className="mx-auto w-full px-20 py-20"
               style={{ maxWidth: contentWidth }}
             >
               <textarea

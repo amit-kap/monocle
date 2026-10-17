@@ -1,12 +1,39 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useStore } from "../store/useStore";
 import { filterTree } from "../lib/fs";
 import { SIDEBAR, clampWidth, readWidth, storeWidth } from "../lib/layout";
+import { scrollDelta } from "../lib/scroll";
+import { stepRow, visibleRows, type TreeRow } from "../lib/treeNav";
 import { FileTree } from "./FileTree";
+import { ResizeHandle } from "./ResizeHandle";
 
 function baseName(path: string): string {
   return path.split("/").pop() ?? path;
+}
+
+/** The tree renders its rows in visual order, so the DOM is the row list. */
+function rowElement(nav: HTMLElement | null, path: string): HTMLElement | null {
+  const rows = Array.from(
+    nav?.querySelectorAll<HTMLElement>("[data-tree-row]") ?? [],
+  );
+  return rows.find((row) => row.dataset.treeRow === path) ?? null;
+}
+
+/** Bring a row into view, moving the sidebar's scroller and nothing else. */
+function revealRow(nav: HTMLElement | null, path: string): void {
+  const row = rowElement(nav, path);
+  if (!nav || !row) return;
+  nav.scrollTop += scrollDelta(
+    nav.getBoundingClientRect(),
+    row.getBoundingClientRect(),
+  );
 }
 
 function PlusIcon() {
@@ -92,13 +119,20 @@ export function Sidebar() {
   const deleteNote = useStore((s) => s.deleteNote);
   const toggleDir = useStore((s) => s.toggleDir);
   const refresh = useStore((s) => s.refresh);
+  const requestEditorFocus = useStore((s) => s.requestEditorFocus);
 
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [folderMenu, setFolderMenu] = useState(false);
   const [width, setWidth] = useState(() => readWidth(SIDEBAR, localStorage));
+  // The row the keyboard is on, and the row the ⌘P search is on. They are
+  // separate: while the search box has focus the tree cannot take focus, so
+  // the search carries its own highlight.
+  const [focusedPath, setFocusedPath] = useState<string | null>(null);
+  const [highlight, setHighlight] = useState<string | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     storeWidth(SIDEBAR, localStorage, width);
@@ -151,10 +185,104 @@ export function Sidebar() {
 
   const filtered = useMemo(() => filterTree(tree, query), [tree, query]);
   const searching = query.trim().length > 0;
+  const rows = useMemo(
+    () => visibleRows(filtered, { expanded, forceExpand: searching }),
+    [filtered, expanded, searching],
+  );
+  const files = useMemo(() => rows.filter((row) => row.kind === "file"), [rows]);
+  // A value to depend on: the results, as one string.
+  const fileKey = files.map((row) => row.path).join("\n");
+
+  useEffect(() => {
+    // A new set of results starts on its first note.
+    setHighlight(searching ? (files[0]?.path ?? null) : null);
+  }, [searching, fileKey]);
+
+  useEffect(() => {
+    if (highlight) revealRow(navRef.current, highlight);
+  }, [highlight]);
+
+  /** Open a note from the tree, keeping the focus where the keyboard is. */
+  async function openFromTree(path: string) {
+    const before = useStore.getState().activePath;
+    if (path === before) return;
+    await openNote(path);
+    // A dismissed unsaved-changes prompt leaves the old note open: send the
+    // focus back to it, so the tree and the editor don't disagree.
+    if (useStore.getState().activePath !== path) {
+      setFocusedPath(before);
+      rowElement(navRef.current, before ?? "")?.focus({ preventScroll: true });
+    }
+  }
+
+  function moveTo(row: TreeRow, open: boolean) {
+    setFocusedPath(row.path);
+    rowElement(navRef.current, row.path)?.focus({ preventScroll: true });
+    revealRow(navRef.current, row.path);
+    if (open) void openFromTree(row.path);
+  }
+
+  function onTreeKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
+    const target = event.target as HTMLElement;
+    // A row can hold a control of its own — the rename field — and its keys
+    // are its own.
+    if (target.closest("input, textarea")) return;
+    // The key came from the focused row, so that is the row to move from. (The
+    // focus state cannot be relied on for this: a window that isn't frontmost
+    // still moves the caret but fires no focus events.)
+    const from = target.closest<HTMLElement>("[data-tree-row]")?.dataset.treeRow
+      ?? focusedPath;
+    const focused = rows.find((row) => row.path === from);
+
+    if (event.key === "Enter" || event.key === " ") {
+      if (!focused) return;
+      event.preventDefault();
+      if (focused.kind === "dir") toggleDir(focused.path);
+      else void openFromTree(focused.path);
+      return;
+    }
+
+    const index = rows.findIndex((row) => row.path === from);
+    const step = stepRow(rows, index, event.key, { canToggle: !searching });
+    if (!step) return;
+    const row = rows[step.index];
+    if (!row) return;
+    event.preventDefault();
+    if (step.toggle) {
+      toggleDir(row.path);
+      return;
+    }
+    moveTo(row, row.kind === "file");
+  }
+
+  function onSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape") {
+      setSearchOpen(false);
+      return;
+    }
+    if (event.key === "Enter") {
+      const target = highlight ?? files[0]?.path;
+      if (!target) return;
+      event.preventDefault();
+      setSearchOpen(false);
+      void openNote(target).then(() => {
+        // Only take the caret if the note actually opened.
+        if (useStore.getState().activePath === target) requestEditorFocus();
+      });
+      return;
+    }
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    const index = files.findIndex((row) => row.path === highlight);
+    const step = stepRow(files, index, event.key, { canToggle: false });
+    if (!step) return;
+    event.preventDefault();
+    const row = files[step.index];
+    if (row) setHighlight(row.path);
+  }
 
   return (
     <aside
-      className="relative flex h-full shrink-0 flex-col border-r border-[var(--border)] bg-[var(--bg-sidebar)]"
+      className="relative flex h-full shrink-0 flex-col bg-[var(--bg-sidebar)]"
       style={{ width }}
     >
       <div
@@ -236,16 +364,18 @@ export function Sidebar() {
             ref={searchRef}
             value={query}
             onChange={(event) => setQuery(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") setSearchOpen(false);
-            }}
+            onKeyDown={onSearchKeyDown}
             placeholder="Search notes"
             className="w-full rounded-[var(--radius)] border border-transparent bg-[var(--bg-active)] px-2 py-1 text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-[var(--accent)]"
           />
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto px-2 pb-3">
+      <nav
+        ref={navRef}
+        onKeyDown={onTreeKeyDown}
+        className="flex-1 overflow-y-auto px-2 pb-3"
+      >
         {folder && error && (
           <p className="mx-1 mb-2 rounded-[var(--radius)] bg-[var(--bg-active)] px-2 py-1.5 text-[12px] leading-snug text-[#e03e3e] [overflow-wrap:anywhere]">
             {error}
@@ -278,18 +408,25 @@ export function Sidebar() {
           selectedDir={selectedDir}
           expanded={expanded}
           forceExpand={searching}
+          tabbablePath={focusedPath ?? activePath}
+          highlightPath={highlight}
           onToggle={toggleDir}
-          onOpen={(path) => void openNote(path)}
+          onOpen={(path) => {
+            // Picking a note answers the search.
+            setSearchOpen(false);
+            void openNote(path);
+          }}
           onAddNote={(path) => void createNote(path)}
           onRename={(path, name) => void renameNote(path, name)}
           onDelete={(path) => void deleteNote(path)}
+          onFocusRow={setFocusedPath}
         />
       </nav>
 
-      <div
-        onMouseDown={(event) => startResize(event.clientX)}
-        className="absolute right-0 top-0 z-20 h-full w-1 translate-x-1/2 cursor-col-resize hover:bg-[var(--accent)]"
-        aria-hidden
+      <ResizeHandle
+        style={{ left: "100%" }}
+        onResizeStart={(event) => startResize(event.clientX)}
+        onReset={() => setWidth(SIDEBAR.default)}
       />
     </aside>
   );

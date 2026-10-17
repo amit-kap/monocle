@@ -7,19 +7,7 @@ the reasoning behind the decisions.
 
 ## Open issues
 
-- [ ] **Sidebar resize handle is invisible until hover** — the content column
-  now has a persistent hairline on both edges; give the sidebar's right-edge
-  handle the same treatment (hairline at rest, accent on hover). (sidebar)
-- [ ] **Arrow keys ignore focus** — the editor takes focus every time a note
-  opens, and ↑/↓/←/→ act only there, so they always drive the main view even
-  when the pointer (or a click) is in the sidebar. Arrows should drive whatever
-  has focus: move the tree selection, ←/→ collapse and expand folders, and walk
-  the ⌘P search results without leaving the box. (keyboard / sidebar)
-- [ ] **Block gutter collides with the column hairline** — on hover the handle
-  and its block-type label sit 26px left of the text, and the label is
-  right-aligned, so a longer name ("Heading 1", "Bullet list") runs out past the
-  content column's left hairline and sits on top of it. Keep the gutter inside
-  the hairline, or clip the label at it. (editor pane)
+Nothing open.
 
 ## Feature requests
 

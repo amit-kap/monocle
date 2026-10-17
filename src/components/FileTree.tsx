@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type MouseEvent as ReactMouseEvent } from "react";
 import type { TreeNode } from "../types";
 
 type Handlers = {
@@ -6,11 +6,32 @@ type Handlers = {
   selectedDir: string | null;
   expanded: Set<string>;
   forceExpand: boolean;
+  /** The row Tab reaches, so the tree is keyboard-reachable at all. */
+  tabbablePath: string | null;
+  /** The row the ⌘P search is on, highlighted while the search box has focus. */
+  highlightPath: string | null;
   onToggle: (path: string) => void;
   onOpen: (path: string) => void;
   onAddNote: (path: string) => void;
   onRename: (path: string, name: string) => void;
   onDelete: (path: string) => void;
+  onFocusRow: (path: string) => void;
+};
+
+/**
+ * Rows are containers, so they opt into focus with a tabindex; a click on one
+ * of their own controls must not pull focus away from that control.
+ */
+function focusUnlessControl(event: ReactMouseEvent<HTMLDivElement>) {
+  const target = event.target as HTMLElement;
+  if (target.closest("input, button")) return;
+  event.currentTarget.focus();
+}
+
+type RowProps = {
+  focused: boolean;
+  highlighted: boolean;
+  onFocusRow: (path: string) => void;
 };
 
 function ChevronIcon({ className }: { className?: string }) {
@@ -129,6 +150,9 @@ function FolderRow({
   node,
   depth,
   open,
+  focused,
+  highlighted,
+  onFocusRow,
   onToggle,
   onAddNote,
 }: {
@@ -137,11 +161,18 @@ function FolderRow({
   open: boolean;
   onToggle: (path: string) => void;
   onAddNote: (path: string) => void;
-}) {
+} & RowProps) {
   return (
     <div
+      data-tree-row={node.path}
+      data-kind={node.kind}
+      tabIndex={focused ? 0 : -1}
+      onMouseDown={focusUnlessControl}
+      onFocus={() => onFocusRow(node.path)}
       onClick={() => onToggle(node.path)}
-      className="group/folder flex cursor-default items-center gap-2 rounded-[var(--radius)] py-1.5 pr-2 text-[13px] hover:bg-[var(--bg-hover)]"
+      className={`group/folder flex cursor-default items-center gap-2 rounded-[var(--radius)] py-1.5 pr-2 text-[13px] hover:bg-[var(--bg-hover)] ${
+        highlighted ? "bg-[var(--bg-hover)]" : ""
+      }`}
       style={{ paddingLeft: 8 + depth * 12 }}
     >
       <span className="flex shrink-0 items-center gap-1.5 text-[var(--text-muted)] group-hover/folder:text-[var(--text)]">
@@ -172,6 +203,9 @@ function FileRow({
   node,
   depth,
   active,
+  focused,
+  highlighted,
+  onFocusRow,
   onOpen,
   onRename,
   onDelete,
@@ -182,7 +216,7 @@ function FileRow({
   onOpen: (path: string) => void;
   onRename: (path: string, name: string) => void;
   onDelete: (path: string) => void;
-}) {
+} & RowProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(node.name);
 
@@ -196,15 +230,22 @@ function FileRow({
     await onDelete(node.path);
   }
 
+  const tone = active
+    ? "bg-[var(--bg-active)] text-[var(--text)]"
+    : `text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]${
+        highlighted ? " bg-[var(--bg-hover)] text-[var(--text)]" : ""
+      }`;
+
   return (
     <div
+      data-tree-row={node.path}
+      data-kind={node.kind}
+      tabIndex={focused ? 0 : -1}
+      onMouseDown={focusUnlessControl}
+      onFocus={() => onFocusRow(node.path)}
       onClick={() => !editing && onOpen(node.path)}
       data-active={active}
-      className={`group/file flex cursor-default items-center gap-2 rounded-[var(--radius)] py-1.5 pr-2 text-[13px] ${
-        active
-          ? "bg-[var(--bg-active)] text-[var(--text)]"
-          : "text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
-      }`}
+      className={`group/file flex cursor-default items-center gap-2 rounded-[var(--radius)] py-1.5 pr-2 text-[13px] ${tone}`}
       style={{ paddingLeft: 9 + depth * 12 }}
     >
       {editing ? (
@@ -274,6 +315,8 @@ export function FileTree({
   return (
     <div className="flex flex-col gap-0.5">
       {nodes.map((node) => {
+        const focused = node.path === handlers.tabbablePath;
+        const highlighted = node.path === handlers.highlightPath;
         if (node.kind === "dir") {
           const open = handlers.forceExpand || handlers.expanded.has(node.path);
           return (
@@ -282,6 +325,9 @@ export function FileTree({
                 node={node}
                 depth={depth}
                 open={open}
+                focused={focused}
+                highlighted={highlighted}
+                onFocusRow={handlers.onFocusRow}
                 onToggle={handlers.onToggle}
                 onAddNote={handlers.onAddNote}
               />
@@ -303,6 +349,9 @@ export function FileTree({
             node={node}
             depth={depth}
             active={node.path === handlers.activePath}
+            focused={focused}
+            highlighted={highlighted}
+            onFocusRow={handlers.onFocusRow}
             onOpen={handlers.onOpen}
             onRename={handlers.onRename}
             onDelete={handlers.onDelete}

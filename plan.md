@@ -44,10 +44,11 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   `Library`/`node_modules`/symlinks, tolerate unreadable subdirs, and show a
   "Scanning…" state. Home (1403 dirs) scans in ~460 ms.
 - Sidebar is now horizontally resizable by dragging its right edge (180–480 px,
-  width persisted) and has a refresh button that re-scans the tree.
+  width persisted, hairline at rest like the content column's edges) and has a
+  refresh button that re-scans the tree.
 - Block hover handle stays put when the pointer moves onto it (window-level
   mousemove, ignores handle/menu) so blocks can be dragged; hovering shows the
-  block type (Text, H1, List, …) beside the handle.
+  block type (Text, H1, List, …) beside the handle, inside the column's gutter.
 - Note titles are editable inline in the editor and rename the file (extension
   is preserved); sidebar shows full file names including `.md`.
 - **Markdown round-trip fixtures written** (`src/editor/markdownRoundTrip.test.ts`):
@@ -87,7 +88,7 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   come from CSS custom properties, so highlighting follows the light/dark themes
   instead of shipping two JS themes. Costs +230 kB raw / +67 kB gzipped.
 - **The content column is resizable** and persists, default 860px rather than a
-  fixed 720px; drag its right edge, double-click to reset. Bounds and persistence
+  fixed 720px; drag either edge, double-click to reset. Bounds and persistence
   live in `lib/layout.ts`, shared with the sidebar.
 - **Every nested block is draggable.** A block is a direct child of the document
   or a list item at any depth. Crossing a list boundary converts rather than
@@ -97,6 +98,34 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   is never mutated, so the note still saves the author's own paths. Confirmed by
   hand in 0.4.0: same-folder, subfolder, mid-sentence, absolute and remote
   sources all render, and saving leaves the markdown untouched.
+- **One resize handle, used by both panes** (`components/ResizeHandle.tsx`): 4px
+  of grab area straddling a persistent 1px hairline that turns accent on hover,
+  double-click to reset. The sidebar dropped its own `border-r`, so its edge is
+  one line (the handle's) like the content column's, and it gained the
+  double-click reset it was missing. The content column is dragged from **either**
+  edge.
+- **The sidebar tree is keyboard-navigable.** Rows take focus (a roving tab stop,
+  so Tab lands on the open note) and the row logic lives in `lib/treeNav.ts`:
+  ↑/↓ move and *open* the note they land on, so the tree and the editor never
+  disagree; ←/→ fold and unfold folders (← on a file walks out to its parent);
+  Enter/Space opens a note or folds a folder. Collapsing is disabled while
+  searching, where every folder is shown open. The rename field keeps its own
+  keys. A dismissed unsaved-changes prompt puts the focus back on the note that
+  stayed open.
+- **Opens no longer steal focus.** The editor focused itself on every load, so the
+  caret always ended up in the note and ↑/↓/←/→ could never drive the sidebar.
+  Now the caret moves only when an open means "start writing" — a new note (⌘N),
+  a picked search result, a file opened from outside the app — via
+  `requestEditorFocus`, so a click or an arrow in the tree leaves the focus
+  where the user put it.
+- **⌘P walks its results without leaving the box**: ↑/↓ move a highlight that is
+  scrolled into view, Enter opens the highlighted note and hands the caret to the
+  editor, and Esc or a click closes the search.
+- **The block type label stays inside the column.** The gutter is 80px (was 64)
+  and the label is capped at what that leaves, so "Divider" no longer runs out
+  past the hairline; anything longer ellipsizes. The three numbers that hold this
+  together (the article's padding, the handle's 26px offset, the label's cap) are
+  noted wherever each is set.
 ### Why raw HTML is escaped
 
 `Markdown` runs with `html: false`, so `<div>x</div>` in a note is saved as

@@ -21,6 +21,10 @@ type State = {
   status: SaveStatus;
   error: string | null;
   loading: boolean;
+  // Bumped to ask the editor to take focus, for opens that mean "start
+  // writing" (a new note, a file opened from outside, a picked search result).
+  // Read by the editor pane, so it needs no editor reference of its own.
+  editorFocusRequest: number;
   init: () => Promise<void>;
   chooseFolder: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -33,6 +37,7 @@ type State = {
   markDirty: () => void;
   save: (markdown: string) => Promise<void>;
   setError: (message: string | null) => void;
+  requestEditorFocus: () => void;
 };
 
 function noteLabel(path: string | null): string | null {
@@ -69,6 +74,7 @@ export const useStore = create<State>((set, get) => ({
   status: "idle",
   error: null,
   loading: false,
+  editorFocusRequest: 0,
 
   init: async () => {
     const folder = localStorage.getItem(LAST_FOLDER_KEY);
@@ -167,6 +173,8 @@ export const useStore = create<State>((set, get) => ({
       await get().refresh();
     }
     await get().openNote(path);
+    // Opened from outside the app: the user came here to write in it.
+    if (get().activePath === path) get().requestEditorFocus();
   },
 
   createNote: async (dir) => {
@@ -186,6 +194,8 @@ export const useStore = create<State>((set, get) => ({
         status: "idle",
         selectedDir: target,
         expanded,
+        // A brand-new note is an invitation to type, so the caret goes in it.
+        editorFocusRequest: get().editorFocusRequest + 1,
       });
     } catch (error) {
       set({ error: String(error) });
@@ -228,6 +238,9 @@ export const useStore = create<State>((set, get) => ({
   },
 
   markDirty: () => set({ status: "dirty" }),
+
+  requestEditorFocus: () =>
+    set((state) => ({ editorFocusRequest: state.editorFocusRequest + 1 })),
 
   save: async (markdown) => {
     const { activePath } = get();
