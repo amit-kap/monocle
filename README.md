@@ -44,7 +44,7 @@ Artifacts land in `src-tauri/target/release/bundle/`.
 - Local images resolve against the note's own folder and display through Tauri's
   asset protocol, without the note's markdown being rewritten
 - Explicit save with ⌘S, dirty indicator, and an unsaved-changes prompt on
-  switch/quit that can save the buffer, discard it, or keep editing
+  switch/quit that can save the buffer or discard it (✕ keeps editing)
 - Light, dark, or system theme via a selector in the custom title bar
 
 `npm test` runs 382 tests, including markdown round-trip fixtures that pin every

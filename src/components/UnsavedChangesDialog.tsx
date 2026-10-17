@@ -4,10 +4,30 @@ import {
   useUnsavedPrompt,
 } from "../store/useUnsavedPrompt";
 
+function XIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
 /**
  * Blocks note switches and quitting until the user decides what happens to
- * unsaved edits. Each button names its outcome, so there is no guessing which
- * one keeps the work — the old OK/Cancel alert made "OK" mean "lose it".
+ * unsaved edits. Both actions name their outcome — the native alert it replaced
+ * made "OK" mean "lose it" — and the ✕ (like Esc and the backdrop) means keep
+ * editing, so no button is spent saying "cancel".
  */
 export function UnsavedChangesDialog() {
   const pending = useUnsavedPrompt((s) => s.pending);
@@ -43,6 +63,15 @@ export function UnsavedChangesDialog() {
         className="modal-card"
         onMouseDown={(event) => event.stopPropagation()}
       >
+        <button
+          type="button"
+          className="modal-close"
+          aria-label="Keep editing"
+          title="Keep editing"
+          onClick={() => answerUnsavedChanges("cancel")}
+        >
+          <XIcon />
+        </button>
         <h2 id="unsaved-title" className="modal-title">
           Unsaved changes
         </h2>
@@ -52,13 +81,6 @@ export function UnsavedChangesDialog() {
             : "This note has changes you haven't saved."}
         </p>
         <div className="modal-actions">
-          <button
-            type="button"
-            className="modal-btn"
-            onClick={() => answerUnsavedChanges("cancel")}
-          >
-            Keep editing
-          </button>
           <button
             type="button"
             className="modal-btn is-danger"
@@ -79,3 +101,4 @@ export function UnsavedChangesDialog() {
     </div>
   );
 }
+

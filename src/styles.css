@@ -583,6 +583,7 @@ body {
 }
 
 .modal-card {
+  position: relative;
   width: 400px;
   max-width: calc(100vw - 32px);
   padding: 20px;
@@ -595,8 +596,30 @@ body {
 
 .modal-title {
   margin: 0;
+  padding-right: 28px;
   font-size: 15px;
   font-weight: 600;
+  color: var(--text);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.modal-close:hover {
+  background: var(--bg-hover);
   color: var(--text);
 }
 
@@ -630,6 +653,11 @@ body {
 }
 
 .modal-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.modal-close:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }

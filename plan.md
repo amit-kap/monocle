@@ -17,10 +17,11 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
 
 - TipTap **v3** (not v2) — `tiptap-markdown` requires it.
 - Save is **explicit (⌘S)** per the locked decision; autosave deferred.
-- The unsaved-changes guard is an in-app prompt (Save / Discard changes / Keep
-  editing), not the native OK/Cancel alert whose "OK" meant losing the edits. It
-  names the note and can save the buffer before a switch or a quit; a failed save
-  holds the note open instead of dropping it.
+- The unsaved-changes guard is an in-app prompt (Save / Discard changes, with an
+  ✕ — like Esc and the backdrop — meaning keep editing), not the native OK/Cancel
+  alert whose "OK" meant losing the edits. It names the note and can save the
+  buffer before a switch or a quit; a failed save holds the note open instead of
+  dropping it.
 - Smoke + markdown round-trip tests added (`npm test`).
 - Fixed: `BlockHandles` accessed `editor.view` before mount (blank window). It now
   receives the editor DOM element and guards `editor.isInitialized`; an
