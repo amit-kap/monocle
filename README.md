@@ -40,13 +40,13 @@ Artifacts land in `src-tauri/target/release/bundle/`.
 - Hover block handle: drag to reorder, or open the menu to turn into, duplicate,
   move, or delete a block. Every list item gets its own handle at any nesting
   depth, and dragging across a list boundary converts the block
-- Resizable content column; drag its right edge, double-click to reset
+- Resizable content column; drag either edge, double-click to reset
 - Local images resolve against the note's own folder and display through Tauri's
   asset protocol, without the note's markdown being rewritten
 - Explicit save with ⌘S, dirty indicator, and unsaved-changes guard on switch/quit
 - Light, dark, or system theme via a selector in the custom title bar
 
-`npm test` runs 354 tests, including markdown round-trip fixtures that pin every
+`npm test` runs 363 tests, including markdown round-trip fixtures that pin every
 block type and mark so nothing is silently dropped on save.
 
 See `plan.md` for the full design and phase breakdown.

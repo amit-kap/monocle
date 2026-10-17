@@ -20,6 +20,29 @@ export const CONTENT = {
 
 export type WidthSpec = { key: string; min: number; max: number; default: number };
 
+export type ColumnSide = "left" | "right";
+
+// The content column is centred in its pane, so its edges sit at centre ± half
+// the width. This returns the CSS `left` value that puts a grab handle on the
+// given edge.
+export function columnEdgeLeft(width: number, side: ColumnSide): string {
+  const half = width / 2;
+  return side === "left" ? `calc(50% - ${half}px)` : `calc(50% + ${half}px)`;
+}
+
+// Dragging an edge of a centred column by `deltaX` pixels changes the width by
+// twice the delta: the column stays centred, so each edge moves half the total.
+// Pulling the right edge rightwards widens it; pulling the left edge rightwards
+// narrows it.
+export function widthFromDrag(
+  startWidth: number,
+  deltaX: number,
+  side: ColumnSide,
+): number {
+  const direction = side === "left" ? -1 : 1;
+  return startWidth + deltaX * 2 * direction;
+}
+
 export function clampWidth(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }

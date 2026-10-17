@@ -3,8 +3,10 @@ import {
   CONTENT,
   SIDEBAR,
   clampWidth,
+  columnEdgeLeft,
   readWidth,
   storeWidth,
+  widthFromDrag,
 } from "./layout";
 
 describe("clampWidth", () => {
@@ -54,6 +56,52 @@ describe("storeWidth", () => {
   it("round-trips through readWidth", () => {
     storeWidth(CONTENT, localStorage, 1000);
     expect(readWidth(CONTENT, localStorage)).toBe(1000);
+  });
+});
+
+describe("columnEdgeLeft", () => {
+  it("puts the right edge half a width right of centre", () => {
+    expect(columnEdgeLeft(800, "right")).toBe("calc(50% + 400px)");
+  });
+
+  it("puts the left edge half a width left of centre", () => {
+    expect(columnEdgeLeft(800, "left")).toBe("calc(50% - 400px)");
+  });
+
+  it("keeps both edges symmetric around the centre", () => {
+    expect(columnEdgeLeft(CONTENT.default, "left")).toContain(
+      `- ${CONTENT.default / 2}px`,
+    );
+    expect(columnEdgeLeft(CONTENT.default, "right")).toContain(
+      `+ ${CONTENT.default / 2}px`,
+    );
+  });
+});
+
+describe("widthFromDrag", () => {
+  it("widens when the right edge moves right", () => {
+    expect(widthFromDrag(800, 20, "right")).toBe(840);
+  });
+
+  it("narrows when the right edge moves left", () => {
+    expect(widthFromDrag(800, -20, "right")).toBe(760);
+  });
+
+  it("narrows when the left edge moves right", () => {
+    expect(widthFromDrag(800, 20, "left")).toBe(760);
+  });
+
+  it("widens when the left edge moves left", () => {
+    expect(widthFromDrag(800, -20, "left")).toBe(840);
+  });
+
+  it("mirrors: the same outward drag grows the column equally from either edge", () => {
+    expect(widthFromDrag(700, 30, "right")).toBe(widthFromDrag(700, -30, "left"));
+  });
+
+  it("is a no-op for a zero delta", () => {
+    expect(widthFromDrag(800, 0, "left")).toBe(800);
+    expect(widthFromDrag(800, 0, "right")).toBe(800);
   });
 });
 

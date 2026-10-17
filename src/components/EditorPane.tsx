@@ -6,8 +6,11 @@ import { stripExt } from "../lib/fs";
 import {
   CONTENT,
   clampWidth,
+  columnEdgeLeft,
   readWidth,
   storeWidth,
+  widthFromDrag,
+  type ColumnSide,
 } from "../lib/layout";
 import { appExtensions } from "../editor/extensions";
 import { setImageBaseDir } from "../editor/extensions/LocalImages";
@@ -43,16 +46,14 @@ export function EditorPane() {
     storeWidth(CONTENT, localStorage, contentWidth);
   }, [contentWidth]);
 
-  function startColumnResize(event: ReactMouseEvent) {
+  function startColumnResize(side: ColumnSide, event: ReactMouseEvent) {
     if (event.button !== 0) return;
     event.preventDefault();
     const startX = event.clientX;
     const startWidth = contentWidth;
 
     function onMove(moveEvent: MouseEvent) {
-      // The column is centred, so its right edge sits at centre + width / 2.
-      // Doubling the delta keeps the grabbed edge under the pointer.
-      const next = startWidth + (moveEvent.clientX - startX) * 2;
+      const next = widthFromDrag(startWidth, moveEvent.clientX - startX, side);
       setContentWidth(clampWidth(next, CONTENT.min, CONTENT.max));
     }
     function onUp() {
@@ -144,13 +145,20 @@ export function EditorPane() {
 
       {activePath ? (
         <>
-          <div
-            onMouseDown={startColumnResize}
-            onDoubleClick={() => setContentWidth(CONTENT.default)}
-            title="Drag to resize, double-click to reset"
-            className="absolute top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize hover:bg-[var(--accent)]"
-            style={{ left: `calc(50% + ${contentWidth / 2}px)` }}
-          />
+          {(["left", "right"] as const).map((side) => (
+            <div
+              key={side}
+              onMouseDown={(event) => startColumnResize(side, event)}
+              onDoubleClick={() => setContentWidth(CONTENT.default)}
+              title="Drag to resize, double-click to reset"
+              className="group absolute top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize"
+              style={{ left: columnEdgeLeft(contentWidth, side) }}
+            >
+              {/* A persistent hairline, so the column's edges stay discoverable;
+                  the 4px parent is just the grab area. */}
+              <div className="pointer-events-none mx-auto h-full w-px bg-[var(--border)] group-hover:bg-[var(--accent)]" />
+            </div>
+          ))}
           <div className="editor-scroll flex-1 overflow-y-auto">
             <div
               className="mx-auto w-full px-16 py-20"

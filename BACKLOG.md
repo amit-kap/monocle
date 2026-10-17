@@ -7,10 +7,7 @@ the reasoning behind the decisions.
 
 ## Open issues
 
-- [ ] **Center column resize** — the content column can only be dragged from
-  its right edge, and the drag handle is invisible until hover. Add a matching
-  handle on the left edge and give both handles a persistent visible line.
-  (editor pane)
+(none)
 
 ## Feature requests
 
