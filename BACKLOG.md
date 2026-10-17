@@ -7,7 +7,10 @@ the reasoning behind the decisions.
 
 ## Open issues
 
-(none)
+- [ ] **Center column resize** — the content column can only be dragged from
+  its right edge, and the drag handle is invisible until hover. Add a matching
+  handle on the left edge and give both handles a persistent visible line.
+  (editor pane)
 
 ## Feature requests
 
@@ -15,6 +18,16 @@ the reasoning behind the decisions.
   border; make them work like Notion's: syntax highlighting per language, plus a
   language picker in the block's corner (dropdown with search) that reads and
   writes the fence's info string (e.g. ```` ```js ````). (editor)
+- [ ] **Selection text styling** — when text is selected, show a way to format
+  the selection (floating toolbar / bubble menu: bold, italic, strikethrough,
+  code, headings, etc.). (editor)
+- [ ] **Auto numbered lists** — when a row starts with a number (`1. `, `2) `,
+  etc.), auto-convert the line into a numbered list item, continuing the
+  sequence. (editor)
+- [ ] **Word autocomplete** — IntelliSense-style suggestions as you type
+  (complete words already used in the note / vault). (editor)
+- [ ] **Spell-check underlines** — flag misspelled words inline (squiggly
+  underline, suggestions on right-click / hover). (editor)
 - [ ] Autosave (currently explicit `⌘S` only).
 - [ ] External file-change watching (e.g. `notify`).
 - [ ] Multiple windows / tabs.
