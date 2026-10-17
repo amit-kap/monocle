@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { confirm } from "@tauri-apps/plugin-dialog";
 import type { TreeNode } from "../types";
 
 type Handlers = {
@@ -194,11 +193,7 @@ function FileRow({
   }
 
   async function handleDelete() {
-    const ok = await confirm(`Delete "${node.name}"? This cannot be undone.`, {
-      title: "Delete note",
-      kind: "warning",
-    });
-    if (ok) await onDelete(node.path);
+    await onDelete(node.path);
   }
 
   return (

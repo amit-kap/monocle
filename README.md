@@ -45,9 +45,12 @@ Artifacts land in `src-tauri/target/release/bundle/`.
   asset protocol, without the note's markdown being rewritten
 - Explicit save with ⌘S, dirty indicator, and an unsaved-changes prompt on
   switch/quit that can save the buffer or discard it (✕ keeps editing)
+- Every blocking question — unsaved changes, deleting a note, changing the root
+  folder — is the same in-app modal: ✕ / Esc / backdrop back out without an
+  answer, and each action names its outcome instead of "OK"
 - Light, dark, or system theme via a selector in the custom title bar
 
-`npm test` runs 382 tests, including markdown round-trip fixtures that pin every
+`npm test` runs 390 tests, including markdown round-trip fixtures that pin every
 block type and mark so nothing is silently dropped on save.
 
 See `plan.md` for the full design and phase breakdown.

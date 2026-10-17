@@ -3,7 +3,7 @@ import { dirname } from "@tauri-apps/api/path";
 import type { NoteFile, SaveStatus, TreeNode } from "../types";
 import * as fs from "../lib/fs";
 import { bufferMarkdown } from "../lib/editorBuffer";
-import { askUnsavedChanges } from "./useUnsavedPrompt";
+import { DISMISS, askModal, askUnsavedChanges } from "./useModalPrompt";
 
 const LAST_FOLDER_KEY = "monocle:lastFolder";
 
@@ -48,7 +48,7 @@ function noteLabel(path: string | null): string | null {
 async function confirmDiscard(): Promise<boolean> {
   const state = useStore.getState();
   const choice = await askUnsavedChanges(noteLabel(state.activePath));
-  if (choice === "cancel") return false;
+  if (choice === DISMISS) return false;
   if (choice === "discard") return true;
   const markdown = bufferMarkdown();
   // No editor mounted means nothing can write the buffer: keep the note.
@@ -78,6 +78,7 @@ export const useStore = create<State>((set, get) => ({
   },
 
   chooseFolder: async () => {
+    if (get().status === "dirty" && !(await confirmDiscard())) return;
     try {
       const folder = await fs.pickFolder();
       if (!folder) return;
@@ -202,6 +203,13 @@ export const useStore = create<State>((set, get) => ({
   },
 
   deleteNote: async (path) => {
+    const choice = await askModal<"delete">({
+      title: "Delete note",
+      body: `"${noteLabel(path)}" will be deleted. This can't be undone.`,
+      actions: [{ value: "delete", label: "Delete", tone: "danger" }],
+      dismissLabel: "Keep note",
+    });
+    if (choice !== "delete") return;
     try {
       await fs.deleteNoteFile(path);
       const wasActive = get().activePath === path;

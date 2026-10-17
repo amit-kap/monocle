@@ -22,6 +22,11 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   alert whose "OK" meant losing the edits. It names the note and can save the
   buffer before a switch or a quit; a failed save holds the note open instead of
   dropping it.
+- Every modal is one shell: `ModalHost` renders whatever `askModal` opened, so
+  the ✕ / Esc / backdrop behaviour and the focus rule are uniform, and the native
+  confirms are gone (delete was the last). Focus lands on the primary action, or
+  on the ✕ when the only action is destructive, so Enter never deletes. Changing
+  the root folder is guarded too — it used to drop a dirty buffer silently.
 - Smoke + markdown round-trip tests added (`npm test`).
 - Fixed: `BlockHandles` accessed `editor.view` before mount (blank window). It now
   receives the editor DOM element and guards `editor.isInitialized`; an

@@ -5,13 +5,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPane } from "./components/EditorPane";
 import { ThemeSelector } from "./components/ThemeSelector";
-import { UnsavedChangesDialog } from "./components/UnsavedChangesDialog";
+import { ModalHost } from "./components/ModalHost";
 import { bufferMarkdown } from "./lib/editorBuffer";
 import { useStore } from "./store/useStore";
 import {
+  DISMISS,
   askUnsavedChanges,
-  useUnsavedPrompt,
-} from "./store/useUnsavedPrompt";
+  useModalPrompt,
+} from "./store/useModalPrompt";
 
 function App() {
   const init = useStore((s) => s.init);
@@ -48,7 +49,7 @@ function App() {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
         // The unsaved-changes prompt owns the keyboard while it is open.
-        if (useUnsavedPrompt.getState().pending) return;
+        if (useModalPrompt.getState().pending) return;
         event.preventDefault();
         void createNote();
       }
@@ -79,7 +80,7 @@ function App() {
         const choice = await askUnsavedChanges(
           activePath?.split(/[\\/]/).pop() ?? null,
         );
-        if (choice === "cancel") return;
+        if (choice === DISMISS) return;
         if (choice === "save") {
           const markdown = bufferMarkdown();
           if (markdown === null) return;
@@ -110,7 +111,7 @@ function App() {
       </div>
       <Sidebar />
       <EditorPane />
-      <UnsavedChangesDialog />
+      <ModalHost />
       {error && (
         <button
           type="button"

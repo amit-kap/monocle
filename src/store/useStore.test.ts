@@ -8,24 +8,27 @@ vi.mock("../lib/fs", async (importOriginal) => {
     readTree: vi.fn(async () => []),
     readNote: vi.fn(async () => "original"),
     writeNote: vi.fn(async () => {}),
+    deleteNoteFile: vi.fn(async () => {}),
     renameNoteFile: vi.fn(async () => "/notes/Renamed.md"),
   };
 });
 
 const { useStore } = await import("./useStore");
-const { answerUnsavedChanges, useUnsavedPrompt } = await import(
-  "./useUnsavedPrompt"
+const { DISMISS, answerModal, useModalPrompt } = await import(
+  "./useModalPrompt"
 );
 const { setBufferSerializer } = await import("../lib/editorBuffer");
 const fs = await import("../lib/fs");
 const readTree = vi.mocked(fs.readTree);
 const writeNote = vi.mocked(fs.writeNote);
+const deleteNoteFile = vi.mocked(fs.deleteNoteFile);
 
-/** Every describe starts from a clean, prompt-free store. */
+/** Every describe starts from a clean, modal-free store. */
 function resetStore(): void {
   readTree.mockClear();
   writeNote.mockClear();
-  useUnsavedPrompt.setState({ pending: null });
+  deleteNoteFile.mockClear();
+  useModalPrompt.setState({ pending: null });
   setBufferSerializer(null);
   useStore.setState({
     folder: "/notes",
@@ -95,21 +98,27 @@ describe("switching notes with unsaved edits", () => {
 
   it("asks, naming the note that has the edits", async () => {
     const switching = useStore.getState().openNote("/notes/B.md");
-    expect(useUnsavedPrompt.getState().pending?.note).toBe("A.md");
-    answerUnsavedChanges("discard");
+    const asked = useModalPrompt.getState().pending;
+    expect(asked?.title).toBe("Unsaved changes");
+    expect(asked?.body).toContain("A.md");
+    expect(asked?.actions.map((action) => action.value)).toEqual([
+      "discard",
+      "save",
+    ]);
+    answerModal("discard");
     await switching;
   });
 
   it("stays on the note when the user keeps editing", async () => {
     const switching = useStore.getState().openNote("/notes/B.md");
-    answerUnsavedChanges("cancel");
+    answerModal(DISMISS);
     await switching;
     expect(useStore.getState().activePath).toBe("/notes/A.md");
   });
 
   it("switches and drops the edits on discard", async () => {
     const switching = useStore.getState().openNote("/notes/B.md");
-    answerUnsavedChanges("discard");
+    answerModal("discard");
     await switching;
     expect(useStore.getState().activePath).toBe("/notes/B.md");
     expect(writeNote).not.toHaveBeenCalled();
@@ -118,7 +127,7 @@ describe("switching notes with unsaved edits", () => {
   it("writes the buffer first when the user saves", async () => {
     setBufferSerializer(() => "edited body");
     const switching = useStore.getState().openNote("/notes/B.md");
-    answerUnsavedChanges("save");
+    answerModal("save");
     await switching;
 
     expect(writeNote).toHaveBeenCalledWith("/notes/A.md", "edited body");
@@ -130,7 +139,7 @@ describe("switching notes with unsaved edits", () => {
     setBufferSerializer(() => "edited body");
 
     const switching = useStore.getState().openNote("/notes/B.md");
-    answerUnsavedChanges("save");
+    answerModal("save");
     await switching;
 
     expect(useStore.getState().activePath).toBe("/notes/A.md");
@@ -139,11 +148,57 @@ describe("switching notes with unsaved edits", () => {
 
   it("keeps the note open when there is no buffer to save", async () => {
     const switching = useStore.getState().openNote("/notes/B.md");
-    answerUnsavedChanges("save");
+    answerModal("save");
     await switching;
 
     expect(useStore.getState().activePath).toBe("/notes/A.md");
     expect(writeNote).not.toHaveBeenCalled();
+  });
+
+  it("asks before changing the root folder too", async () => {
+    const choosing = useStore.getState().chooseFolder();
+    expect(useModalPrompt.getState().pending?.title).toBe("Unsaved changes");
+    answerModal(DISMISS);
+    await choosing;
+  });
+});
+
+describe("deleting a note", () => {
+  beforeEach(resetStore);
+
+  it("asks first, naming the note and marking the action dangerous", async () => {
+    const deleting = useStore.getState().deleteNote("/notes/A.md");
+    const asked = useModalPrompt.getState().pending;
+    expect(asked?.title).toBe("Delete note");
+    expect(asked?.body).toContain("A.md");
+    expect(asked?.actions).toEqual([
+      { value: "delete", label: "Delete", tone: "danger" },
+    ]);
+    expect(deleteNoteFile).not.toHaveBeenCalled();
+    answerModal("delete");
+    await deleting;
+  });
+
+  it("keeps the note when the user dismisses the prompt", async () => {
+    const deleting = useStore.getState().deleteNote("/notes/A.md");
+    answerModal(DISMISS);
+    await deleting;
+    expect(deleteNoteFile).not.toHaveBeenCalled();
+  });
+
+  it("deletes once the user confirms", async () => {
+    const deleting = useStore.getState().deleteNote("/notes/A.md");
+    answerModal("delete");
+    await deleting;
+    expect(deleteNoteFile).toHaveBeenCalledWith("/notes/A.md");
+  });
+
+  it("clears the open note when the deleted one was open", async () => {
+    await useStore.getState().openNote("/notes/A.md");
+    const deleting = useStore.getState().deleteNote("/notes/A.md");
+    answerModal("delete");
+    await deleting;
+    expect(useStore.getState().activePath).toBeNull();
   });
 });
 
@@ -153,7 +208,7 @@ describe("switching without unsaved edits", () => {
   it("does not ask", async () => {
     await useStore.getState().openNote("/notes/A.md");
     await useStore.getState().openNote("/notes/B.md");
-    expect(useUnsavedPrompt.getState().pending).toBeNull();
+    expect(useModalPrompt.getState().pending).toBeNull();
     expect(useStore.getState().activePath).toBe("/notes/B.md");
   });
 });

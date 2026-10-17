@@ -652,16 +652,6 @@ body {
   background: var(--bg-hover);
 }
 
-.modal-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.modal-close:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
 .modal-btn.is-primary {
   border-color: var(--accent);
   background: var(--accent);
