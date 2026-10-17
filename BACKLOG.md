@@ -7,7 +7,9 @@ the reasoning behind the decisions.
 
 ## Open issues
 
-(none)
+- [ ] **Sidebar resize handle is invisible until hover** — the content column
+  now has a persistent hairline on both edges; give the sidebar's right-edge
+  handle the same treatment (hairline at rest, accent on hover). (sidebar)
 
 ## Feature requests
 
@@ -25,6 +27,10 @@ the reasoning behind the decisions.
   (complete words already used in the note / vault). (editor)
 - [ ] **Spell-check underlines** — flag misspelled words inline (squiggly
   underline, suggestions on right-click / hover). (editor)
+- [ ] **Outline / mini map** — a slim rail down the right side of the editor
+  reflecting the note's structure: a heading outline to jump between sections,
+  optionally a proportional mini map of the document with a viewport indicator
+  for long notes. (editor)
 - [ ] Autosave (currently explicit `⌘S` only).
 - [ ] External file-change watching (e.g. `notify`).
 - [ ] Multiple windows / tabs.
