@@ -50,5 +50,10 @@
         "rank": "Alternate"
       }
     ]
+  },
+  "plugins": {
+    "fs": {
+      "requireLiteralLeadingDot": false
+    }
   }
 }

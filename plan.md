@@ -49,7 +49,11 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   empty and there was no way to reach it. "Show hidden files" (checkmark when on,
   remembered in `localStorage`, re-scans on change) includes dot-files and
   dot-folders; `Library`, `node_modules`, `.git` and `.Trash` stay out either way
-  because they are never notes.
+  because they are never notes. Tauri's fs scope needed
+  `requireLiteralLeadingDot: false` (`src-tauri/tauri.conf.json`): its globs skip
+  dot-components by default on Unix, so `**` never matched `~/.notes` and every
+  read inside a hidden folder was denied — silently, because the walk treats an
+  unreadable subfolder as empty rather than failing the whole scan.
 - Sidebar is now horizontally resizable by dragging its right edge (180–480 px,
   width persisted, hairline at rest like the content column's edges) and has a
   refresh button that re-scans the tree.
