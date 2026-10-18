@@ -37,9 +37,10 @@ Artifacts land in `src-tauri/target/release/bundle/`.
   file's folder and selects it)
 - Block editor: headings, bold/italic/strike/code, bullet/numbered/to-do lists,
   tables, quotes, images, code blocks, dividers, and markdown input shortcuts
-  (`# `, `- `, `[] `, `> `)
-- Syntax-highlighted code blocks (lowlight, common languages), with the language
-  written in the fence preserved on save
+  (`# `, `- `, `1. `, `1) `, `[] `, `> `)
+- Syntax-highlighted code blocks (lowlight, common languages) with a searchable
+  language picker in the block's corner; the tag you write in the fence is
+  preserved on save, and picking Plain text removes it
 - Slash (`/`) menu to insert and convert blocks
 - Hover block handle: drag to reorder, or open the menu to turn into, duplicate,
   move, or delete a block. Every list item gets its own handle at any nesting
@@ -54,7 +55,7 @@ Artifacts land in `src-tauri/target/release/bundle/`.
   answer, and each action names its outcome instead of "OK"
 - Light, dark, or system theme via a selector in the custom title bar
 
-`npm test` runs 407 tests, including markdown round-trip fixtures that pin every
+`npm test` runs 422 tests, including markdown round-trip fixtures that pin every
 block type and mark so nothing is silently dropped on save.
 
 See `plan.md` for the full design and phase breakdown.

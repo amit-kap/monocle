@@ -15,9 +15,6 @@ Ordered by effort, smallest first. `(area)` is the code the work lands in.
 
 ### Small
 
-- [ ] **Auto numbered lists** — `1. ` already converts into a numbered list and
-  continues an existing sequence (tiptap's ordered-list input rule); only the
-  `2) ` form is missing. Verify in the app, then add that rule. (editor)
 - [ ] **Spell-check underlines** — misspellings are not flagged today: nothing sets
   `spellcheck` on the editor, and the title field turns it off. If the webview's
   native checker can't be switched on, this grows into a custom decoration.
@@ -27,10 +24,6 @@ Ordered by effort, smallest first. `(area)` is the code the work lands in.
 
 ### Medium
 
-- [ ] **Notion-style code blocks** — syntax highlighting already ships (lowlight
-  with the common grammars, colours from our theme tokens); what is missing is a
-  searchable language picker in the block's corner that reads and writes the
-  fence's info string (```` ```js ````). (editor)
 - [ ] **Selection text styling** — a floating toolbar over a selection: bold,
   italic, strikethrough, code, headings. (editor)
 - [ ] **Outline** — a slim rail of the note's headings that jumps to a section.

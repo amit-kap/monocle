@@ -11,6 +11,7 @@ import { TaskItem } from "@tiptap/extension-task-item";
 import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "tiptap-markdown";
 import { SlashCommand } from "./extensions/SlashCommand";
+import { ParenOrderedList } from "./extensions/ParenOrderedList";
 import { SoftBreakSpace } from "./extensions/SoftBreakSpace";
 import { TaskListTight } from "./extensions/TaskListTight";
 
@@ -26,6 +27,9 @@ export const appExtensions = [
     // Replaced below by the lowlight-backed version.
     codeBlock: false,
   }),
+  // StarterKit's ordered list handles "1. "; this adds markdown's other marker,
+  // "1) ", which markdown-it also reads as a list.
+  ParenOrderedList,
   // Without this, `![alt](img.png)` is dropped from the document on load and
   // the image is gone from the file on the next save. LocalImages resolves
   // relative paths through the asset protocol and swaps failures for a
