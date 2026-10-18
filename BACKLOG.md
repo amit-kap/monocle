@@ -11,30 +11,49 @@ Nothing open.
 
 ## Feature requests
 
-- [ ] **Notion-style code blocks** — code blocks already have a background and
-  border; make them work like Notion's: syntax highlighting per language, plus a
-  language picker in the block's corner (dropdown with search) that reads and
-  writes the fence's info string (e.g. ```` ```js ````). (editor)
-- [ ] **Selection text styling** — when text is selected, show a way to format
-  the selection (floating toolbar / bubble menu: bold, italic, strikethrough,
-  code, headings, etc.). (editor)
-- [ ] **Auto numbered lists** — when a row starts with a number (`1. `, `2) `,
-  etc.), auto-convert the line into a numbered list item, continuing the
-  sequence. (editor)
-- [ ] **Word autocomplete** — IntelliSense-style suggestions as you type
-  (complete words already used in the note / vault). (editor)
-- [ ] **Spell-check underlines** — flag misspelled words inline (squiggly
-  underline, suggestions on right-click / hover). (editor)
-- [ ] **Outline / mini map** — a slim rail down the right side of the editor
-  reflecting the note's structure: a heading outline to jump between sections,
-  optionally a proportional mini map of the document with a viewport indicator
-  for long notes. (editor)
-- [ ] Autosave (currently explicit `⌘S` only).
-- [ ] External file-change watching (e.g. `notify`).
-- [ ] Multiple windows / tabs.
-- [ ] Inserting images into a note (picking a file, drag-drop, paste).
-  *Displaying* existing images already works.
-- [ ] Databases, kanban, embeds. (Tables are supported.)
-- [ ] Wiki-style `[[links]]` and backlinks.
-- [ ] Code signing & notarization (not distributing yet).
-- [ ] Windows / Linux builds.
+Ordered by effort, smallest first. `(area)` is the code the work lands in.
+
+### Small
+
+- [ ] **Auto numbered lists** — `1. ` already converts into a numbered list and
+  continues an existing sequence (tiptap's ordered-list input rule); only the
+  `2) ` form is missing. Verify in the app, then add that rule. (editor)
+- [ ] **Spell-check underlines** — misspellings are not flagged today: nothing sets
+  `spellcheck` on the editor, and the title field turns it off. If the webview's
+  native checker can't be switched on, this grows into a custom decoration.
+  Right-click suggestions come from macOS. (editor)
+- [ ] **Autosave** — debounce edits into the existing save path. Needs a decision:
+  explicit `⌘S` was a locked decision, so this would change the save model.
+
+### Medium
+
+- [ ] **Notion-style code blocks** — syntax highlighting already ships (lowlight
+  with the common grammars, colours from our theme tokens); what is missing is a
+  searchable language picker in the block's corner that reads and writes the
+  fence's info string (```` ```js ````). (editor)
+- [ ] **Selection text styling** — a floating toolbar over a selection: bold,
+  italic, strikethrough, code, headings. (editor)
+- [ ] **Outline** — a slim rail of the note's headings that jumps to a section.
+  The proportional mini map is a separate, larger piece. (editor)
+- [ ] **Inserting images** — pick a file (or drag-drop, or paste), copy it beside
+  the note, insert a relative `![]()`. *Displaying* existing images already
+  works. (editor)
+- [ ] **External file-change watching** — plugin-fs ships `watch` (needs the cargo
+  `watch` feature and a permission), then re-scan on outside edits while ignoring
+  our own saves. (workspace)
+
+### Large
+
+- [ ] **Word autocomplete** — IntelliSense-style suggestions as you type, from the
+  words already in the note and folder. (editor)
+- [ ] **Wiki-style `[[links]]` and backlinks** — a new node, markdown round-trip
+  for it, a note index, and a backlinks view. (editor)
+- [ ] **Multiple windows / tabs** — the store is one module-level instance, so this
+  starts with per-window state. (app)
+
+### Blocked, or out of scope
+
+- [ ] Code signing & notarization — needs Apple Developer credentials.
+- [ ] Windows / Linux builds — a platform port plus CI.
+- [ ] Databases, kanban, embeds. — outside a markdown editor's model (tables are
+  supported, and anything richer would break round-trip fidelity).
