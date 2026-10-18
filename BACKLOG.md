@@ -7,7 +7,9 @@ the reasoning behind the decisions.
 
 ## Open issues
 
-Nothing open.
+- [ ] **Show markdown files in hidden folders, behind a toggle** — the scan skips
+  every dot-entry (`src/lib/fs.ts`), so notes under `.notes/` are invisible; add a
+  setting to include them, off by default. (sidebar)
 
 ## Feature requests
 
