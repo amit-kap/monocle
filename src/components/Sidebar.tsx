@@ -12,6 +12,7 @@ import { SIDEBAR, clampWidth, readWidth, storeWidth } from "../lib/layout";
 import { scrollDelta } from "../lib/scroll";
 import { stepRow, visibleRows, type TreeRow } from "../lib/treeNav";
 import { FileTree } from "./FileTree";
+import { MenuCheck } from "./MenuCheck";
 import { ResizeHandle } from "./ResizeHandle";
 
 function baseName(path: string): string {
@@ -119,6 +120,8 @@ export function Sidebar() {
   const deleteNote = useStore((s) => s.deleteNote);
   const toggleDir = useStore((s) => s.toggleDir);
   const refresh = useStore((s) => s.refresh);
+  const showHidden = useStore((s) => s.showHidden);
+  const setShowHidden = useStore((s) => s.setShowHidden);
   const requestEditorFocus = useStore((s) => s.requestEditorFocus);
 
   const [query, setQuery] = useState("");
@@ -353,6 +356,19 @@ export function Sidebar() {
               }}
             >
               Reveal in Finder
+            </button>
+            <div className="block-menu-sep" />
+            <button
+              type="button"
+              className="block-menu-item"
+              title="Also list files and folders whose name starts with a dot"
+              onClick={() => {
+                setFolderMenu(false);
+                void setShowHidden(!showHidden);
+              }}
+            >
+              Show hidden files
+              {showHidden && <MenuCheck />}
             </button>
           </div>
         )}

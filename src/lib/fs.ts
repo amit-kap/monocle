@@ -55,7 +55,11 @@ function sortNodes(nodes: TreeNode[]): TreeNode[] {
   });
 }
 
-async function walk(dir: string, isRoot = false): Promise<TreeNode[]> {
+async function walk(
+  dir: string,
+  showHidden: boolean,
+  isRoot = false,
+): Promise<TreeNode[]> {
   let entries: Awaited<ReturnType<typeof readDir>>;
   await acquireRead();
   try {
@@ -72,12 +76,14 @@ async function walk(dir: string, isRoot = false): Promise<TreeNode[]> {
   const subdirs: Promise<TreeNode | null>[] = [];
 
   for (const entry of entries) {
-    if (entry.name.startsWith(".")) continue;
+    // Hidden files and folders are off by default: a notes folder often sits
+    // inside a home directory full of dotfiles the user never wants to see.
+    if (!showHidden && entry.name.startsWith(".")) continue;
     const path = pathFor(dir, entry.name);
     if (entry.isDirectory) {
       if (entry.isSymlink || SKIP_DIRS.has(entry.name)) continue;
       subdirs.push(
-        walk(path).then((children) =>
+        walk(path, showHidden).then((children) =>
           children.length > 0
             ? ({ name: entry.name, path, kind: "dir", children } as TreeNode)
             : null,
@@ -95,8 +101,11 @@ async function walk(dir: string, isRoot = false): Promise<TreeNode[]> {
   return sortNodes(nodes);
 }
 
-export function readTree(root: string): Promise<TreeNode[]> {
-  return walk(root, true);
+export function readTree(
+  root: string,
+  showHidden = false,
+): Promise<TreeNode[]> {
+  return walk(root, showHidden, true);
 }
 
 export function flattenTree(nodes: TreeNode[]): NoteFile[] {

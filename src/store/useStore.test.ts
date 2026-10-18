@@ -31,6 +31,8 @@ function resetStore(): void {
   deleteNoteFile.mockClear();
   useModalPrompt.setState({ pending: null });
   setBufferSerializer(null);
+  localStorage.removeItem("monocle:lastFolder");
+  localStorage.removeItem("monocle:showHidden");
   useStore.setState({
     folder: "/notes",
     notes: [],
@@ -40,6 +42,7 @@ function resetStore(): void {
     activeContent: "",
     status: "idle",
     error: null,
+    showHidden: false,
     editorFocusRequest: 0,
   });
 }
@@ -228,5 +231,30 @@ describe("switching without unsaved edits", () => {
     await useStore.getState().openNote("/notes/B.md");
     expect(useModalPrompt.getState().pending).toBeNull();
     expect(useStore.getState().activePath).toBe("/notes/B.md");
+  });
+});
+
+describe("hidden files", () => {
+  beforeEach(resetStore);
+
+  it("rescans with them when the toggle is turned on", async () => {
+    await useStore.getState().setShowHidden(true);
+    expect(useStore.getState().showHidden).toBe(true);
+    expect(readTree).toHaveBeenLastCalledWith("/notes", true);
+  });
+
+  it("keeps the choice for the next launch", async () => {
+    localStorage.setItem("monocle:showHidden", "1");
+    localStorage.setItem("monocle:lastFolder", "/notes");
+    useStore.setState({ showHidden: false });
+
+    await useStore.getState().init();
+    expect(useStore.getState().showHidden).toBe(true);
+    expect(readTree).toHaveBeenLastCalledWith("/notes", true);
+  });
+
+  it("scans without them by default", async () => {
+    await useStore.getState().refresh();
+    expect(readTree).toHaveBeenLastCalledWith("/notes", false);
   });
 });

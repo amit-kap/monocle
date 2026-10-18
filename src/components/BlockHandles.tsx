@@ -18,6 +18,7 @@ import {
   type BlockHover,
   type TurnIntoKind,
 } from "../editor/blockUtils";
+import { MenuCheck } from "./MenuCheck";
 
 type MenuState = {
   from: number;
@@ -237,24 +238,7 @@ export function BlockHandles({
                 onClick={() => turnInto(menu.from, option.kind)}
               >
                 {option.label}
-                {current && (
-                  <svg
-                    className="block-menu-check"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 16 16"
-                    aria-hidden
-                  >
-                    <path
-                      d="M3.5 8.5l3 3 6.5-7.5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
+                {current && <MenuCheck />}
               </button>
             );
           })}

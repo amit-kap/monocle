@@ -34,7 +34,8 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
 - Added missing `core:window:allow-set-title` capability.
 - Sidebar upgraded from a flat list to a **recursive directory tree** (folders
   first, only `.md` files, dirs with no markdown pruned). Header now has two icon
-  buttons: folder (dropdown: Change root folder… / Reveal in Finder) and plus.
+  buttons: folder (dropdown: Change root folder… / Reveal in Finder / Show hidden
+  files) and plus.
   New notes are created in the selected folder (root if none). Folders are
   read-only. Search auto-expands matching branches.
 - Fixed folder selection doing nothing: the fs scope `$HOME/**` did not include
@@ -43,6 +44,12 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   `join` IPC call, parallelized the scan with a 32-way concurrency cap, skip
   `Library`/`node_modules`/symlinks, tolerate unreadable subdirs, and show a
   "Scanning…" state. Home (1403 dirs) scans in ~460 ms.
+- **Hidden files are a toggle in the folder menu, off by default.** The scan used
+  to skip every dot-entry, so a notes root with a `.notes/` subfolder looked
+  empty and there was no way to reach it. "Show hidden files" (checkmark when on,
+  remembered in `localStorage`, re-scans on change) includes dot-files and
+  dot-folders; `Library`, `node_modules`, `.git` and `.Trash` stay out either way
+  because they are never notes.
 - Sidebar is now horizontally resizable by dragging its right edge (180–480 px,
   width persisted, hairline at rest like the content column's edges) and has a
   refresh button that re-scans the tree.

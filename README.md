@@ -27,7 +27,8 @@ Artifacts land in `src-tauri/target/release/bundle/`.
 ## Features
 
 - Open any folder and browse its `.md` files in a recursive tree; resize the
-  sidebar, refresh, and search notes with ⌘P
+  sidebar, refresh, and search notes with ⌘P (dot-folders are listed only when
+  you turn on "Show hidden files" in the folder menu)
 - Drive the tree from the keyboard: ↑/↓ move through notes (opening the one they
   land on), ←/→ fold and unfold folders, Enter opens, and ⌘P walks its results
   without leaving the search box

@@ -6,6 +6,7 @@ import { bufferMarkdown } from "../lib/editorBuffer";
 import { DISMISS, askModal, askUnsavedChanges } from "./useModalPrompt";
 
 const LAST_FOLDER_KEY = "monocle:lastFolder";
+const SHOW_HIDDEN_KEY = "monocle:showHidden";
 
 type State = {
   folder: string | null;
@@ -21,6 +22,9 @@ type State = {
   status: SaveStatus;
   error: string | null;
   loading: boolean;
+  // Whether the tree includes hidden (dot-prefixed) files and folders. Off by
+  // default and remembered across launches, like the last folder.
+  showHidden: boolean;
   // Bumped to ask the editor to take focus, for opens that mean "start
   // writing" (a new note, a file opened from outside, a picked search result).
   // Read by the editor pane, so it needs no editor reference of its own.
@@ -37,6 +41,7 @@ type State = {
   markDirty: () => void;
   save: (markdown: string) => Promise<void>;
   setError: (message: string | null) => void;
+  setShowHidden: (value: boolean) => Promise<void>;
   requestEditorFocus: () => void;
 };
 
@@ -74,10 +79,13 @@ export const useStore = create<State>((set, get) => ({
   status: "idle",
   error: null,
   loading: false,
+  showHidden: false,
   editorFocusRequest: 0,
 
   init: async () => {
+    const showHidden = localStorage.getItem(SHOW_HIDDEN_KEY) === "1";
     const folder = localStorage.getItem(LAST_FOLDER_KEY);
+    set({ showHidden });
     if (!folder) return;
     set({ folder });
     await get().refresh();
@@ -107,15 +115,21 @@ export const useStore = create<State>((set, get) => ({
   },
 
   refresh: async () => {
-    const { folder } = get();
+    const { folder, showHidden } = get();
     if (!folder) return;
     set({ loading: true });
     try {
-      const tree = await fs.readTree(folder);
+      const tree = await fs.readTree(folder, showHidden);
       set({ tree, notes: fs.flattenTree(tree), error: null, loading: false });
     } catch (error) {
       set({ error: String(error), loading: false });
     }
+  },
+
+  setShowHidden: async (value) => {
+    localStorage.setItem(SHOW_HIDDEN_KEY, value ? "1" : "0");
+    set({ showHidden: value });
+    await get().refresh();
   },
 
   toggleDir: (path) => {
