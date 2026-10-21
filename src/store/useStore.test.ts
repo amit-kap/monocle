@@ -234,6 +234,44 @@ describe("switching without unsaved edits", () => {
   });
 });
 
+describe("the tree", () => {
+  beforeEach(resetStore);
+
+  it("collapses every folder at once", () => {
+    useStore.setState({ expanded: new Set(["/notes/projects", "/notes/travel"]) });
+    useStore.getState().collapseAll();
+    expect(useStore.getState().expanded.size).toBe(0);
+  });
+
+  it("expands every folder at once", () => {
+    useStore.setState({
+      tree: [
+        {
+          name: "projects",
+          path: "/notes/projects",
+          kind: "dir",
+          children: [
+            { name: "draft.md", path: "/notes/projects/draft.md", kind: "file" },
+            {
+              name: "archive",
+              path: "/notes/projects/archive",
+              kind: "dir",
+              children: [],
+            },
+          ],
+        },
+        { name: "inbox.md", path: "/notes/inbox.md", kind: "file" },
+      ],
+      expanded: new Set<string>(),
+    });
+    useStore.getState().expandAll();
+    expect([...useStore.getState().expanded].sort()).toEqual([
+      "/notes/projects",
+      "/notes/projects/archive",
+    ]);
+  });
+});
+
 describe("hidden files", () => {
   beforeEach(resetStore);
 

@@ -712,6 +712,15 @@ body {
   color: var(--danger);
 }
 
+.block-menu-item:disabled {
+  color: var(--text-faint);
+  opacity: 0.55;
+}
+
+.block-menu-item:disabled:hover {
+  background: transparent;
+}
+
 .block-menu-item.is-danger:hover {
   background: var(--bg-hover-strong);
 }

@@ -33,6 +33,8 @@ type State = {
   chooseFolder: () => Promise<void>;
   refresh: () => Promise<void>;
   toggleDir: (path: string) => void;
+  collapseAll: () => void;
+  expandAll: () => void;
   openNote: (path: string) => Promise<void>;
   openExternalNote: (path: string) => Promise<void>;
   createNote: (dir?: string) => Promise<void>;
@@ -139,6 +141,21 @@ export const useStore = create<State>((set, get) => ({
       else expanded.add(path);
       return { expanded, selectedDir: path };
     });
+  },
+
+  collapseAll: () => set({ expanded: new Set<string>() }),
+
+  expandAll: () => {
+    const dirs = new Set<string>();
+    function walk(nodes: TreeNode[]) {
+      for (const node of nodes) {
+        if (node.kind !== "dir") continue;
+        dirs.add(node.path);
+        if (node.children) walk(node.children);
+      }
+    }
+    walk(get().tree);
+    set({ expanded: dirs });
   },
 
   openNote: async (path) => {

@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
 } from "react";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useStore } from "../store/useStore";
@@ -37,19 +38,6 @@ function revealRow(nav: HTMLElement | null, path: string): void {
   );
 }
 
-function PlusIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M8 3.5v9M3.5 8h9"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function FolderIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -63,16 +51,9 @@ function FolderIcon() {
   );
 }
 
-function RefreshIcon({ spinning }: { spinning?: boolean }) {
+function RefreshIcon() {
   return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden
-      className={spinning ? "animate-spin" : undefined}
-    >
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
       <path
         d="M13 8a5 5 0 1 1-1.6-3.7"
         stroke="currentColor"
@@ -104,6 +85,97 @@ function SearchIcon() {
   );
 }
 
+function MoreIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <circle cx="3.4" cy="8" r="1.15" />
+      <circle cx="8" cy="8" r="1.15" />
+      <circle cx="12.6" cy="8" r="1.15" />
+    </svg>
+  );
+}
+
+/** One icon slot for every menu row, matching the block menu's. */
+function MenuIcon({ children }: { children: ReactNode }) {
+  return <span className="block-menu-icon">{children}</span>;
+}
+
+function PlusMenuIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M8 3.5v9M3.5 8h9"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CollapseAllIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="m4 7.5 4-4 4 4M4 12.5l4-4 4 4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ExpandAllIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="m4 3.5 4 4 4-4M4 8.5l4 4 4-4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function RevealIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M9.5 2.5h4v4M13.5 2.5 7.5 8.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M11 9.5V12a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 12V6.5A1.5 1.5 0 0 1 4 5h2.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M1.8 8s2.4-4 6.2-4 6.2 4 6.2 4-2.4 4-6.2 4S1.8 8 1.8 8Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
 
 export function Sidebar() {
   const folder = useStore((s) => s.folder);
@@ -119,6 +191,8 @@ export function Sidebar() {
   const renameNote = useStore((s) => s.renameNote);
   const deleteNote = useStore((s) => s.deleteNote);
   const toggleDir = useStore((s) => s.toggleDir);
+  const collapseAll = useStore((s) => s.collapseAll);
+  const expandAll = useStore((s) => s.expandAll);
   const refresh = useStore((s) => s.refresh);
   const showHidden = useStore((s) => s.showHidden);
   const setShowHidden = useStore((s) => s.setShowHidden);
@@ -126,7 +200,7 @@ export function Sidebar() {
 
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [folderMenu, setFolderMenu] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [width, setWidth] = useState(() => readWidth(SIDEBAR, localStorage));
   // The row the keyboard is on, and the row the ⌘P search is on. They are
   // separate: while the search box has focus the tree cannot take focus, so
@@ -194,18 +268,19 @@ export function Sidebar() {
   }, [searchOpen]);
 
   useEffect(() => {
-    if (!folderMenu) return;
+    if (!menuOpen) return;
     function onDown(event: MouseEvent) {
       if (!headerRef.current?.contains(event.target as Node)) {
-        setFolderMenu(false);
+        setMenuOpen(false);
       }
     }
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
-  }, [folderMenu]);
+  }, [menuOpen]);
 
   const filtered = useMemo(() => filterTree(tree, query), [tree, query]);
   const searching = query.trim().length > 0;
+  const anyExpanded = expanded.size > 0;
   const rows = useMemo(
     () => visibleRows(filtered, { expanded, forceExpand: searching }),
     [filtered, expanded, searching],
@@ -312,32 +387,14 @@ export function Sidebar() {
       >
         <button
           type="button"
-          title="Root folder"
-          onClick={() => (folder ? setFolderMenu((open) => !open) : chooseFolder())}
+          title={folder ? "Change root folder" : "Choose a folder"}
+          onClick={() => void chooseFolder()}
           className="flex min-w-0 items-center gap-1.5 rounded-[var(--radius)] px-1.5 py-1 text-[13px] font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
         >
           <FolderIcon />
           <span className="truncate">{folder ? baseName(folder) : "Monocle"}</span>
         </button>
         <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            title="Refresh"
-            onClick={() => void refresh()}
-            disabled={!folder || loading}
-            className="grid h-6 w-6 place-items-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:opacity-30 disabled:hover:bg-transparent"
-          >
-            <RefreshIcon spinning={loading} />
-          </button>
-          <button
-            type="button"
-            title="New note"
-            onClick={() => createNote()}
-            disabled={!folder}
-            className="grid h-6 w-6 place-items-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:opacity-30 disabled:hover:bg-transparent"
-          >
-            <PlusIcon />
-          </button>
           <button
             type="button"
             title="Search notes"
@@ -351,40 +408,90 @@ export function Sidebar() {
           >
             <SearchIcon />
           </button>
+          <button
+            type="button"
+            title="More"
+            onClick={() => setMenuOpen((open) => !open)}
+            className={`grid h-6 w-6 place-items-center rounded hover:bg-[var(--bg-hover)] hover:text-[var(--text)] ${
+              menuOpen
+                ? "bg-[var(--bg-active)] text-[var(--text)]"
+                : "text-[var(--text-muted)]"
+            }`}
+          >
+            <MoreIcon />
+          </button>
         </div>
 
-        {folderMenu && folder && (
-          <div className="block-menu" style={{ position: "absolute", left: 8, top: 40 }}>
+        {menuOpen && (
+          <div className="block-menu" style={{ position: "absolute", right: 8, top: 40 }}>
             <button
               type="button"
               className="block-menu-item"
+              disabled={!folder}
               onClick={() => {
-                setFolderMenu(false);
-                void chooseFolder();
+                setMenuOpen(false);
+                void createNote();
               }}
             >
-              Change root folder…
+              <MenuIcon>
+                <PlusMenuIcon />
+              </MenuIcon>
+              Add file
+            </button>
+            <button
+              type="button"
+              className="block-menu-item"
+              disabled={!folder || loading}
+              onClick={() => {
+                setMenuOpen(false);
+                void refresh();
+              }}
+            >
+              <MenuIcon>
+                <RefreshIcon />
+              </MenuIcon>
+              Refresh
             </button>
             <button
               type="button"
               className="block-menu-item"
               onClick={() => {
-                setFolderMenu(false);
-                void revealItemInDir(folder);
+                setMenuOpen(false);
+                if (anyExpanded) collapseAll();
+                else expandAll();
               }}
             >
-              Reveal in Finder
+              <MenuIcon>
+                {anyExpanded ? <CollapseAllIcon /> : <ExpandAllIcon />}
+              </MenuIcon>
+              {anyExpanded ? "Collapse all" : "Expand all"}
             </button>
             <div className="block-menu-sep" />
             <button
               type="button"
               className="block-menu-item"
-              title="Also list files and folders whose name starts with a dot"
+              disabled={!folder}
               onClick={() => {
-                setFolderMenu(false);
+                setMenuOpen(false);
+                if (folder) void revealItemInDir(folder);
+              }}
+            >
+              <MenuIcon>
+                <RevealIcon />
+              </MenuIcon>
+              Reveal in Finder
+            </button>
+            <button
+              type="button"
+              className="block-menu-item"
+              onClick={() => {
+                setMenuOpen(false);
                 void setShowHidden(!showHidden);
               }}
             >
+              <MenuIcon>
+                <EyeIcon />
+              </MenuIcon>
               Show hidden files
               {showHidden && <MenuCheck />}
             </button>
