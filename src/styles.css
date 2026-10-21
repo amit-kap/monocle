@@ -660,7 +660,8 @@ body {
   cursor: default;
 }
 
-.block-menu-item:hover {
+.block-menu-item:hover,
+.block-menu-item.is-selected {
   background: var(--bg-hover-strong);
 }
 
@@ -681,6 +682,63 @@ body {
   height: 1px;
   margin: 5px 4px;
   background: var(--border);
+}
+
+/* The code block's language, in its top-right corner. Fixed, like the block
+   handle, because a code block scrolls horizontally and would clip it. */
+.code-lang {
+  position: fixed;
+  z-index: 40;
+  padding: 1px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--code-gutter);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
+  transform: translateX(-100%);
+  cursor: default;
+}
+
+.code-lang:hover,
+.code-lang.is-active {
+  background: var(--bg-hover-strong);
+  color: var(--code-fg);
+}
+
+.code-lang-menu {
+  /* The search field sits flush with the menu's edges. */
+  padding: 0;
+}
+
+.code-lang-search {
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  outline: none;
+}
+
+.code-lang-search::placeholder {
+  color: var(--text-faint);
+}
+
+.code-lang-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.code-lang-empty {
+  padding: 6px 6px 5px;
+  color: var(--text-faint);
+  font-size: 13px;
 }
 
 .drop-line {

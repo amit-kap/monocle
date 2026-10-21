@@ -7,51 +7,14 @@ import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 // app's light/dark themes instead of shipping two JS themes.
 export const lowlight = createLowlight(common);
 
-// Maps the language written in a fence to the name highlight.js knows. A fence
-// can be tagged with anything (`ts`, `sh`, `typescript`), and an unknown tag
-// makes lowlight throw, which would break rendering of the whole block.
-const ALIASES: Record<string, string> = {
-  js: "javascript",
-  jsx: "javascript",
-  mjs: "javascript",
-  cjs: "javascript",
-  ts: "typescript",
-  tsx: "typescript",
-  sh: "bash",
-  shell: "bash",
-  zsh: "bash",
-  console: "bash",
-  yml: "yaml",
-  md: "markdown",
-  py: "python",
-  rb: "ruby",
-  rs: "rust",
-  golang: "go",
-  ps1: "powershell",
-  htm: "html",
-  xml: "html",
-  text: "plaintext",
-  txt: "plaintext",
-};
-
-export function resolveLanguage(tag: string | null | undefined): string | null {
-  if (!tag) return null;
-  const key = tag.trim().toLowerCase();
-  if (!key) return null;
-
-  const name = ALIASES[key] ?? key;
-  const grammar = (lowlight as unknown as { listLanguages: () => string[] }).listLanguages();
-  if (!grammar.includes(name)) return null;
-
-  // Keep the author's tag on the node so the fence round-trips unchanged, but
-  // only highlight when we recognise it.
-  return name;
-}
-
 // Replaces StarterKit's codeBlock. The name stays `codeBlock`, which is what
 // tiptap-markdown looks up to find the fence serializer.
+//
+// A fence's tag stays on the node exactly as the author wrote it, so the file
+// round-trips unchanged. Highlighting a tag is lowlight's own business: it
+// knows the usual aliases (`js`, `ts`, `sh`), and a tag no grammar matches is
+// auto-detected rather than left plain. `lib/languages.ts` holds the names and
+// tags the picker offers.
 export const CodeBlock = CodeBlockLowlight.extend({
   name: "codeBlock",
 }).configure({ lowlight });
-
-export { ALIASES };

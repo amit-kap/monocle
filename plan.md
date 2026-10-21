@@ -138,6 +138,30 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   column's hairline. The menu now names the block in its header (the same label),
   with the matching option checked, so the gutter is back to 40px — enough for the
   24px handle, which starts 26px left of the text — and the label cannot collide.
+- **A code block names its language in its own corner.** Hovering a block shows a
+  small label in the top-right — the language the fence names, or Plain text when
+  it names none — and clicking it opens a searchable picker. The label reads the
+  fence's tag through `lib/languages.ts` (a `js` fence shows JavaScript, an `html`
+  fence shows HTML rather than XML) and writes back the tag the author already
+  used, so picking JavaScript for a ```js block leaves the fence alone; Plain text
+  clears the tag. The list comes from lowlight's own grammars, so it can only
+  offer languages the editor can highlight, and `codeHighlight.test.ts` keeps the
+  names table in step with that list. The picker reuses the block menu's design
+  (`.block-menu`, the shared ✓) and never moves the caret: the label swallows its
+  own mousedown, the search box takes focus while the menu is open, and the editor
+  gets the focus back only if it had it.
+- **`1) ` starts a numbered list too.** markdown-it reads "1)" as a list marker
+  exactly like "1.", but tiptap's ordered-list input rule only matched "1. ", so a
+  typed "1) " stayed literal text and became a list only on the next load — the
+  file said one thing and the editor another. `ParenOrderedList` adds the missing
+  rule, with the same start number and the same "carry on the sequence" join as
+  "1. ", so the two markers behave identically.
+- **The language names moved out of the code-block extension.** `resolveLanguage`
+  and its `ALIASES` table in `extensions/CodeBlock.ts` were reachable only from
+  their own test: lowlight resolves fence aliases (`js`, `sh`, `yml`) itself, and
+  auto-detects a tag no grammar matches rather than throwing. The names and tags
+  now live in `lib/languages.ts` as the picker's data, with its drift test moved to
+  the file that owns the lowlight instance.
 ### Why raw HTML is escaped
 
 `Markdown` runs with `html: false`, so `<div>x</div>` in a note is saved as

@@ -18,6 +18,7 @@ import { setBufferSerializer } from "../lib/editorBuffer";
 import { noteDir } from "../lib/imagePath";
 import { loadDocument } from "../editor/loadDocument";
 import { BlockHandles } from "./BlockHandles";
+import { CodeBlockLanguage } from "./CodeBlockLanguage";
 import { ResizeHandle } from "./ResizeHandle";
 import type { SaveStatus } from "../types";
 
@@ -253,6 +254,7 @@ export function EditorPane() {
       )}
 
       <BlockHandles editor={editor} editorDom={editorDom} />
+      <CodeBlockLanguage editor={editor} editorDom={editorDom} />
     </main>
   );
 }

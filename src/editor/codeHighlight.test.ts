@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { makeTestEditor, onDisk } from "./testEditor";
 import { toMarkdown } from "../lib/markdown";
-import { resolveLanguage } from "./extensions/CodeBlock";
+import { LANGUAGES, languageOptions } from "../lib/languages";
+import { lowlight } from "./extensions/CodeBlock";
 
 function highlight(markdown: string) {
   const editor = makeTestEditor(markdown);
@@ -69,37 +70,24 @@ describe("code highlighting", () => {
   });
 });
 
-describe("resolveLanguage", () => {
-  it.each([
-    ["ts", "typescript"],
-    ["tsx", "typescript"],
-    ["js", "javascript"],
-    ["jsx", "javascript"],
-    ["sh", "bash"],
-    ["zsh", "bash"],
-    ["py", "python"],
-    ["yml", "yaml"],
-    ["md", "markdown"],
-    ["rb", "ruby"],
-    ["rs", "rust"],
-    ["plaintext", "plaintext"],
-  ])("maps %s to %s", (tag, expected) => {
-    expect(resolveLanguage(tag)).toBe(expected);
+describe("the languages the picker offers", () => {
+  const grammars = lowlight.listLanguages();
+
+  it("names every grammar the editor can highlight", () => {
+    const options = languageOptions(grammars);
+    for (const grammar of grammars) {
+      const found = options.find((option) => option.value === grammar);
+      expect(found, grammar).toBeDefined();
+      // An entry missing from LANGUAGES falls back to the bare grammar name.
+      expect(found?.label, grammar).not.toBe(grammar);
+    }
   });
 
-  it("passes a full language name through", () => {
-    expect(resolveLanguage("typescript")).toBe("typescript");
-    expect(resolveLanguage("python")).toBe("python");
+  it("names nothing lowlight cannot highlight", () => {
+    const known = new Set(grammars);
+    for (const key of Object.keys(LANGUAGES)) expect(known.has(key), key).toBe(true);
+    for (const option of languageOptions(grammars)) {
+      expect(known.has(option.value), option.label).toBe(true);
+    }
   });
-
-  it("is case insensitive", () => {
-    expect(resolveLanguage("TS")).toBe("typescript");
-  });
-
-  it.each([["nope"], [""], ["   "], [null], [undefined]])(
-    "returns null for %s",
-    (tag) => {
-      expect(resolveLanguage(tag as string | null | undefined)).toBeNull();
-    },
-  );
 });
