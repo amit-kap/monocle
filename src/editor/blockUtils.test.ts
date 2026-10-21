@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import { makeTestEditor, onDisk } from "./testEditor";
 import { toMarkdown } from "../lib/markdown";
 import {
+  blockForm,
   blockLabel,
   canInsertAt,
   movableBlocks,
   moveBlockTo,
   moveSibling,
+  turnIntoBlock,
   TURN_INTO,
+  TURN_INTO_MORE,
 } from "./blockUtils";
 
 // Layout-dependent helpers (blockAt, blockAtY, dropTargetForY) read
@@ -152,15 +155,52 @@ describe("blockLabel", () => {
 
   it("marks the block each handle-menu option produces", () => {
     const editor = makeTestEditor();
-    for (const option of TURN_INTO) {
-      const node =
-        option.kind === "paragraph"
-          ? editor.schema.nodes.paragraph.createAndFill()!
-          : editor.schema.nodes.heading.createAndFill({ level: option.kind })!;
-      // The menu's check is driven by this label matching the hovered block's,
-      // so the two must agree with what turnInto() actually applies.
-      expect(blockLabel(node), option.label).toBe(option.matches);
+    for (const option of [...TURN_INTO, ...TURN_INTO_MORE]) {
+      expect(
+        [...TURN_INTO, ...TURN_INTO_MORE].filter((o) => o.form === option.form),
+        option.label,
+      ).toHaveLength(1);
     }
+    editor.destroy();
+  });
+});
+
+describe("turnIntoBlock", () => {
+  const ALL = [...TURN_INTO, ...TURN_INTO_MORE];
+
+  it("converts a paragraph into every form the menu offers", () => {
+    for (const option of ALL) {
+      const editor = makeTestEditor("hello\n");
+      turnIntoBlock(editor, 0, option.kind);
+      expect(blockForm(editor, 0), option.label).toBe(option.form);
+      editor.destroy();
+    }
+  });
+
+  it("keeps the text when it changes the block", () => {
+    for (const option of ALL.filter((o) => o.kind !== "divider")) {
+      const editor = makeTestEditor("hello\n");
+      turnIntoBlock(editor, 0, option.kind);
+      expect(editor.state.doc.textContent, option.label).toBe("hello");
+      editor.destroy();
+    }
+  });
+
+  it("turns a heading into a list without leaving the heading inside it", () => {
+    const editor = makeTestEditor("## Title\n");
+    turnIntoBlock(editor, 0, "bulletList");
+    expect(blockForm(editor, 0)).toBe("bulletList");
+    expect(toMarkdown(editor)).toBe(onDisk("- Title"));
+    editor.destroy();
+  });
+
+  it("swaps a block for a rule", () => {
+    const editor = makeTestEditor("hello\n");
+    turnIntoBlock(editor, 0, "divider");
+    // A trailing paragraph follows, so there is somewhere to type after a rule
+    // that ends the note.
+    expect(editor.state.doc.child(0).type.name).toBe("horizontalRule");
+    expect(editor.state.doc.textContent).toBe("");
     editor.destroy();
   });
 });

@@ -61,22 +61,113 @@ export function blockLabel(node: PMNode): string {
   }
 }
 
-export type TurnIntoKind = "paragraph" | 1 | 2 | 3;
+export type TurnIntoKind =
+  | "paragraph"
+  | 1
+  | 2
+  | 3
+  | "bulletList"
+  | "orderedList"
+  | "taskList"
+  | "blockquote"
+  | "codeBlock"
+  | "divider";
 
 export type TurnIntoOption = {
   kind: TurnIntoKind;
   label: string;
-  /** The `blockLabel()` of a block this option produces, to mark the current one. */
-  matches: string;
+  /** The `blockForm()` of a block this option produces, to tick the current one. */
+  form: string;
 };
 
-/** The block types the handle's menu can convert a block into. */
+/** The block types the handle's menu shows outright. */
 export const TURN_INTO: TurnIntoOption[] = [
-  { kind: "paragraph", label: "Text", matches: "Text" },
-  { kind: 1, label: "Heading 1", matches: "H1" },
-  { kind: 2, label: "Heading 2", matches: "H2" },
-  { kind: 3, label: "Heading 3", matches: "H3" },
+  { kind: "paragraph", label: "Text", form: "paragraph" },
+  { kind: 1, label: "Heading 1", form: "heading-1" },
+  { kind: 2, label: "Heading 2", form: "heading-2" },
+  { kind: 3, label: "Heading 3", form: "heading-3" },
 ];
+
+/** The rest, behind the menu's submenu. */
+export const TURN_INTO_MORE: TurnIntoOption[] = [
+  { kind: "bulletList", label: "Bullet List", form: "bulletList" },
+  { kind: "orderedList", label: "Numbered List", form: "orderedList" },
+  { kind: "taskList", label: "To-do List", form: "taskList" },
+  { kind: "blockquote", label: "Quote", form: "blockquote" },
+  { kind: "codeBlock", label: "Code Block", form: "codeBlock" },
+  { kind: "divider", label: "Divider", form: "horizontalRule" },
+];
+
+/**
+ * The block's shape for the menu's tick. Headings keep their level, and a list
+ * item reports the list around it, so `•` and `1.` are never both ticked.
+ */
+export function blockForm(editor: Editor, from: number): string | null {
+  const node = editor.state.doc.nodeAt(from);
+  if (!node) return null;
+  switch (node.type.name) {
+    case "heading":
+      return `heading-${node.attrs.level}`;
+    case "listItem":
+    case "taskItem":
+      return editor.state.doc.resolve(from).parent.type.name;
+    default:
+      return node.type.name;
+  }
+}
+
+/**
+ * Convert one block in place. Lists and quotes wrap a text block, so the block
+ * is normalised to a paragraph first — a heading cannot sit inside a list item.
+ */
+export function turnIntoBlock(
+  editor: Editor,
+  from: number,
+  kind: TurnIntoKind,
+): void {
+  const node = editor.state.doc.nodeAt(from);
+  if (!node) return;
+  const chain = editor.chain().focus();
+
+  if (kind === "paragraph") {
+    chain.setNodeSelection(from).setParagraph().run();
+    return;
+  }
+  if (kind === 1 || kind === 2 || kind === 3) {
+    chain.setNodeSelection(from).setNode("heading", { level: kind }).run();
+    return;
+  }
+  if (kind === "divider") {
+    // `setNode` is for text blocks only; a rule replaces the block outright.
+    chain
+      .deleteRange({ from, to: from + node.nodeSize })
+      .insertContentAt(from, { type: "horizontalRule" })
+      .run();
+    return;
+  }
+  if (kind === "codeBlock") {
+    chain.setNodeSelection(from).setNode("codeBlock").run();
+    return;
+  }
+  if (node.type.name !== "listItem" && node.type.name !== "taskItem") {
+    chain.setNodeSelection(from).setParagraph();
+  }
+  chain.setTextSelection(from + 1);
+  switch (kind) {
+    case "bulletList":
+      chain.toggleBulletList().run();
+      break;
+    case "orderedList":
+      chain.toggleOrderedList().run();
+      break;
+    case "taskList":
+      chain.toggleTaskList().run();
+      break;
+    case "blockquote":
+      chain.toggleBlockquote().run();
+      break;
+  }
+}
 
 function isListItem(node: PMNode): boolean {
   return node.type.name === "listItem" || node.type.name === "taskItem";
