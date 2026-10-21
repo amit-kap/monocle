@@ -13,7 +13,8 @@ export const CONTENT = {
   min: 560,
   // Wider than a typical prose measure: code blocks, tables and wide quotes
   // all need the room, and the column stays centred so extra width costs
-  // nothing on a large display.
+  // nothing on a large display. (A test pins this: the old fixed 720 was
+  // deliberately widened.)
   max: 1200,
   default: 860,
 } as const;

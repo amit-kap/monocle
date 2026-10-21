@@ -1,91 +1,142 @@
 @import "tailwindcss";
 
+/* Brass & Graphite: warm bone paper, graphite ink, brass used only for state
+   (checked boxes, focus rings, the current block, the drop line) — never for
+   body copy, where it sits under 4.5:1. */
 :root {
   color-scheme: light;
-  --bg: #ffffff;
-  --bg-sidebar: #f7f7f5;
-  --bg-hover: rgba(55, 53, 47, 0.06);
-  --bg-active: rgba(55, 53, 47, 0.09);
-  --text: #37352f;
-  --text-muted: #787774;
-  --text-faint: #9b9a97;
-  --border: #e9e9e7;
-  --accent: #2383e2;
+  --bg: #fbfaf7;
+  --bg-sidebar: #f3f1ec;
+  --bg-menu: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-hover: rgba(35, 33, 28, 0.05);
+  --bg-hover-strong: rgba(35, 33, 28, 0.07);
+  --bg-active: rgba(35, 33, 28, 0.08);
+  --text: #23211c;
+  --text-muted: #6e6a62;
+  /* Faint stays readable at 11–12px: 4.7:1 on bone. */
+  --text-faint: #767066;
+  --border: #e6e2d9;
+  --border-strong: #d6d0c3;
+  --accent: #a87526;
+  --danger: #b3402f;
+  --selection: rgba(35, 33, 28, 0.12);
+  --btn-primary-bg: #23211c;
+  --btn-primary-fg: #fbfaf7;
+  --scroll-thumb: rgba(35, 33, 28, 0.18);
+  --scroll-thumb-hover: rgba(35, 33, 28, 0.3);
+  --shadow-menu:
+    0 8px 24px rgba(35, 33, 28, 0.1), 0 2px 6px rgba(35, 33, 28, 0.06);
+  --shadow-modal:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 24px 48px rgba(35, 33, 28, 0.18),
+    0 4px 12px rgba(35, 33, 28, 0.08);
   --radius: 6px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
-  /* Code highlighting. Tokens only, so the same rules serve both themes. */
-  --code-fg: #24292f;
-  --code-gutter: #6e7781;
-  --code-bg: #f6f8fa;
-  --code-border: #d0d7de;
-  --code-keyword: #cf222e;
-  --code-string: #0a3069;
-  --code-number: #0550ae;
-  --code-comment: #6e7781;
-  --code-function: #8250df;
-  --code-type: #953800;
-  --code-variable: #24292f;
-  --code-punctuation: #57606a;
-  --code-tag: #116329;
-  --code-attr: #0550ae;
+  /* Code highlighting, warmed to sit on paper. Tokens only, so the same rules
+     serve both themes. */
+  --code-fg: #23211c;
+  --code-gutter: #767066;
+  --code-bg: #f3f1ec;
+  --code-border: #e6e2d9;
+  --code-keyword: #a23b2a;
+  --code-string: #4e6b45;
+  --code-number: #8a5a1e;
+  --code-comment: #8a857b;
+  --code-function: #6b4e86;
+  --code-type: #8a5a1e;
+  --code-variable: #23211c;
+  --code-punctuation: #6e6a62;
+  --code-tag: #4e6b45;
+  --code-attr: #8a5a1e;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #191919;
-    --bg-sidebar: #202020;
-    --bg-hover: rgba(255, 255, 255, 0.055);
-    --bg-active: rgba(255, 255, 255, 0.1);
-    --text: #e9e9e7;
-    --text-muted: #9b9a97;
-    --text-faint: #6f6f6f;
-    --border: #2f2f2f;
-    --accent: #529cca;
-    --code-fg: #e6edf3;
-    --code-gutter: #8b949e;
-    --code-bg: #161616;
-    --code-border: #30363d;
-    --code-keyword: #ff7b72;
-    --code-string: #a5d6ff;
-    --code-number: #79c0ff;
-    --code-comment: #8b949e;
-    --code-function: #d2a8ff;
-    --code-type: #ffa657;
-    --code-variable: #e6edf3;
-    --code-punctuation: #8b949e;
-    --code-tag: #7ee787;
-    --code-attr: #79c0ff;
+    --bg: #16171b;
+    --bg-sidebar: #1c1d22;
+    --bg-menu: #1f2025;
+    --bg-elevated: #31333a;
+    --bg-hover: rgba(236, 232, 223, 0.06);
+    --bg-hover-strong: rgba(236, 232, 223, 0.08);
+    --bg-active: rgba(236, 232, 223, 0.1);
+    --text: #ece8df;
+    --text-muted: #a19c92;
+    --text-faint: #938e84;
+    --border: #2c2e34;
+    --border-strong: #3a3c43;
+    --accent: #e2b65c;
+    --danger: #f0907e;
+    --selection: rgba(236, 232, 223, 0.14);
+    --btn-primary-bg: #ece8df;
+    --btn-primary-fg: #16171b;
+    --scroll-thumb: rgba(236, 232, 223, 0.14);
+    --scroll-thumb-hover: rgba(236, 232, 223, 0.24);
+    --shadow-menu:
+      0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
+    --shadow-modal:
+      inset 0 1px 0 rgba(236, 232, 223, 0.06), 0 24px 56px rgba(0, 0, 0, 0.55),
+      0 4px 12px rgba(0, 0, 0, 0.35);
+    --code-fg: #ece8df;
+    --code-gutter: #938e84;
+    --code-bg: #1c1d22;
+    --code-border: #2c2e34;
+    --code-keyword: #e8917c;
+    --code-string: #a9c08f;
+    --code-number: #e2b65c;
+    --code-comment: #8b867c;
+    --code-function: #c9a9e8;
+    --code-type: #e2b65c;
+    --code-variable: #ece8df;
+    --code-punctuation: #938e84;
+    --code-tag: #a9c08f;
+    --code-attr: #e2b65c;
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #191919;
-  --bg-sidebar: #202020;
-  --bg-hover: rgba(255, 255, 255, 0.055);
-  --bg-active: rgba(255, 255, 255, 0.1);
-  --text: #e9e9e7;
-  --text-muted: #9b9a97;
-  --text-faint: #6f6f6f;
-  --border: #2f2f2f;
-  --accent: #529cca;
-  --code-fg: #e6edf3;
-  --code-gutter: #8b949e;
-  --code-bg: #161616;
-  --code-border: #30363d;
-  --code-keyword: #ff7b72;
-  --code-string: #a5d6ff;
-  --code-number: #79c0ff;
-  --code-comment: #8b949e;
-  --code-function: #d2a8ff;
-  --code-type: #ffa657;
-  --code-variable: #e6edf3;
-  --code-punctuation: #8b949e;
-  --code-tag: #7ee787;
-  --code-attr: #79c0ff;
+  --bg: #16171b;
+  --bg-sidebar: #1c1d22;
+  --bg-menu: #1f2025;
+  --bg-elevated: #31333a;
+  --bg-hover: rgba(236, 232, 223, 0.06);
+  --bg-hover-strong: rgba(236, 232, 223, 0.08);
+  --bg-active: rgba(236, 232, 223, 0.1);
+  --text: #ece8df;
+  --text-muted: #a19c92;
+  --text-faint: #938e84;
+  --border: #2c2e34;
+  --border-strong: #3a3c43;
+  --accent: #e2b65c;
+  --danger: #f0907e;
+  --selection: rgba(236, 232, 223, 0.14);
+  --btn-primary-bg: #ece8df;
+  --btn-primary-fg: #16171b;
+  --scroll-thumb: rgba(236, 232, 223, 0.14);
+  --scroll-thumb-hover: rgba(236, 232, 223, 0.24);
+  --shadow-menu:
+    0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-modal:
+    inset 0 1px 0 rgba(236, 232, 223, 0.06), 0 24px 56px rgba(0, 0, 0, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.35);
+  --code-fg: #ece8df;
+  --code-gutter: #938e84;
+  --code-bg: #1c1d22;
+  --code-border: #2c2e34;
+  --code-keyword: #e8917c;
+  --code-string: #a9c08f;
+  --code-number: #e2b65c;
+  --code-comment: #8b867c;
+  --code-function: #c9a9e8;
+  --code-type: #e2b65c;
+  --code-variable: #ece8df;
+  --code-punctuation: #938e84;
+  --code-tag: #a9c08f;
+  --code-attr: #e2b65c;
 }
 
 * {
@@ -113,14 +164,37 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(55, 53, 47, 0.2);
+  background: var(--scroll-thumb);
   border-radius: 6px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(55, 53, 47, 0.35);
+  background: var(--scroll-thumb-hover);
   background-clip: content-box;
+}
+
+/* The note title is a textarea, so it needs the resets the editor gets for
+   free. The frame sets 40/48 serif at -0.015em. */
+.doc-title {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 48px;
+  letter-spacing: -0.015em;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+}
+.doc-title::placeholder {
+  color: var(--text-faint);
 }
 
 .tiptap {
@@ -128,7 +202,7 @@ body {
   user-select: text;
   font-size: 16px;
   line-height: 1.6;
-  caret-color: var(--text);
+  caret-color: var(--accent);
 }
 
 .tiptap > * + * {
@@ -143,21 +217,26 @@ body {
 .tiptap h1,
 .tiptap h2,
 .tiptap h3 {
+  font-family: var(--font-serif);
   font-weight: 600;
-  line-height: 1.3;
+  letter-spacing: -0.01em;
+  padding: 3px 0;
 }
 
 .tiptap h1 {
-  font-size: 1.875em;
-  margin: 1.4em 0 0.2em;
+  font-size: 30px;
+  line-height: 39px;
+  margin: 32px 0 0;
 }
 .tiptap h2 {
-  font-size: 1.5em;
-  margin: 1.2em 0 0.2em;
+  font-size: 24px;
+  line-height: 31px;
+  margin: 27px 0 0;
 }
 .tiptap h3 {
-  font-size: 1.25em;
-  margin: 1em 0 0.2em;
+  font-size: 20px;
+  line-height: 26px;
+  margin: 22px 0 0;
 }
 
 .tiptap ul,
@@ -180,14 +259,14 @@ body {
 
 .tiptap blockquote {
   margin: 0.4em 0;
-  padding-left: 1em;
+  padding: 6px 0 6px 16px;
   border-left: 3px solid var(--text);
 }
 
 .tiptap code {
   font-family: var(--font-mono);
   font-size: 0.85em;
-  background: var(--bg-hover);
+  background: var(--code-bg);
   padding: 0.2em 0.4em;
   border-radius: 4px;
 }
@@ -339,8 +418,12 @@ body {
 }
 
 .tiptap a {
-  color: var(--accent);
+  /* Brass is state-only, so a link keeps the ink and takes a brass rule. */
+  color: var(--text);
   text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
   cursor: pointer;
 }
 
@@ -391,11 +474,40 @@ body {
   text-decoration: line-through;
 }
 .tiptap input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
   margin: 0;
   width: 16px;
   height: 16px;
-  accent-color: var(--accent);
+  flex: 0 0 auto;
+  border: 1px solid var(--text-faint);
+  border-radius: 3px;
+  background: transparent;
   cursor: pointer;
+}
+/* The tick is drawn over the brass fill, so its colour is baked into the SVG
+   and each theme gets its own copy. */
+.tiptap input[type="checkbox"]:checked {
+  border-color: var(--accent);
+  background-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5l3 3 6-7' stroke='%23FBFAF7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 12px 12px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.tiptap input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--accent);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tiptap input[type="checkbox"]:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5l3 3 6-7' stroke='%2316171B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}
+:root[data-theme="dark"] .tiptap input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5l3 3 6-7' stroke='%2316171B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .tiptap p.is-editor-empty:first-child::before {
@@ -407,7 +519,7 @@ body {
 }
 
 .tiptap ::selection {
-  background: rgba(35, 131, 226, 0.28);
+  background: var(--selection);
 }
 
 .slash-menu {
@@ -418,16 +530,15 @@ body {
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--bg);
-  box-shadow:
-    0 8px 24px rgba(15, 15, 15, 0.14),
-    0 2px 6px rgba(15, 15, 15, 0.08);
+  background: var(--bg-menu);
+  box-shadow: var(--shadow-menu);
   font-family: var(--font-sans);
 }
 
 .slash-menu-label {
   padding: 6px 8px 4px;
   font-size: 11px;
+  line-height: 14px;
   font-weight: 500;
   color: var(--text-faint);
 }
@@ -450,6 +561,7 @@ body {
   color: var(--text);
   font-family: inherit;
   font-size: 13.5px;
+  line-height: 18px;
   text-align: left;
   cursor: default;
 }
@@ -464,12 +576,28 @@ body {
   width: 22px;
   height: 22px;
   flex: 0 0 auto;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: 4px;
   background: var(--bg);
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 10px;
+}
+
+.slash-menu-item.is-selected .slash-glyph {
+  background: var(--bg-elevated);
+}
+
+/* Brass ring on the keyboard row, offset by the menu's own surface so it reads
+   on top of a hover tint. */
+.slash-menu-item:focus-visible,
+.block-menu-item:focus-visible,
+.modal-btn:focus-visible,
+.modal-close:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--bg-menu),
+    0 0 0 4px var(--accent);
 }
 
 .block-handle {
@@ -488,7 +616,7 @@ body {
 
 .block-handle:hover,
 .block-handle.is-active {
-  background: var(--bg-hover);
+  background: var(--bg-hover-strong);
   color: var(--text-muted);
 }
 
@@ -499,20 +627,19 @@ body {
 .block-menu {
   position: fixed;
   z-index: 50;
-  min-width: 180px;
+  min-width: 200px;
   padding: 5px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--bg);
-  box-shadow:
-    0 8px 24px rgba(15, 15, 15, 0.14),
-    0 2px 6px rgba(15, 15, 15, 0.08);
+  background: var(--bg-menu);
+  box-shadow: var(--shadow-menu);
   font-family: var(--font-sans);
 }
 
 .block-menu-label {
   padding: 6px 8px 3px;
   font-size: 11px;
+  line-height: 14px;
   font-weight: 500;
   color: var(--text-faint);
 }
@@ -528,12 +655,13 @@ body {
   color: var(--text);
   font-family: inherit;
   font-size: 13.5px;
+  line-height: 18px;
   text-align: left;
   cursor: default;
 }
 
 .block-menu-item:hover {
-  background: var(--bg-active);
+  background: var(--bg-hover-strong);
 }
 
 .block-menu-check {
@@ -542,7 +670,11 @@ body {
 }
 
 .block-menu-item.is-danger {
-  color: #e03e3e;
+  color: var(--danger);
+}
+
+.block-menu-item.is-danger:hover {
+  background: var(--bg-hover-strong);
 }
 
 .block-menu-sep {
@@ -568,40 +700,43 @@ body {
   z-index: 60;
   display: grid;
   place-items: center;
-  background: rgba(15, 15, 15, 0.4);
+  background: rgba(35, 33, 28, 0.32);
 }
 
 .modal-card {
   position: relative;
   width: 400px;
   max-width: calc(100vw - 32px);
-  padding: 20px;
+  padding: 22px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  box-shadow: 0 12px 32px rgba(15, 15, 15, 0.24);
+  border-radius: 12px;
+  background: var(--bg-menu);
+  box-shadow: var(--shadow-modal);
   font-family: var(--font-sans);
 }
 
 .modal-title {
   margin: 0;
-  padding-right: 28px;
-  font-size: 15px;
+  padding-right: 32px;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 26px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 
 .modal-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
   display: grid;
   place-items: center;
   width: 26px;
   height: 26px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius);
+  border-radius: 6px;
   background: transparent;
   color: var(--text-faint);
   cursor: default;
@@ -615,7 +750,7 @@ body {
 .modal-body {
   margin: 8px 0 0;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 20px;
   color: var(--text-muted);
 }
 
@@ -623,17 +758,18 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .modal-btn {
   padding: 6px 12px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
+  border-radius: 6px;
+  background: var(--bg-menu);
   color: var(--text);
   font-family: inherit;
   font-size: 13px;
+  line-height: 16px;
   cursor: default;
 }
 
@@ -642,22 +778,35 @@ body {
 }
 
 .modal-btn.is-primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #ffffff;
+  padding: 7px 16px;
+  border-color: transparent;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
 }
 
 .modal-btn.is-primary:hover {
-  background: var(--accent);
+  background: var(--btn-primary-bg);
   filter: brightness(1.08);
 }
 
 .modal-btn.is-danger {
-  color: #e03e3e;
+  color: var(--danger);
 }
 
 .modal-btn.is-danger:hover {
-  background: rgba(224, 62, 62, 0.1);
+  background: var(--bg-hover);
+}
+
+/* Keyboard ring on a tree row. An inset shadow goes ragged at fractional
+   scales (some edges land on a half pixel and some don't), and it paints
+   outside the row's radius; a 1px border drawn inside the row is even. */
+.tree-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--accent);
+  border-radius: inherit;
+  pointer-events: none;
 }
 
 @keyframes tree-expand {

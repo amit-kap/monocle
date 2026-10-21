@@ -70,7 +70,7 @@ export function ThemeSelector() {
   }
 
   return (
-    <div className="flex items-center gap-0.5 rounded-[var(--radius)] bg-[var(--bg-active)] p-0.5">
+    <div className="flex items-center gap-0.5 rounded-[6px] bg-[var(--bg-active)] p-0.5">
       {OPTIONS.map((option) => (
         <button
           key={option.value}
@@ -79,9 +79,9 @@ export function ThemeSelector() {
           aria-label={option.label}
           aria-pressed={theme === option.value}
           onClick={() => choose(option.value)}
-          className={`grid h-6 w-6 place-items-center rounded-[4px] ${
+          className={`grid h-6 w-6 place-items-center rounded-[4px] outline-none focus-visible:shadow-[0_0_0_2px_var(--bg-active),0_0_0_4px_var(--accent)] ${
             theme === option.value
-              ? "bg-[var(--bg)] text-[var(--text)] shadow-sm"
+              ? "bg-[var(--bg-elevated)] text-[var(--text)] shadow-[0_1px_2px_rgba(35,33,28,0.1)]"
               : "text-[var(--text-faint)] hover:text-[var(--text)]"
           }`}
         >

@@ -13,6 +13,7 @@ import { Markdown } from "tiptap-markdown";
 import { SlashCommand } from "./extensions/SlashCommand";
 import { SoftBreakSpace } from "./extensions/SoftBreakSpace";
 import { TaskListTight } from "./extensions/TaskListTight";
+import { ParenNumberedList } from "./extensions/ParenNumberedList";
 
 // The one extension stack the app ships with, shared by the editor pane and
 // the round-trip fixtures so the tests cannot drift from what runs.
@@ -48,6 +49,7 @@ export const appExtensions = [
   }),
   SoftBreakSpace,
   TaskListTight,
+  ParenNumberedList,
   CodeBlock,
   LocalImages,
   SlashCommand,

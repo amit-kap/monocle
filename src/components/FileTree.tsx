@@ -10,6 +10,8 @@ type Handlers = {
   tabbablePath: string | null;
   /** The row the ⌘P search is on, highlighted while the search box has focus. */
   highlightPath: string | null;
+  /** Only the keyboard earns the brass ring; a click just selects. */
+  keyboardRing: boolean;
   onToggle: (path: string) => void;
   onOpen: (path: string) => void;
   onAddNote: (path: string) => void;
@@ -31,6 +33,7 @@ function focusUnlessControl(event: ReactMouseEvent<HTMLDivElement>) {
 type RowProps = {
   focused: boolean;
   highlighted: boolean;
+  keyboardRing: boolean;
   onFocusRow: (path: string) => void;
 };
 
@@ -152,6 +155,7 @@ function FolderRow({
   open,
   focused,
   highlighted,
+  keyboardRing,
   onFocusRow,
   onToggle,
   onAddNote,
@@ -170,9 +174,9 @@ function FolderRow({
       onMouseDown={focusUnlessControl}
       onFocus={() => onFocusRow(node.path)}
       onClick={() => onToggle(node.path)}
-      className={`group/folder flex cursor-default items-center gap-2 rounded-[var(--radius)] py-1.5 pr-2 text-[13px] hover:bg-[var(--bg-hover)] ${
+      className={`group/folder relative flex h-8 cursor-default items-center gap-2 rounded-[var(--radius)] pr-2 text-[13px] outline-none hover:bg-[var(--bg-hover)] ${
         highlighted ? "bg-[var(--bg-hover)]" : ""
-      }`}
+      } ${focused && keyboardRing ? "tree-ring" : ""}`}
       style={{ paddingLeft: 8 + depth * 12 }}
     >
       <span className="flex shrink-0 items-center gap-1.5 text-[var(--text-muted)] group-hover/folder:text-[var(--text)]">
@@ -205,6 +209,7 @@ function FileRow({
   active,
   focused,
   highlighted,
+  keyboardRing,
   onFocusRow,
   onOpen,
   onRename,
@@ -245,7 +250,9 @@ function FileRow({
       onFocus={() => onFocusRow(node.path)}
       onClick={() => !editing && onOpen(node.path)}
       data-active={active}
-      className={`group/file flex cursor-default items-center gap-2 rounded-[var(--radius)] py-1.5 pr-2 text-[13px] ${tone}`}
+      className={`group/file relative flex h-9 cursor-default items-center gap-2 rounded-[var(--radius)] pr-2 text-[13px] outline-none ${
+        focused && keyboardRing ? "tree-ring" : ""
+      } ${tone}`}
       style={{ paddingLeft: 9 + depth * 12 }}
     >
       {editing ? (
@@ -327,6 +334,7 @@ export function FileTree({
                 open={open}
                 focused={focused}
                 highlighted={highlighted}
+                keyboardRing={handlers.keyboardRing}
                 onFocusRow={handlers.onFocusRow}
                 onToggle={handlers.onToggle}
                 onAddNote={handlers.onAddNote}
@@ -351,6 +359,7 @@ export function FileTree({
             active={node.path === handlers.activePath}
             focused={focused}
             highlighted={highlighted}
+            keyboardRing={handlers.keyboardRing}
             onFocusRow={handlers.onFocusRow}
             onOpen={handlers.onOpen}
             onRename={handlers.onRename}

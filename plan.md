@@ -16,7 +16,8 @@ Phases 0–8 implemented, and the whole open backlog worked through. `Monocle.ap
 and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
 
 - TipTap **v3** (not v2) — `tiptap-markdown` requires it.
-- Save is **explicit (⌘S)** per the locked decision; autosave deferred.
+- Save is **explicit (⌘S)**, with a debounced autosave behind it as a safety net
+  (added after v0.4.1; the explicit model stays).
 - The unsaved-changes guard is an in-app prompt (Save / Discard changes, with an
   ✕ — like Esc and the backdrop — meaning keep editing), not the native OK/Cancel
   alert whose "OK" meant losing the edits. It names the note and can save the
@@ -161,7 +162,10 @@ not just flip `html: true`.
 - **A failed image load shows the browser's broken-image glyph.** CSS cannot
   detect a failed load, only an empty `src`, so styling this needs an `error`
   listener on the image node.
-- **Autosave is not implemented** — saving is explicit (⌘S) by a locked decision.
+- **Autosave is a safety net, not the model.** Saving is still explicit (⌘S);
+  an edit also saves itself 800ms after the last keystroke, keyed on `loadId` so a
+  rename carries the pending save to the new name. The unsaved-changes prompt now
+  only catches edits made inside that window.
 - Still open: signing/notarization and a custom icon (Phase 8).
 
 ## 2. Stack and rationale
@@ -368,7 +372,17 @@ dev: typescript vite @vitejs/plugin-react vitest
 
 1. **Sidebar: recursive folder tree.** Folders first, only `.md` files, empty
    directories pruned. (Supersedes the original flat-list v1 decision.)
-2. **Explicit save via `⌘S`** only. No autosave in v1; dirty indicator and
-   guard against losing unsaved changes on note switch/quit.
+2. **Explicit save via `⌘S`.** Dirty indicator and a guard against losing unsaved
+   changes on note switch/quit. (Amended 2026-10-21: a debounced autosave rides
+   behind `⌘S` — the user asked for it — but the explicit model is unchanged and
+   `⌘S` still saves on demand.)
 3. **User-chosen folder.** Monocle reads/writes `.md` files in a folder the user
    picks; it does not manage its own hidden library.
+4. **Brass is a state colour, not an accent.** Checks, focus rings, the current
+   block, the drop line and the caret use `--accent` (brass); body copy, links
+   and icons do not, because `#A87526` on bone is 3.9:1. Text uses graphite, and
+   `--text-faint` is `#767066` light / `#938E84` dark so 11–12px labels clear
+   4.5:1 (the Paper frame's `#A19C92` does not).
+5. **The keyboard earns the brass ring.** The sidebar shows the focus ring only
+   after a key event, never from a click or the row WebKit focuses at launch.
+   (Added 2026-10-21 — focus alone painted the active note.)

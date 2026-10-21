@@ -133,6 +133,9 @@ export function Sidebar() {
   // the search carries its own highlight.
   const [focusedPath, setFocusedPath] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
+  // WebKit focuses the first row on its own at launch; the brass ring is for
+  // the keyboard, so it follows the last input rather than focus alone.
+  const [keyboardRing, setKeyboardRing] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -158,6 +161,21 @@ export function Sidebar() {
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   }
+
+  useEffect(() => {
+    function onKeyDown() {
+      setKeyboardRing(true);
+    }
+    function onMouseDown() {
+      setKeyboardRing(false);
+    }
+    window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("mousedown", onMouseDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("mousedown", onMouseDown, true);
+    };
+  }, []);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -393,7 +411,7 @@ export function Sidebar() {
         className="flex-1 overflow-y-auto px-2 pb-3"
       >
         {folder && error && (
-          <p className="mx-1 mb-2 rounded-[var(--radius)] bg-[var(--bg-active)] px-2 py-1.5 text-[12px] leading-snug text-[#e03e3e] [overflow-wrap:anywhere]">
+          <p className="mx-1 mb-2 rounded-[var(--radius)] bg-[var(--bg-active)] px-2 py-1.5 text-[12px] leading-snug text-[var(--danger)] [overflow-wrap:anywhere]">
             {error}
           </p>
         )}
@@ -426,6 +444,7 @@ export function Sidebar() {
           forceExpand={searching}
           tabbablePath={focusedPath ?? activePath}
           highlightPath={highlight}
+          keyboardRing={keyboardRing}
           onToggle={toggleDir}
           onOpen={(path) => {
             // Picking a note answers the search.

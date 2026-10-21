@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
@@ -19,6 +20,7 @@ import {
   type TurnIntoKind,
 } from "../editor/blockUtils";
 import { MenuCheck } from "./MenuCheck";
+import { MENU_GAP_BELOW, menuTop } from "../lib/placement";
 
 type MenuState = {
   from: number;
@@ -52,8 +54,24 @@ export function BlockHandles({
 }) {
   const [hover, setHover] = useState<BlockHover | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // The menu's height is only known once it is in the DOM, so its `top` is
+  // settled after the first render — null until then.
+  const [menuY, setMenuY] = useState<number | null>(null);
   const [dropY, setDropY] = useState<number | null>(null);
   const dragging = useRef(false);
+
+  useLayoutEffect(() => {
+    const el = menuRef.current;
+    if (!menu || !el) return;
+    setMenuY(
+      menuTop({
+        anchorTop: menu.top,
+        height: el.offsetHeight,
+        viewportBottom: window.innerHeight,
+      }),
+    );
+  }, [menu]);
 
   useEffect(() => {
     if (!editor || !editorDom) return;
@@ -181,6 +199,7 @@ export function BlockHandles({
           moveBlockTo(editor!, anchor.from, anchor.to, target);
         }
       } else {
+        setMenuY(null);
         setMenu({
           from: anchor.from,
           to: anchor.to,
@@ -224,8 +243,12 @@ export function BlockHandles({
 
       {menu && (
         <div
+          ref={menuRef}
           className="block-menu"
-          style={{ top: menu.top + 26, left: menu.left - 26 }}
+          style={{
+            top: menuY ?? menu.top + MENU_GAP_BELOW,
+            left: menu.left - 26,
+          }}
         >
           <div className="block-menu-label">{menu.label}</div>
           {TURN_INTO.map((option) => {

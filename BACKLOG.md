@@ -7,23 +7,17 @@ the reasoning behind the decisions.
 
 ## Open issues
 
-Nothing open.
+- [ ] **Spell-check underlines never appear** — `spellcheck="true"` sits on the
+  editor element, but WKWebView does not run the macOS checker inside a
+  contenteditable, so a misspelling gets no underline. The shortcut is closed:
+  setting `continuousSpellCheckingEnabled` on the web view through KVC raises an
+  "not key value coding-compliant" exception and aborts the app at launch (tried
+  in v0.4.2, reverted). What's left is a decoration built on a JS spell checker,
+  or reaching the checker through WebKit's private content view. (editor/app)
 
 ## Feature requests
 
 Ordered by effort, smallest first. `(area)` is the code the work lands in.
-
-### Small
-
-- [ ] **Auto numbered lists** — `1. ` already converts into a numbered list and
-  continues an existing sequence (tiptap's ordered-list input rule); only the
-  `2) ` form is missing. Verify in the app, then add that rule. (editor)
-- [ ] **Spell-check underlines** — misspellings are not flagged today: nothing sets
-  `spellcheck` on the editor, and the title field turns it off. If the webview's
-  native checker can't be switched on, this grows into a custom decoration.
-  Right-click suggestions come from macOS. (editor)
-- [ ] **Autosave** — debounce edits into the existing save path. Needs a decision:
-  explicit `⌘S` was a locked decision, so this would change the save model.
 
 ### Medium
 
@@ -41,6 +35,10 @@ Ordered by effort, smallest first. `(area)` is the code the work lands in.
 - [ ] **External file-change watching** — plugin-fs ships `watch` (needs the cargo
   `watch` feature and a permission), then re-scan on outside edits while ignoring
   our own saves. (workspace)
+- [ ] **Collapsible items** — fold a block's children away: a toggle beside
+  headings and list items that have nested content, and the folded state
+  remembered per note. Markdown has nowhere to keep that state, so it has to live
+  outside the file (per-note UI state) or in an HTML comment. (editor)
 
 ### Large
 

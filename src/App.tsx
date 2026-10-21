@@ -100,7 +100,7 @@ function App() {
     <div className="relative flex h-full w-full overflow-hidden pt-9">
       <div
         data-tauri-drag-region
-        className="absolute inset-x-0 top-0 z-30 flex h-9 items-center justify-center border-b border-[var(--border)]"
+        className="absolute inset-x-0 top-0 z-30 flex h-9 items-center justify-center border-b border-[var(--border)] bg-[var(--bg)]"
       >
         <span className="pointer-events-none max-w-[60%] truncate text-[13px] font-medium text-[var(--text-muted)]">
           {activeName ?? "Monocle"}
@@ -116,7 +116,7 @@ function App() {
         <button
           type="button"
           onClick={() => setError(null)}
-          className="absolute bottom-3 right-3 max-w-[420px] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-left text-[12px] text-[var(--text)] shadow-lg"
+          className="absolute bottom-3 right-3 max-w-[420px] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-menu)] px-3 py-2 text-left text-[12px] text-[var(--danger)] shadow-[var(--shadow-menu)]"
         >
           {error}
         </button>

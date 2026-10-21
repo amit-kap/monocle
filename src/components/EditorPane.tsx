@@ -29,6 +29,9 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
   error: "Save failed",
 };
 
+// How long the editor waits after the last keystroke before saving.
+const AUTOSAVE_DELAY = 800;
+
 export function EditorPane() {
   const notes = useStore((s) => s.notes);
   const activePath = useStore((s) => s.activePath);
@@ -96,11 +99,41 @@ export function EditorPane() {
     void renameNote(activePath, next);
   }
 
+  // Autosave is a safety net, not a replacement: ⌘S still saves on demand, and
+  // the unsaved-changes prompt only surfaces edits made inside this window.
+  const saveTimer = useRef<number | null>(null);
+
+  function cancelAutosave() {
+    if (saveTimer.current === null) return;
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+  }
+
+  function scheduleAutosave() {
+    cancelAutosave();
+    // Keyed on loadId, not the path: a rename keeps the buffer, so a pending
+    // save must follow it to the new name instead of being dropped.
+    const { activePath, loadId } = useStore.getState();
+    if (!activePath) return;
+    saveTimer.current = window.setTimeout(() => {
+      saveTimer.current = null;
+      const state = useStore.getState();
+      // The note may have been closed or replaced while we waited.
+      if (!editor || !state.activePath || state.loadId !== loadId) return;
+      void state.save(toMarkdown(editor));
+    }, AUTOSAVE_DELAY);
+  }
+
+  useEffect(() => cancelAutosave, []);
+
   const editor = useEditor({
     extensions: appExtensions,
     content: "",
-    editorProps: { attributes: { class: "tiptap" } },
-    onUpdate: () => markDirty(),
+    editorProps: { attributes: { class: "tiptap", spellcheck: "true" } },
+    onUpdate: () => {
+      markDirty();
+      scheduleAutosave();
+    },
   });
 
   useEffect(() => {
@@ -108,6 +141,7 @@ export function EditorPane() {
     // replace the buffer with the content loaded when it was opened.
     const { activePath, activeContent } = useStore.getState();
     if (!editor || !activePath) return;
+    cancelAutosave();
     loadDocument(editor, activeContent);
     // Deliberately no focus() here: keeping the caret out of the note means
     // arrow keys keep working in whatever the user had focused — the sidebar
@@ -175,7 +209,7 @@ export function EditorPane() {
             <div
               /* 40px of gutter: enough for the 24px handle, which starts 26px
                  left of the text. The column's hairline is 40px out. */
-              className="mx-auto w-full px-10 py-20"
+              className="mx-auto w-full px-16 py-20"
               style={{ maxWidth: contentWidth }}
             >
               <textarea
@@ -187,14 +221,17 @@ export function EditorPane() {
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
-                    event.currentTarget.blur();
+                    // Hand the caret back to the body, where it was last —
+                    // not to the first line, and not to nothing at all.
+                    if (editor) editor.commands.focus();
+                    else event.currentTarget.blur();
                   } else if (event.key === "Escape") {
                     setTitle(baseName);
                   }
                 }}
                 placeholder="Untitled"
                 spellCheck={false}
-                className="mb-2 block w-full resize-none overflow-hidden bg-transparent text-[38px] font-bold leading-[1.25] tracking-[-0.01em] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)]"
+                className="doc-title"
               />
               <div ref={setEditorDom}>
                 <EditorContent editor={editor} />
