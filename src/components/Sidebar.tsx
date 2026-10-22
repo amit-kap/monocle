@@ -145,18 +145,27 @@ function RevealIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
       <path
-        d="M9.5 2.5h4v4M13.5 2.5 7.5 8.5"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M2.2 5.2a3 3 0 0 1 3-3H8v11.6H5.2a3 3 0 0 1-3-3V5.2Z"
+        fill="currentColor"
+        opacity=".16"
+        stroke="none"
       />
-      <path
-        d="M11 9.5V12a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 12V6.5A1.5 1.5 0 0 1 4 5h2.5"
+      <rect
+        x="2.2"
+        y="2.2"
+        width="11.6"
+        height="11.6"
+        rx="3"
         stroke="currentColor"
-        strokeWidth="1.3"
+        strokeWidth="1.2"
+      />
+      <circle cx="5.9" cy="6.4" r="0.7" fill="currentColor" />
+      <circle cx="10.1" cy="6.4" r="0.7" fill="currentColor" />
+      <path
+        d="M5.4 9.2c.6.9 1.5 1.4 2.6 1.4s2-.5 2.6-1.4"
+        stroke="currentColor"
+        strokeWidth="1.2"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </svg>
   );
@@ -559,6 +568,7 @@ export function Sidebar() {
             void openNote(path);
           }}
           onAddNote={(path) => void createNote(path)}
+          onReveal={(path) => void revealItemInDir(path)}
           onRename={(path, name) => void renameNote(path, name)}
           onDelete={(path) => void deleteNote(path)}
           onFocusRow={setFocusedPath}

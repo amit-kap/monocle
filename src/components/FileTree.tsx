@@ -15,6 +15,7 @@ type Handlers = {
   onToggle: (path: string) => void;
   onOpen: (path: string) => void;
   onAddNote: (path: string) => void;
+  onReveal: (path: string) => void;
   onRename: (path: string, name: string) => void;
   onDelete: (path: string) => void;
   onFocusRow: (path: string) => void;
@@ -100,6 +101,36 @@ function PlusIcon({ className }: { className?: string }) {
   );
 }
 
+function RevealIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M3.3 7.8A4.5 4.5 0 0 1 7.8 3.3H12v17.4H7.8a4.5 4.5 0 0 1-4.5-4.5V7.8Z"
+        fill="currentColor"
+        opacity=".16"
+        stroke="none"
+      />
+      <rect
+        x="3.3"
+        y="3.3"
+        width="17.4"
+        height="17.4"
+        rx="4.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <circle cx="8.85" cy="9.6" r="1.05" fill="currentColor" />
+      <circle cx="15.15" cy="9.6" r="1.05" fill="currentColor" />
+      <path
+        d="M8.1 13.8c.9 1.35 2.25 2.1 3.9 2.1s3-.75 3.9-2.1"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function PencilIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
@@ -151,7 +182,6 @@ function TrashIcon({ className }: { className?: string }) {
 
 function FolderRow({
   node,
-  depth,
   open,
   focused,
   highlighted,
@@ -159,12 +189,13 @@ function FolderRow({
   onFocusRow,
   onToggle,
   onAddNote,
+  onReveal,
 }: {
   node: TreeNode;
-  depth: number;
   open: boolean;
   onToggle: (path: string) => void;
   onAddNote: (path: string) => void;
+  onReveal: (path: string) => void;
 } & RowProps) {
   return (
     <div
@@ -174,10 +205,9 @@ function FolderRow({
       onMouseDown={focusUnlessControl}
       onFocus={() => onFocusRow(node.path)}
       onClick={() => onToggle(node.path)}
-      className={`group/folder relative flex h-8 cursor-default items-center gap-2 rounded-[var(--radius)] pr-2 text-[13px] outline-none hover:bg-[var(--bg-hover)] ${
+      className={`group/folder relative flex h-8 cursor-default items-center gap-2 rounded-[var(--radius)] ps-2 pr-2 text-[13px] outline-none hover:bg-[var(--bg-hover)] ${
         highlighted ? "bg-[var(--bg-hover)]" : ""
       } ${focused && keyboardRing ? "tree-ring" : ""}`}
-      style={{ paddingLeft: 8 + depth * 12 }}
     >
       <span className="flex shrink-0 items-center gap-1.5 text-[var(--text-muted)] group-hover/folder:text-[var(--text)]">
         <ChevronIcon
@@ -188,6 +218,17 @@ function FolderRow({
       <span className="min-w-0 flex-1 truncate font-medium text-[var(--text)]">
         {node.name}
       </span>
+      <button
+        type="button"
+        title="Reveal in Finder"
+        onClick={(event) => {
+          event.stopPropagation();
+          onReveal(node.path);
+        }}
+        className="grid size-5 shrink-0 place-items-center rounded text-[var(--text-faint)] opacity-0 hover:bg-[var(--bg-active)] hover:text-[var(--text)] group-hover/folder:opacity-100"
+      >
+        <RevealIcon className="size-3.5" />
+      </button>
       <button
         type="button"
         title="New note"
@@ -205,7 +246,6 @@ function FolderRow({
 
 function FileRow({
   node,
-  depth,
   active,
   focused,
   highlighted,
@@ -214,13 +254,14 @@ function FileRow({
   onOpen,
   onRename,
   onDelete,
+  onReveal,
 }: {
   node: TreeNode;
-  depth: number;
   active: boolean;
   onOpen: (path: string) => void;
   onRename: (path: string, name: string) => void;
   onDelete: (path: string) => void;
+  onReveal: (path: string) => void;
 } & RowProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(node.name);
@@ -250,10 +291,9 @@ function FileRow({
       onFocus={() => onFocusRow(node.path)}
       onClick={() => !editing && onOpen(node.path)}
       data-active={active}
-      className={`group/file relative flex h-9 cursor-default items-center gap-2 rounded-[var(--radius)] pr-2 text-[13px] outline-none ${
+      className={`group/file relative flex h-9 cursor-default items-center gap-2 rounded-[var(--radius)] ps-[9px] pr-2 text-[13px] outline-none ${
         focused && keyboardRing ? "tree-ring" : ""
       } ${tone}`}
-      style={{ paddingLeft: 9 + depth * 12 }}
     >
       {editing ? (
         <input
@@ -286,6 +326,17 @@ function FileRow({
           >
             <button
               type="button"
+              title="Reveal in Finder"
+              onClick={(event) => {
+                event.stopPropagation();
+                onReveal(node.path);
+              }}
+              className="grid size-6 shrink-0 place-items-center rounded text-[var(--text-faint)] hover:bg-[var(--bg-active)] hover:text-[var(--text)]"
+            >
+              <RevealIcon className="size-3.5" />
+            </button>
+            <button
+              type="button"
               title="Rename"
               onClick={(event) => {
                 event.stopPropagation();
@@ -316,9 +367,8 @@ function FileRow({
 
 export function FileTree({
   nodes,
-  depth = 0,
   ...handlers
-}: { nodes: TreeNode[]; depth?: number } & Handlers) {
+}: { nodes: TreeNode[] } & Handlers) {
   return (
     <div className="flex flex-col gap-0.5">
       {nodes.map((node) => {
@@ -330,7 +380,6 @@ export function FileTree({
             <div key={node.path}>
               <FolderRow
                 node={node}
-                depth={depth}
                 open={open}
                 focused={focused}
                 highlighted={highlighted}
@@ -338,14 +387,11 @@ export function FileTree({
                 onFocusRow={handlers.onFocusRow}
                 onToggle={handlers.onToggle}
                 onAddNote={handlers.onAddNote}
+                onReveal={handlers.onReveal}
               />
               {open && node.children && (
-                <div className="tree-children ps-1.5">
-                  <FileTree
-                    nodes={node.children}
-                    depth={depth + 1}
-                    {...handlers}
-                  />
+                <div className="tree-children">
+                  <FileTree nodes={node.children} {...handlers} />
                 </div>
               )}
             </div>
@@ -355,7 +401,6 @@ export function FileTree({
           <FileRow
             key={node.path}
             node={node}
-            depth={depth}
             active={node.path === handlers.activePath}
             focused={focused}
             highlighted={highlighted}
@@ -364,6 +409,7 @@ export function FileTree({
             onOpen={handlers.onOpen}
             onRename={handlers.onRename}
             onDelete={handlers.onDelete}
+            onReveal={handlers.onReveal}
           />
         );
       })}
