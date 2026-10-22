@@ -918,10 +918,10 @@ body {
    rows it owns. The group carries the indent and the thread, so its place is the
    same at every level: 14px in — the row's 8px gutter plus half of the 12px
    chevron — which is 4px left of the rows themselves, so a hover or a selected
-   row never crosses it. It starts 13px above the group: with no gap between a
-   folder row and the rows it owns, that is exactly where the open chevron's
-   lowest point sits (the rotated apex, 19px down a 32px row), so the thread
-   hangs off the chevron. */
+   row never crosses it. It starts 10px above the group: a folder row and the
+   rows it owns have no gap, and the open chevron's lowest ink sits 18px down a
+   32px row (rotated, the glyph's tip lands 8px into its 12px box, which the row
+   centres), so the thread clears the chevron's tip by 4px. */
 .tree-children {
   position: relative;
   padding-left: 18px;
@@ -931,7 +931,7 @@ body {
 .tree-children::before {
   content: "";
   position: absolute;
-  top: -13px;
+  top: -10px;
   bottom: 0;
   left: 14px;
   width: 1px;
