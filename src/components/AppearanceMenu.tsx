@@ -91,18 +91,45 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: ReactNode }[] = [
   { value: "dark", label: "Dark theme", icon: <MoonIcon /> },
 ];
 
+// Long enough for the exit transition in styles.css to finish before the panel
+// leaves the DOM.
+const POPOVER_EXIT = 110;
+
 /**
  * The titlebar's appearance button and the popover it opens: theme, page tint
  * and page width in one place, so nothing floats over the page while writing.
  */
 export function AppearanceMenu() {
   const [open, setOpen] = useState(false);
+  // The panel outlives `open` by one animation so it can fade out: `rendered`
+  // keeps it mounted, and the CSS reads `data-open` for which way to move.
+  const [rendered, setRendered] = useState(false);
   const [theme, setTheme] = useState<Theme>(getStoredTheme);
   const tint = useStore((s) => s.tint);
   const setTint = useStore((s) => s.setTint);
   const contentWidth = useStore((s) => s.contentWidth);
   const setContentWidth = useStore((s) => s.setContentWidth);
   const anchorRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setRendered(true);
+      return;
+    }
+    if (!rendered) return;
+    const timer = window.setTimeout(() => setRendered(false), POPOVER_EXIT);
+    return () => window.clearTimeout(timer);
+  }, [open, rendered]);
+
+  // Flip the panel to its open style one frame after it mounts, so the closed
+  // state is painted first and the transition has somewhere to travel from.
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    if (open) void panel.offsetHeight;
+    panel.dataset.open = open ? "true" : "false";
+  }, [open, rendered]);
 
   useEffect(() => {
     if (!open) return;
@@ -139,12 +166,20 @@ export function AppearanceMenu() {
         <SlidersIcon />
       </button>
 
-      {open && (
+      {rendered && (
         <div
+          ref={panelRef}
           role="dialog"
-          aria-label="Appearance"
+          aria-labelledby="appearance-title"
+          aria-hidden={!open}
           className="appearance-popover"
         >
+          <div className="appearance-titlebar">
+            <h2 id="appearance-title" className="appearance-title">
+              Appearance
+            </h2>
+          </div>
+
           <div className="appearance-group">
             <span className="appearance-label" id="appearance-theme">
               Theme

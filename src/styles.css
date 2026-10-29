@@ -1070,7 +1070,9 @@ body {
   z-index: 50;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  /* One gap between groups, the same gap under the title's rule, and a tighter
+     one inside a group: label to control. */
+  gap: 20px;
   width: 240px;
   padding: 12px;
   border: 1px solid var(--border);
@@ -1078,12 +1080,54 @@ body {
   background: var(--bg-menu);
   box-shadow: var(--shadow-menu);
   font-family: var(--font-sans);
+  /* Closed: a touch high and small, so it grows out of the button rather than
+     appearing over it. */
+  transform-origin: top right;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  pointer-events: none;
+  transition:
+    opacity 90ms ease-in,
+    transform 90ms ease-in;
+}
+
+.appearance-popover[data-open="true"] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity 130ms cubic-bezier(0.2, 0, 0, 1),
+    transform 140ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appearance-popover,
+  .appearance-popover[data-open="true"] {
+    transform: none;
+    transition: opacity 90ms linear;
+  }
+}
+
+/* The panel's title, and a hairline that closes it off from the controls, the
+   way a menu header is separated. */
+.appearance-titlebar {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.appearance-title {
+  margin: 0;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.005em;
 }
 
 .appearance-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .appearance-head {
@@ -1159,29 +1203,66 @@ body {
   justify-content: space-between;
 }
 
+/* 24px tall, the theme segment's own height, and 32 wide so the five swatches
+   spread across the panel as they did originally.
+
+   The edge is a 1px shadow OUTSIDE the box, not a border: a border eats into
+   the colour, so the darkest swatch — whose fill barely separates from the
+   panel — read as a 30x22 outline while the rest read as 32x24 blocks. With the
+   rim outside, every swatch paints the same block and carries the same edge. */
 .tint-chip {
+  --chip-edge: rgba(35, 33, 28, 0.14);
   width: 32px;
-  height: 32px;
+  height: 24px;
   padding: 0;
-  border: 1px solid rgba(35, 33, 28, 0.1);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 6px;
   background: var(--chip-light);
+  /* The rim marks the box; the inner line marks the colour, so a swatch that
+     sits close to the panel still reads as a filled block. */
+  box-shadow:
+    0 0 0 1px var(--chip-edge),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   cursor: default;
 }
 
+/* The swatch fill follows the scheme; these sit above the selected rule so one
+   pixel of brass can win without extra specificity. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tint-chip {
+    --chip-edge: rgba(236, 232, 223, 0.16);
+    background: var(--chip-dark);
+  }
+}
+:root[data-theme="dark"] .tint-chip {
+  --chip-edge: rgba(236, 232, 223, 0.16);
+  background: var(--chip-dark);
+}
+
+/* A swatch says "selected" with one pixel of brass on its own edge — the chip
+   is the colour, so the mark around it stays quiet. The keyboard ring keeps its
+   full weight; that one is for finding your place, not for state. */
+:root .tint-chip[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 1px var(--accent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
 .tint-chip:focus-visible,
-.tint-chip[aria-pressed="true"] {
+.tint-chip[aria-pressed="true"]:focus-visible {
   outline: none;
   box-shadow:
-    0 0 0 2px var(--bg-menu),
-    0 0 0 4px var(--accent);
+    0 0 0 1px var(--accent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 0 3px var(--bg-menu),
+    0 0 0 5px var(--accent);
 }
 
 /* Page width: a bone pill with a small dark thumb and a tick at each quarter,
    so the range is visible without a pair of end labels. */
 .width-input {
   width: 100%;
-  height: 16px;
+  height: 20px;
   margin: 0;
   appearance: none;
   -webkit-appearance: none;
@@ -1190,9 +1271,9 @@ body {
 }
 
 .width-input::-webkit-slider-runnable-track {
-  height: 16px;
+  height: 20px;
   border: 1px solid var(--slider-track-border);
-  border-radius: 8px;
+  border-radius: 10px;
   background-color: var(--slider-track);
   /* Five notches, inset so the end ones sit inside the pill's caps: one 1px
      rule per quarter-tile, tiled from 5px in. */
@@ -1211,7 +1292,8 @@ body {
   -webkit-appearance: none;
   width: 10px;
   height: 10px;
-  margin-top: 2px;
+  /* (20px track − 2px border − 10px thumb) / 2 */
+  margin-top: 4px;
   border: 0;
   border-radius: 50%;
   background: var(--slider-thumb);
@@ -1225,17 +1307,9 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .tint-chip {
-    border-color: rgba(236, 232, 223, 0.1);
-    background: var(--chip-dark);
-  }
   :root:not([data-theme="light"]) .theme-switch > button[aria-pressed="true"] {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   }
-}
-:root[data-theme="dark"] .tint-chip {
-  border-color: rgba(236, 232, 223, 0.1);
-  background: var(--chip-dark);
 }
 :root[data-theme="dark"] .theme-switch > button[aria-pressed="true"] {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
