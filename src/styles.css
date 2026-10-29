@@ -31,6 +31,15 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 24px 48px rgba(35, 33, 28, 0.18),
     0 4px 12px rgba(35, 33, 28, 0.08);
   --radius: 6px;
+  /* The page defaults to the app surface; a tint overrides it on the page
+     element. */
+  --page: var(--bg);
+  --page-border: var(--border);
+  /* The page-width slider: a bone pill with a small dark thumb. */
+  --slider-track: #fbfaf7;
+  --slider-track-border: #e6e2d9;
+  --slider-thumb: #222222;
+  --slider-tick: #d5cfc1;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
@@ -75,6 +84,10 @@
     --btn-primary-fg: #16171b;
     --scroll-thumb: rgba(236, 232, 223, 0.14);
     --scroll-thumb-hover: rgba(236, 232, 223, 0.24);
+    --slider-track: #1c1d22;
+    --slider-track-border: #2c2e34;
+    --slider-thumb: #ece8df;
+    --slider-tick: #43454c;
     --shadow-menu:
       0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
     --shadow-modal:
@@ -118,6 +131,10 @@
   --btn-primary-fg: #16171b;
   --scroll-thumb: rgba(236, 232, 223, 0.14);
   --scroll-thumb-hover: rgba(236, 232, 223, 0.24);
+  --slider-track: #1c1d22;
+  --slider-track-border: #2c2e34;
+  --slider-thumb: #ece8df;
+  --slider-tick: #43454c;
   --shadow-menu:
     0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
   --shadow-modal:
@@ -139,10 +156,74 @@
   --code-attr: #e2b65c;
 }
 
+/* Page tint: the editor's writing column, app-wide rather than per note. Each
+   tint carries a light and a dark value, so the two scheme rules below stay one
+   line each instead of five. The tint sits on the page element only, so the
+   sidebar and the titlebar keep the app surface. */
+.page[data-tint="bone"] {
+  --tint-page-light: #fbfaf7;
+  --tint-page-dark: #16171b;
+  --tint-border-light: #e6e2d9;
+  --tint-border-dark: #2c2e34;
+}
+.page[data-tint="sand"] {
+  --tint-page-light: #faf1df;
+  --tint-page-dark: #322c1e;
+  --tint-border-light: #efe2c5;
+  --tint-border-dark: #443b28;
+}
+.page[data-tint="sage"] {
+  --tint-page-light: #eaf0e6;
+  --tint-page-dark: #203029;
+  --tint-border-light: #dce6d5;
+  --tint-border-dark: #2e4136;
+}
+.page[data-tint="rose"] {
+  --tint-page-light: #fce7e7;
+  --tint-page-dark: #3a2429;
+  --tint-border-light: #eddcdb;
+  --tint-border-dark: #4b3138;
+}
+.page[data-tint="fog"] {
+  --tint-page-light: #e9edf2;
+  --tint-page-dark: #212a36;
+  --tint-border-light: #dbe2ea;
+  --tint-border-dark: #2e3947;
+}
+
+.page[data-tint] {
+  --page: var(--tint-page-light);
+  --page-border: var(--tint-border-light);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .page[data-tint] {
+    --page: var(--tint-page-dark);
+    --page-border: var(--tint-border-dark);
+  }
+}
+:root[data-theme="dark"] .page[data-tint] {
+  --page: var(--tint-page-dark);
+  --page-border: var(--tint-border-dark);
+}
+
+/* A tint costs contrast: the default faint and muted inks land at 4.2–4.4 on
+   the deeper tints. On a page these two shadows lift them clear of 4.5, and
+   faint stays lighter than muted, as it is on bone. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .page[data-tint] {
+    --text-faint: #6a645a;
+    --text-muted: #5f594f;
+  }
+}
+:root[data-theme="light"] .page[data-tint] {
+  --text-faint: #6a645a;
+  --text-muted: #5f594f;
+}
+
 * {
   box-sizing: border-box;
 }
-
 html,
 body,
 #root {
@@ -498,7 +579,7 @@ body {
 .tiptap input[type="checkbox"]:focus-visible {
   outline: none;
   box-shadow:
-    0 0 0 2px var(--bg),
+    0 0 0 2px var(--page),
     0 0 0 4px var(--accent);
 }
 @media (prefers-color-scheme: dark) {
@@ -952,3 +1033,210 @@ body {
 
 
 
+/* Appearance: one titlebar button and the popover it opens. The popover is
+   anchored to the button's right edge, clear of the 36px titlebar, so nothing
+   floats over the page while writing. */
+.appearance-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: default;
+}
+
+.appearance-btn:hover,
+.appearance-btn[aria-expanded="true"] {
+  background: var(--bg-hover-strong);
+}
+
+.appearance-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--accent);
+}
+
+.appearance-popover {
+  position: absolute;
+  /* 8px below the 40px toolbar: the button sits 6px down, so 42px from its own
+     top edge. */
+  top: 42px;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 240px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-menu);
+  box-shadow: var(--shadow-menu);
+  font-family: var(--font-sans);
+}
+
+.appearance-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.appearance-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.appearance-label {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+/* The value reads as the number it is: tabular figures, so it doesn't shuffle
+   as the width changes. */
+.appearance-value {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.theme-switch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 6px;
+  /* A well, not a track: at --bg-active the selected segment sits within one
+     point of the well in dark and stops reading as selected at all. */
+  background: var(--bg-hover);
+}
+
+.theme-switch > button {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.theme-switch > button:hover {
+  color: var(--text);
+}
+
+.theme-switch > button[aria-pressed="true"] {
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(35, 33, 28, 0.1);
+}
+
+.theme-switch > button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--bg-menu),
+    0 0 0 4px var(--accent);
+}
+
+/* Five swatches, spread across the popover's full width. The chip shows the
+   page colour for the live scheme, so it is painted from two custom
+   properties rather than one inline background. */
+.tint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tint-chip {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(35, 33, 28, 0.1);
+  border-radius: 8px;
+  background: var(--chip-light);
+  cursor: default;
+}
+
+.tint-chip:focus-visible,
+.tint-chip[aria-pressed="true"] {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--bg-menu),
+    0 0 0 4px var(--accent);
+}
+
+/* Page width: a bone pill with a small dark thumb and a tick at each quarter,
+   so the range is visible without a pair of end labels. */
+.width-input {
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: default;
+}
+
+.width-input::-webkit-slider-runnable-track {
+  height: 16px;
+  border: 1px solid var(--slider-track-border);
+  border-radius: 8px;
+  background-color: var(--slider-track);
+  /* Five notches, inset so the end ones sit inside the pill's caps: one 1px
+     rule per quarter-tile, tiled from 5px in. */
+  background-image: linear-gradient(
+    to right,
+    var(--slider-tick) 0 1px,
+    transparent 1px
+  );
+  background-size: calc((100% - 10px) / 4) 4px;
+  background-position: 5px center;
+  background-repeat: repeat-x;
+}
+
+.width-input::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--slider-thumb);
+}
+
+.width-input:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--bg-menu),
+    0 0 0 4px var(--accent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tint-chip {
+    border-color: rgba(236, 232, 223, 0.1);
+    background: var(--chip-dark);
+  }
+  :root:not([data-theme="light"]) .theme-switch > button[aria-pressed="true"] {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+}
+:root[data-theme="dark"] .tint-chip {
+  border-color: rgba(236, 232, 223, 0.1);
+  background: var(--chip-dark);
+}
+:root[data-theme="dark"] .theme-switch > button[aria-pressed="true"] {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}

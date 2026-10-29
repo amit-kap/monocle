@@ -3,6 +3,8 @@ import { dirname } from "@tauri-apps/api/path";
 import type { NoteFile, SaveStatus, TreeNode } from "../types";
 import * as fs from "../lib/fs";
 import { bufferMarkdown } from "../lib/editorBuffer";
+import { CONTENT, clampWidth, readWidth, storeWidth } from "../lib/layout";
+import { getStoredTint, storeTint, type Tint } from "../lib/tint";
 import { DISMISS, askModal, askUnsavedChanges } from "./useModalPrompt";
 
 const LAST_FOLDER_KEY = "monocle:lastFolder";
@@ -25,6 +27,13 @@ type State = {
   // Whether the tree includes hidden (dot-prefixed) files and folders. Off by
   // default and remembered across launches, like the last folder.
   showHidden: boolean;
+  // The editor column's width. Live state, not a ref, because two controls
+  // drive it: the column's drag handles and the slider in the appearance
+  // popover. Persisted, so it survives a relaunch.
+  contentWidth: number;
+  // The page's tint, app-wide and remembered. Its colours live in the
+  // stylesheet; only the choice is stored.
+  tint: Tint;
   // Bumped to ask the editor to take focus, for opens that mean "start
   // writing" (a new note, a file opened from outside, a picked search result).
   // Read by the editor pane, so it needs no editor reference of its own.
@@ -44,6 +53,8 @@ type State = {
   save: (markdown: string) => Promise<void>;
   setError: (message: string | null) => void;
   setShowHidden: (value: boolean) => Promise<void>;
+  setContentWidth: (value: number) => void;
+  setTint: (tint: Tint) => void;
   requestEditorFocus: () => void;
 };
 
@@ -82,6 +93,10 @@ export const useStore = create<State>((set, get) => ({
   error: null,
   loading: false,
   showHidden: false,
+  // Read once at module load so the column and the tint are right on the very
+  // first paint, before init() runs.
+  contentWidth: readWidth(CONTENT, localStorage),
+  tint: getStoredTint(),
   editorFocusRequest: 0,
 
   init: async () => {
@@ -132,6 +147,19 @@ export const useStore = create<State>((set, get) => ({
     localStorage.setItem(SHOW_HIDDEN_KEY, value ? "1" : "0");
     set({ showHidden: value });
     await get().refresh();
+  },
+
+  // Both controls land here, so the bounds and the stored value stay in one
+  // place: the drag handles clamp as they move, the slider clamps on change.
+  setContentWidth: (value) => {
+    const next = clampWidth(Math.round(value), CONTENT.min, CONTENT.max);
+    storeWidth(CONTENT, localStorage, next);
+    set({ contentWidth: next });
+  },
+
+  setTint: (tint) => {
+    storeTint(tint);
+    set({ tint });
   },
 
   toggleDir: (path) => {

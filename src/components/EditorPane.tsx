@@ -5,10 +5,7 @@ import { toMarkdown } from "../lib/markdown";
 import { stripExt } from "../lib/fs";
 import {
   CONTENT,
-  clampWidth,
   columnEdgeLeft,
-  readWidth,
-  storeWidth,
   widthFromDrag,
   type ColumnSide,
 } from "../lib/layout";
@@ -20,15 +17,6 @@ import { loadDocument } from "../editor/loadDocument";
 import { BlockHandles } from "./BlockHandles";
 import { CodeBlockLanguage } from "./CodeBlockLanguage";
 import { ResizeHandle } from "./ResizeHandle";
-import type { SaveStatus } from "../types";
-
-const STATUS_LABEL: Record<SaveStatus, string> = {
-  idle: "",
-  dirty: "Unsaved changes",
-  saving: "Saving…",
-  saved: "Saved",
-  error: "Save failed",
-};
 
 // How long the editor waits after the last keystroke before saving.
 const AUTOSAVE_DELAY = 800;
@@ -37,20 +25,17 @@ export function EditorPane() {
   const notes = useStore((s) => s.notes);
   const activePath = useStore((s) => s.activePath);
   const loadId = useStore((s) => s.loadId);
-  const status = useStore((s) => s.status);
   const markDirty = useStore((s) => s.markDirty);
   const save = useStore((s) => s.save);
   const renameNote = useStore((s) => s.renameNote);
 
   const [editorDom, setEditorDom] = useState<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
-  const [contentWidth, setContentWidth] = useState(() =>
-    readWidth(CONTENT, localStorage),
-  );
-
-  useEffect(() => {
-    storeWidth(CONTENT, localStorage, contentWidth);
-  }, [contentWidth]);
+  // The width lives in the store: the column's drag handles and the appearance
+  // popover's slider are two controls over the same value.
+  const contentWidth = useStore((s) => s.contentWidth);
+  const setContentWidth = useStore((s) => s.setContentWidth);
+  const tint = useStore((s) => s.tint);
 
   function startColumnResize(side: ColumnSide, event: ReactMouseEvent) {
     if (event.button !== 0) return;
@@ -60,7 +45,7 @@ export function EditorPane() {
 
     function onMove(moveEvent: MouseEvent) {
       const next = widthFromDrag(startWidth, moveEvent.clientX - startX, side);
-      setContentWidth(clampWidth(next, CONTENT.min, CONTENT.max));
+      setContentWidth(next);
     }
     function onUp() {
       window.removeEventListener("mousemove", onMove);
@@ -189,15 +174,23 @@ export function EditorPane() {
   }, [editor, activePath, save]);
 
   return (
-    <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--bg)]">
-      {activePath && (
-        <span className="pointer-events-none absolute right-4 top-3 z-10 text-[12px] text-[var(--text-faint)]">
-          {STATUS_LABEL[status]}
-        </span>
-      )}
-
+    <main
+      data-tint={tint}
+      className="page relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--bg)]"
+    >
       {activePath ? (
         <>
+          {/* The page itself: the writing column's tint, full bleed — it runs
+              from the titlebar to the bottom edge and rounds nothing. The
+              handles' hairlines are the only edges it shows. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 bg-[var(--page)]"
+            style={{
+              left: columnEdgeLeft(contentWidth, "left"),
+              width: contentWidth,
+            }}
+          />
           {(["left", "right"] as const).map((side) => (
             <ResizeHandle
               key={side}
@@ -206,11 +199,10 @@ export function EditorPane() {
               onReset={() => setContentWidth(CONTENT.default)}
             />
           ))}
-          <div className="editor-scroll flex-1 overflow-y-auto">
+          <div className="editor-scroll relative flex-1 overflow-y-auto">
             <div
-              /* 40px of gutter: enough for the 24px handle, which starts 26px
-                 left of the text. The column's hairline is 40px out. */
-              className="mx-auto w-full px-16 py-20"
+              /* 40px top and bottom, 64px each side: the frame's column. */
+              className="mx-auto w-full px-16 py-10"
               style={{ maxWidth: contentWidth }}
             >
               <textarea

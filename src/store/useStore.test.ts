@@ -33,6 +33,8 @@ function resetStore(): void {
   setBufferSerializer(null);
   localStorage.removeItem("monocle:lastFolder");
   localStorage.removeItem("monocle:showHidden");
+  localStorage.removeItem("monocle:contentWidth");
+  localStorage.removeItem("monocle:pageTint");
   useStore.setState({
     folder: "/notes",
     notes: [],
@@ -43,6 +45,8 @@ function resetStore(): void {
     status: "idle",
     error: null,
     showHidden: false,
+    contentWidth: 860,
+    tint: "bone",
     editorFocusRequest: 0,
   });
 }
@@ -294,5 +298,37 @@ describe("hidden files", () => {
   it("scans without them by default", async () => {
     await useStore.getState().refresh();
     expect(readTree).toHaveBeenLastCalledWith("/notes", false);
+  });
+});
+
+describe("page width", () => {
+  beforeEach(resetStore);
+
+  it("clamps the slider to the column's bounds", () => {
+    useStore.getState().setContentWidth(5000);
+    expect(useStore.getState().contentWidth).toBe(1200);
+
+    useStore.getState().setContentWidth(100);
+    expect(useStore.getState().contentWidth).toBe(560);
+  });
+
+  it("keeps a dragged width whole, so the hairline stays on a pixel", () => {
+    useStore.getState().setContentWidth(732.6);
+    expect(useStore.getState().contentWidth).toBe(733);
+  });
+
+  it("keeps the width for the next launch", () => {
+    useStore.getState().setContentWidth(1000);
+    expect(localStorage.getItem("monocle:contentWidth")).toBe("1000");
+  });
+});
+
+describe("page tint", () => {
+  beforeEach(resetStore);
+
+  it("keeps the tint for the next launch", () => {
+    useStore.getState().setTint("rose");
+    expect(useStore.getState().tint).toBe("rose");
+    expect(localStorage.getItem("monocle:pageTint")).toBe("rose");
   });
 });

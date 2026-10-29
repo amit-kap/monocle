@@ -29,7 +29,10 @@ export function ResizeHandle({
       className="group absolute top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize"
       style={style}
     >
-      <div className="pointer-events-none mx-auto h-full w-px bg-[var(--border)] group-hover:bg-[var(--accent)]" />
+      {/* The column's own hairline: tint-aware, because the default border
+          disappears against a tinted page. Outside a page it falls back to the
+          app border. */}
+      <div className="pointer-events-none mx-auto h-full w-px bg-[var(--page-border)] group-hover:bg-[var(--accent)]" />
     </div>
   );
 }

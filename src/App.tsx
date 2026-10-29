@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPane } from "./components/EditorPane";
-import { ThemeSelector } from "./components/ThemeSelector";
+import { AppearanceMenu } from "./components/AppearanceMenu";
 import { ModalHost } from "./components/ModalHost";
 import { bufferMarkdown } from "./lib/editorBuffer";
 import { useStore } from "./store/useStore";
@@ -96,21 +96,24 @@ function App() {
     return () => unlisten?.();
   }, []);
 
+  // The sidebar runs to the top of the window, so the traffic lights sit over
+  // it and each column carries its own top row: the sidebar's actions on the
+  // left, the note's toolbar on the right.
   return (
-    <div className="relative flex h-full w-full overflow-hidden pt-9">
-      <div
-        data-tauri-drag-region
-        className="absolute inset-x-0 top-0 z-30 flex h-9 items-center justify-center border-b border-[var(--border)] bg-[var(--bg)]"
-      >
-        <span className="pointer-events-none max-w-[60%] truncate text-[13px] font-medium text-[var(--text-muted)]">
-          {activeName ?? "Monocle"}
-        </span>
-      </div>
-      <div className="absolute right-3 top-0 z-40 flex h-9 items-center">
-        <ThemeSelector />
-      </div>
+    <div className="relative flex h-full w-full overflow-hidden">
       <Sidebar />
-      <EditorPane />
+      <div className="flex h-full min-w-0 flex-1 flex-col">
+        <div className="relative flex h-10 shrink-0 items-center border-b border-[var(--border)] px-4">
+          <div data-tauri-drag-region className="absolute inset-0" />
+          <span className="pointer-events-none relative max-w-full truncate text-[13px] font-medium text-[var(--text-muted)]">
+            {activeName ?? "Monocle"}
+          </span>
+          <div className="absolute right-3 top-0 flex h-10 items-center">
+            <AppearanceMenu />
+          </div>
+        </div>
+        <EditorPane />
+      </div>
       <ModalHost />
       {error && (
         <button

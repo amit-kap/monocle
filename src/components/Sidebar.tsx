@@ -53,7 +53,7 @@ function FolderIcon() {
 
 function RefreshIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
       <path
         d="M13 8a5 5 0 1 1-1.6-3.7"
         stroke="currentColor"
@@ -73,7 +73,7 @@ function RefreshIcon() {
 
 function SearchIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
       <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.3" />
       <path
         d="M10.5 10.5 14 14"
@@ -390,9 +390,51 @@ export function Sidebar() {
       className="relative flex h-full shrink-0 flex-col bg-[var(--bg-sidebar)]"
       style={{ width }}
     >
+      {/* The window row, 40px like the note's toolbar beside it. The traffic
+          lights are drawn over its left end, so it holds only the drag region
+          and the sidebar's own actions. */}
+      <div className="relative flex h-10 shrink-0 items-center justify-end gap-0.5 px-3">
+        <div data-tauri-drag-region className="absolute inset-0" />
+        <button
+          type="button"
+          title="Search notes"
+          onClick={() => setSearchOpen((open) => !open)}
+          disabled={!folder || tree.length === 0}
+          className={`relative grid h-7 w-7 place-items-center rounded-[6px] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:opacity-30 disabled:hover:bg-transparent ${
+            searchOpen
+              ? "bg-[var(--bg-active)] text-[var(--text)]"
+              : "text-[var(--text-muted)]"
+          }`}
+        >
+          <SearchIcon />
+        </button>
+        <button
+          type="button"
+          title="Refresh"
+          onClick={() => void refresh()}
+          disabled={!folder || loading}
+          className="relative grid h-7 w-7 place-items-center rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:opacity-30 disabled:hover:bg-transparent"
+        >
+          <RefreshIcon />
+        </button>
+        <button
+          type="button"
+          title="More"
+          onClick={() => setMenuOpen((open) => !open)}
+          className={`relative grid h-7 w-7 place-items-center rounded-[6px] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] ${
+            menuOpen
+              ? "bg-[var(--bg-active)] text-[var(--text)]"
+              : "text-[var(--text-muted)]"
+          }`}
+        >
+          <MoreIcon />
+        </button>
+      </div>
+
+      {/* The root folder keeps a row of its own; the menu hangs off it. */}
       <div
         ref={headerRef}
-        className="relative flex h-11 shrink-0 items-center justify-between px-3"
+        className="relative flex h-9 shrink-0 items-center px-3"
       >
         <button
           type="button"
@@ -403,36 +445,9 @@ export function Sidebar() {
           <FolderIcon />
           <span className="truncate">{folder ? baseName(folder) : "Monocle"}</span>
         </button>
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            title="Search notes"
-            onClick={() => setSearchOpen((open) => !open)}
-            disabled={!folder || tree.length === 0}
-            className={`grid h-6 w-6 place-items-center rounded hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:opacity-30 disabled:hover:bg-transparent ${
-              searchOpen
-                ? "bg-[var(--bg-active)] text-[var(--text)]"
-                : "text-[var(--text-muted)]"
-            }`}
-          >
-            <SearchIcon />
-          </button>
-          <button
-            type="button"
-            title="More"
-            onClick={() => setMenuOpen((open) => !open)}
-            className={`grid h-6 w-6 place-items-center rounded hover:bg-[var(--bg-hover)] hover:text-[var(--text)] ${
-              menuOpen
-                ? "bg-[var(--bg-active)] text-[var(--text)]"
-                : "text-[var(--text-muted)]"
-            }`}
-          >
-            <MoreIcon />
-          </button>
-        </div>
 
         {menuOpen && (
-          <div className="block-menu" style={{ position: "absolute", right: 8, top: 40 }}>
+          <div className="block-menu" style={{ position: "absolute", right: 8, top: 32 }}>
             <button
               type="button"
               className="block-menu-item"

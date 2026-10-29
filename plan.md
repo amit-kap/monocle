@@ -410,3 +410,16 @@ dev: typescript vite @vitejs/plugin-react vitest
 5. **The keyboard earns the brass ring.** The sidebar shows the focus ring only
    after a key event, never from a click or the row WebKit focuses at launch.
    (Added 2026-10-21 — focus alone painted the active note.)
+6. **One appearance control in the titlebar.** A sliders button opens a popover
+   holding theme, page tint and page width; the standalone theme switcher is
+   gone, and no control floats over the page. Page tint is app-wide
+   (`monocle:pageTint`), chosen from five warm values with dark counterparts, and
+   the page is a full-bleed band with a tint-aware hairline. `contentWidth` lives
+   in the store so the popover's slider and the column's drag handles are two
+   views of one value. (Added 2026-10-29.)
+7. **The sidebar runs to the top of the window.** Each column carries its own
+   top row: the sidebar's search/refresh/more sit beside the traffic lights on a
+   40px window row, the root folder gets a 36px row of its own, and the note's
+   toolbar is 40px with the title left-aligned at 16px and the appearance button
+   at its right end. There is no window-wide titlebar. (Added 2026-10-29; the
+   frame drew 36px for the toolbar, Amit asked for 40.)
