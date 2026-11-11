@@ -29,6 +29,7 @@ describe("visibleRows", () => {
       kind: "dir",
       depth: 0,
       open: false,
+      parent: null,
     });
   });
 

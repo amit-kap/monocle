@@ -79,3 +79,16 @@ describe("readTree", () => {
     expect(paths(await readTree("/notes"))).not.toContain("/notes/empty");
   });
 });
+
+describe("sortNodes", () => {
+  it("puts files before folders, each A to Z", async () => {
+    const { sortNodes } = await import("./fs");
+    const sorted = sortNodes([
+      { name: "zeta", path: "/z", kind: "dir" },
+      { name: "b.md", path: "/b.md", kind: "file" },
+      { name: "alpha", path: "/a", kind: "dir" },
+      { name: "a.md", path: "/a.md", kind: "file" },
+    ]);
+    expect(sorted.map((n) => n.name)).toEqual(["a.md", "b.md", "alpha", "zeta"]);
+  });
+});
