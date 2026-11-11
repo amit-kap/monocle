@@ -14,6 +14,7 @@ import { scrollDelta } from "../lib/scroll";
 import { stepRow, visibleRows, type TreeRow } from "../lib/treeNav";
 import { FileTree } from "./FileTree";
 import { MenuCheck } from "./MenuCheck";
+import { PaneToggle } from "./PaneToggle";
 import { ResizeHandle } from "./ResizeHandle";
 
 function baseName(path: string): string {
@@ -206,6 +207,8 @@ export function Sidebar() {
   const showHidden = useStore((s) => s.showHidden);
   const setShowHidden = useStore((s) => s.setShowHidden);
   const requestEditorFocus = useStore((s) => s.requestEditorFocus);
+  const leftOpen = useStore((s) => s.leftOpen);
+  const toggleLeft = useStore((s) => s.toggleLeft);
 
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -386,15 +389,22 @@ export function Sidebar() {
   }
 
   return (
+    // Hidden, not unmounted: the search box and the tree's focus survive a
+    // collapse.
     <aside
       className="relative flex h-full shrink-0 flex-col bg-[var(--bg-sidebar)]"
-      style={{ width }}
+      style={{ width, display: leftOpen ? undefined : "none" }}
     >
       {/* The window row, 40px like the note's toolbar beside it. The traffic
           lights are drawn over its left end, so it holds only the drag region
           and the sidebar's own actions. */}
       <div className="relative flex h-10 shrink-0 items-center justify-end gap-0.5 px-3">
         <div data-tauri-drag-region className="absolute inset-0" />
+        {/* Clear of the traffic lights, and at the x the top bar uses for the
+            same button once the sidebar is closed (12 + 72 = 84). */}
+        <div className="relative ml-[72px] mr-auto">
+          <PaneToggle side="left" open onClick={toggleLeft} />
+        </div>
         <button
           type="button"
           title="Search notes"

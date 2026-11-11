@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   CONTENT,
+  LEFT_OPEN_KEY,
+  RIGHT_OPEN_KEY,
+  RIGHT_PANEL,
   SIDEBAR,
   clampWidth,
   columnEdgeLeft,
+  readOpen,
   readWidth,
-  storeWidth,
+  storeOpen,
   widthFromDrag,
+  storeWidth,
 } from "./layout";
 
 describe("clampWidth", () => {
@@ -102,6 +107,53 @@ describe("widthFromDrag", () => {
   it("is a no-op for a zero delta", () => {
     expect(widthFromDrag(800, 0, "left")).toBe(800);
     expect(widthFromDrag(800, 0, "right")).toBe(800);
+  });
+});
+
+describe("pane bounds", () => {
+  it("sidebar resizes between 200 and 440", () => {
+    expect([SIDEBAR.min, SIDEBAR.max]).toEqual([200, 440]);
+  });
+
+  it("right panel resizes between 220 and 460", () => {
+    expect([RIGHT_PANEL.min, RIGHT_PANEL.max]).toEqual([220, 460]);
+  });
+
+  it("defaults sit inside their bounds", () => {
+    expect(SIDEBAR.default).toBeGreaterThanOrEqual(SIDEBAR.min);
+    expect(SIDEBAR.default).toBeLessThanOrEqual(SIDEBAR.max);
+    expect(RIGHT_PANEL.default).toBeGreaterThanOrEqual(RIGHT_PANEL.min);
+    expect(RIGHT_PANEL.default).toBeLessThanOrEqual(RIGHT_PANEL.max);
+  });
+
+  it("a stored sidebar width outside the new range falls back to the default", () => {
+    localStorage.setItem(SIDEBAR.key, "190");
+    expect(readWidth(SIDEBAR, localStorage)).toBe(SIDEBAR.default);
+    localStorage.clear();
+  });
+});
+
+describe("readOpen and storeOpen", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("is open when nothing is stored", () => {
+    expect(readOpen(LEFT_OPEN_KEY, localStorage)).toBe(true);
+  });
+
+  it("remembers a closed pane", () => {
+    storeOpen(LEFT_OPEN_KEY, localStorage, false);
+    expect(readOpen(LEFT_OPEN_KEY, localStorage)).toBe(false);
+  });
+
+  it("remembers a reopened pane", () => {
+    storeOpen(RIGHT_OPEN_KEY, localStorage, false);
+    storeOpen(RIGHT_OPEN_KEY, localStorage, true);
+    expect(readOpen(RIGHT_OPEN_KEY, localStorage)).toBe(true);
+  });
+
+  it("keeps the two panes independent", () => {
+    storeOpen(LEFT_OPEN_KEY, localStorage, false);
+    expect(readOpen(RIGHT_OPEN_KEY, localStorage)).toBe(true);
   });
 });
 

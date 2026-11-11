@@ -176,7 +176,7 @@ export function EditorPane() {
   return (
     <main
       data-tint={tint}
-      className="page relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--bg)]"
+      className="page relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--bg)]"
     >
       {activePath ? (
         <>

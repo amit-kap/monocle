@@ -6,6 +6,9 @@ import { Sidebar } from "./components/Sidebar";
 import { EditorPane } from "./components/EditorPane";
 import { AppearanceMenu } from "./components/AppearanceMenu";
 import { ModalHost } from "./components/ModalHost";
+import { PaneToggle } from "./components/PaneToggle";
+import { RightPanel } from "./components/RightPanel";
+import { StatusBar } from "./components/StatusBar";
 import { bufferMarkdown } from "./lib/editorBuffer";
 import { useStore } from "./store/useStore";
 import {
@@ -21,6 +24,10 @@ function App() {
   const activePath = useStore((s) => s.activePath);
   const error = useStore((s) => s.error);
   const setError = useStore((s) => s.setError);
+  const leftOpen = useStore((s) => s.leftOpen);
+  const rightOpen = useStore((s) => s.rightOpen);
+  const toggleLeft = useStore((s) => s.toggleLeft);
+  const toggleRight = useStore((s) => s.toggleRight);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -47,6 +54,14 @@ function App() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      // ⌘\ hides the sidebar, ⌥⌘\ the right panel. `code`, not `key`: with
+      // Option held, macOS reports a different character for the backslash.
+      if ((event.metaKey || event.ctrlKey) && event.code === "Backslash") {
+        event.preventDefault();
+        if (event.altKey) toggleRight();
+        else toggleLeft();
+        return;
+      }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
         // The unsaved-changes prompt owns the keyboard while it is open.
         if (useModalPrompt.getState().pending) return;
@@ -56,7 +71,7 @@ function App() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [createNote]);
+  }, [createNote, toggleLeft, toggleRight]);
 
   const activeName = notes.find((note) => note.path === activePath)?.name ?? null;
 
@@ -103,17 +118,33 @@ function App() {
     <div className="relative flex h-full w-full overflow-hidden">
       <Sidebar />
       <div className="flex h-full min-w-0 flex-1 flex-col">
-        <div className="relative flex h-10 shrink-0 items-center border-b border-[var(--border)] px-4">
+        <div
+          className="relative flex h-10 shrink-0 items-center gap-2 border-b border-[var(--border)] pr-3"
+          // With the sidebar shut the traffic lights sit over this bar, so the
+          // bar makes room for them, and the sidebar toggle takes the spot it
+          // had inside the sidebar.
+          style={{ paddingLeft: leftOpen ? 16 : 84 }}
+        >
           <div data-tauri-drag-region className="absolute inset-0" />
-          <span className="pointer-events-none relative max-w-full truncate text-[13px] font-medium text-[var(--text-muted)]">
+          {!leftOpen && (
+            <div className="relative">
+              <PaneToggle side="left" open={false} onClick={toggleLeft} />
+            </div>
+          )}
+          <span className="pointer-events-none relative min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--text-muted)]">
             {activeName ?? "Monocle"}
           </span>
-          <div className="absolute right-3 top-0 flex h-10 items-center">
+          <div className="relative flex h-10 items-center gap-1">
             <AppearanceMenu />
+            {!rightOpen && (
+              <PaneToggle side="right" open={false} onClick={toggleRight} />
+            )}
           </div>
         </div>
         <EditorPane />
+        <StatusBar />
       </div>
+      <RightPanel />
       <ModalHost />
       {error && (
         <button

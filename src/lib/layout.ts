@@ -3,10 +3,38 @@
 
 export const SIDEBAR = {
   key: "monocle:sidebarWidth",
-  min: 180,
-  max: 480,
+  min: 200,
+  max: 440,
   default: 240,
 } as const;
+
+export const RIGHT_PANEL = {
+  key: "monocle:rightWidth",
+  min: 220,
+  max: 460,
+  default: 280,
+} as const;
+
+export const LEFT_OPEN_KEY = "monocle:leftOpen";
+export const RIGHT_OPEN_KEY = "monocle:rightOpen";
+export const RIGHT_TAB_KEY = "monocle:rightTab";
+
+// A pane is open unless the user closed it, so anything unreadable means open.
+export function readOpen(key: string, store: Storage): boolean {
+  try {
+    return store.getItem(key) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+export function storeOpen(key: string, store: Storage, open: boolean): void {
+  try {
+    store.setItem(key, open ? "1" : "0");
+  } catch {
+    // Storage can be blocked; the pane just won't be remembered.
+  }
+}
 
 export const CONTENT = {
   key: "monocle:contentWidth",

@@ -1,9 +1,25 @@
 import { create } from "zustand";
 import { dirname } from "@tauri-apps/api/path";
-import type { NoteFile, SaveStatus, TreeNode } from "../types";
+import {
+  RIGHT_TABS,
+  type NoteFile,
+  type RightTab,
+  type SaveStatus,
+  type TreeNode,
+} from "../types";
 import * as fs from "../lib/fs";
 import { bufferMarkdown } from "../lib/editorBuffer";
-import { CONTENT, clampWidth, readWidth, storeWidth } from "../lib/layout";
+import {
+  CONTENT,
+  LEFT_OPEN_KEY,
+  RIGHT_OPEN_KEY,
+  RIGHT_TAB_KEY,
+  clampWidth,
+  readOpen,
+  readWidth,
+  storeOpen,
+  storeWidth,
+} from "../lib/layout";
 import { getStoredTint, storeTint, type Tint } from "../lib/tint";
 import { DISMISS, askModal, askUnsavedChanges } from "./useModalPrompt";
 
@@ -38,6 +54,13 @@ type State = {
   // writing" (a new note, a file opened from outside, a picked search result).
   // Read by the editor pane, so it needs no editor reference of its own.
   editorFocusRequest: number;
+  // Whether each side pane is showing. Remembered across launches.
+  leftOpen: boolean;
+  rightOpen: boolean;
+  rightTab: RightTab;
+  toggleLeft: () => void;
+  toggleRight: () => void;
+  setRightTab: (tab: RightTab) => void;
   init: () => Promise<void>;
   chooseFolder: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -57,6 +80,15 @@ type State = {
   setTint: (tint: Tint) => void;
   requestEditorFocus: () => void;
 };
+
+function readRightTab(store: Storage): RightTab {
+  try {
+    const saved = store.getItem(RIGHT_TAB_KEY);
+    return RIGHT_TABS.includes(saved as RightTab) ? (saved as RightTab) : "outline";
+  } catch {
+    return "outline";
+  }
+}
 
 function noteLabel(path: string | null): string | null {
   if (!path) return null;
@@ -98,6 +130,30 @@ export const useStore = create<State>((set, get) => ({
   contentWidth: readWidth(CONTENT, localStorage),
   tint: getStoredTint(),
   editorFocusRequest: 0,
+  leftOpen: readOpen(LEFT_OPEN_KEY, localStorage),
+  rightOpen: readOpen(RIGHT_OPEN_KEY, localStorage),
+  rightTab: readRightTab(localStorage),
+
+  toggleLeft: () => {
+    const open = !get().leftOpen;
+    storeOpen(LEFT_OPEN_KEY, localStorage, open);
+    set({ leftOpen: open });
+  },
+
+  toggleRight: () => {
+    const open = !get().rightOpen;
+    storeOpen(RIGHT_OPEN_KEY, localStorage, open);
+    set({ rightOpen: open });
+  },
+
+  setRightTab: (tab) => {
+    try {
+      localStorage.setItem(RIGHT_TAB_KEY, tab);
+    } catch {
+      // Not remembered; the tab still switches.
+    }
+    set({ rightTab: tab });
+  },
 
   init: async () => {
     const showHidden = localStorage.getItem(SHOW_HIDDEN_KEY) === "1";

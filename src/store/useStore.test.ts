@@ -332,3 +332,37 @@ describe("page tint", () => {
     expect(localStorage.getItem("monocle:pageTint")).toBe("rose");
   });
 });
+
+describe("side panes", () => {
+  beforeEach(() => {
+    resetStore();
+    localStorage.removeItem("monocle:leftOpen");
+    localStorage.removeItem("monocle:rightOpen");
+    localStorage.removeItem("monocle:rightTab");
+    useStore.setState({ leftOpen: true, rightOpen: true, rightTab: "outline" });
+  });
+
+  it("toggles each pane on its own and remembers it", () => {
+    useStore.getState().toggleLeft();
+    expect(useStore.getState().leftOpen).toBe(false);
+    expect(useStore.getState().rightOpen).toBe(true);
+    expect(localStorage.getItem("monocle:leftOpen")).toBe("0");
+
+    useStore.getState().toggleRight();
+    expect(useStore.getState().rightOpen).toBe(false);
+    expect(localStorage.getItem("monocle:rightOpen")).toBe("0");
+  });
+
+  it("reopens a closed pane", () => {
+    useStore.getState().toggleLeft();
+    useStore.getState().toggleLeft();
+    expect(useStore.getState().leftOpen).toBe(true);
+    expect(localStorage.getItem("monocle:leftOpen")).toBe("1");
+  });
+
+  it("remembers the right panel's tab", () => {
+    useStore.getState().setRightTab("changes");
+    expect(useStore.getState().rightTab).toBe("changes");
+    expect(localStorage.getItem("monocle:rightTab")).toBe("changes");
+  });
+});
