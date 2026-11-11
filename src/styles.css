@@ -1080,29 +1080,39 @@ body {
   background: var(--bg-menu);
   box-shadow: var(--shadow-menu);
   font-family: var(--font-sans);
-  /* Closed: a touch high and small, so it grows out of the button rather than
-     appearing over it. */
+  /* Open is the resting state, so a missed cue can only ever cost the motion,
+     never the panel: it grows out of the button on mount, and turns away when
+     it is closing. */
   transform-origin: top right;
-  opacity: 0;
-  transform: translateY(-4px) scale(0.98);
-  pointer-events: none;
+  animation: appearance-in 130ms cubic-bezier(0.2, 0.9, 0.3, 1);
   transition:
     opacity 90ms ease-in,
     transform 90ms ease-in;
 }
 
-.appearance-popover[data-open="true"] {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-  transition:
-    opacity 130ms cubic-bezier(0.2, 0, 0, 1),
-    transform 140ms cubic-bezier(0.2, 0.9, 0.3, 1);
+.appearance-popover[data-closing="true"] {
+  opacity: 0;
+  transform: translateY(-3px) scale(0.99);
+  pointer-events: none;
+}
+
+@keyframes appearance-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .appearance-popover {
+    animation: none;
+  }
   .appearance-popover,
-  .appearance-popover[data-open="true"] {
+  .appearance-popover[data-closing="true"] {
     transform: none;
     transition: opacity 90ms linear;
   }
@@ -1128,6 +1138,17 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* Page tint and page width do nothing until a note is open, so they wait,
+   dimmed, rather than pretending to. Theme stays live: it dresses the window. */
+.appearance-group[data-disabled="true"] {
+  opacity: 0.4;
+}
+
+.appearance-group[data-disabled="true"] .tint-chip,
+.appearance-group[data-disabled="true"] .width-input {
+  pointer-events: none;
 }
 
 .appearance-head {

@@ -32,7 +32,6 @@ import {
   TrashGlyph,
   TypeIcon,
 } from "./icons";
-import { MenuCheck } from "./MenuCheck";
 import { PaneToggle } from "./PaneToggle";
 import { ResizeHandle } from "./ResizeHandle";
 
@@ -229,8 +228,6 @@ export function Sidebar() {
   const collapseAll = useStore((s) => s.collapseAll);
   const expandAll = useStore((s) => s.expandAll);
   const refresh = useStore((s) => s.refresh);
-  const showHidden = useStore((s) => s.showHidden);
-  const setShowHidden = useStore((s) => s.setShowHidden);
   const requestEditorFocus = useStore((s) => s.requestEditorFocus);
   const leftOpen = useStore((s) => s.leftOpen);
   const toggleLeft = useStore((s) => s.toggleLeft);
@@ -585,19 +582,6 @@ export function Sidebar() {
                 <RevealGlyph className="size-4" />
               </span>
               Reveal in Finder
-            </button>
-            <div className="block-menu-sep" />
-            <button
-              type="button"
-              className="block-menu-item"
-              onClick={() => {
-                setMenuOpen(false);
-                void setShowHidden(!showHidden);
-              }}
-            >
-              <span className="grid w-[18px] place-items-center" />
-              Show hidden files
-              {showHidden && <MenuCheck />}
             </button>
           </div>
         )}

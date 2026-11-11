@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPane } from "./components/EditorPane";
-import { AppearanceMenu } from "./components/AppearanceMenu";
+import { SettingsModal } from "./components/SettingsModal";
 import { ModalHost } from "./components/ModalHost";
 import { FolderPage } from "./components/FolderPage";
 import { TopBar } from "./components/TopBar";
@@ -52,8 +52,35 @@ function App() {
     };
   }, [init]);
 
+  // Outside edits to markdown under the root arrive from the file watcher.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    listen<string[]>("fs-change", (event) => {
+      void useStore.getState().handleFsChange(event.payload);
+    })
+      .then((fn) => {
+        if (cancelled) fn();
+        else unlisten = fn;
+      })
+      .catch(() => {
+        // not running under Tauri
+      });
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []);
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key === ",") {
+        event.preventDefault();
+        const state = useStore.getState();
+        if (state.settingsOpen) state.closeSettings();
+        else state.openSettings();
+        return;
+      }
       // ⌘\ hides the sidebar, ⌥⌘\ the right panel. `code`, not `key`: with
       // Option held, macOS reports a different character for the backslash.
       if ((event.metaKey || event.ctrlKey) && event.code === "Backslash") {
@@ -118,7 +145,7 @@ function App() {
     <div className="relative flex h-full w-full overflow-hidden">
       <Sidebar />
       <div className="flex h-full min-w-0 flex-1 flex-col">
-        <TopBar trailing={<AppearanceMenu />} />
+        <TopBar />
         <div
           className="flex min-h-0 min-w-0 flex-1 flex-col"
           style={{ display: folderPage ? "none" : undefined }}
@@ -130,6 +157,7 @@ function App() {
       </div>
       <RightPanel />
       <ModalHost />
+      <SettingsModal />
       {error && (
         <button
           type="button"
