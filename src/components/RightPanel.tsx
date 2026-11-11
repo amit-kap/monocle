@@ -128,6 +128,8 @@ function ContextTab() {
     void Promise.all(
       paths.map(async (path) => {
         try {
+          // A link to a file that is not there loads nothing.
+          if (!(await pathExists(path))) return null;
           return { path, tokens: estimateTokens(await readNote(path)) };
         } catch {
           return null;

@@ -2,6 +2,10 @@
 
 Closes the gaps between the current Monocle build and the Brief spec and prototype (`~/Desktop/brief`). Compared 2026-11-11.
 
+## Status
+
+G0 to G7 are built on `feature/ui-improvements`. `src/plan.test.tsx` has one test per plan item, run against the whole app. G8 (signing and notarisation) stays blocked on Apple credentials.
+
 ## Decisions
 
 1. **Keep the current search.** The `⌘P` filename filter in the sidebar stays. The spec's `⌘K` overlay (5.12) is not built.

@@ -39,14 +39,20 @@ fn write_file_atomic(
     contents: String,
     writes: tauri::State<SelfWrites>,
 ) -> Result<(), String> {
-    let target = Path::new(&path);
+    atomic_write(Path::new(&path), &contents, || note_self_write(&writes, &path))
+}
+
+/// Write beside the target and rename over it. `before_rename` runs once the
+/// temporary file is written, so the caller can mark the write as its own
+/// before the watcher sees the rename.
+fn atomic_write(target: &Path, contents: &str, before_rename: impl FnOnce()) -> Result<(), String> {
     let name = target
         .file_name()
         .and_then(|n| n.to_str())
         .ok_or("invalid path")?;
     let tmp = target.with_file_name(format!(".{name}.tmp-brief"));
     fs::write(&tmp, contents).map_err(|e| e.to_string())?;
-    note_self_write(&writes, &path);
+    before_rename();
     fs::rename(&tmp, target).map_err(|e| {
         let _ = fs::remove_file(&tmp);
         e.to_string()
@@ -76,16 +82,21 @@ fn save_asset(
     ext: String,
     writes: tauri::State<SelfWrites>,
 ) -> Result<String, String> {
+    let (relative, full) = store_asset(Path::new(&file_path), &bytes, &ext)?;
+    note_self_write(&writes, &full.to_string_lossy());
+    Ok(relative)
+}
+
+/// Save `bytes` into an `assets` folder beside the note. Returns the path
+/// relative to the note, and the full path.
+fn store_asset(note: &Path, bytes: &[u8], ext: &str) -> Result<(String, std::path::PathBuf), String> {
     let ext: String = ext
         .trim_start_matches('.')
         .chars()
         .filter(|c| c.is_ascii_alphanumeric())
         .collect();
     let ext = if ext.is_empty() { "png".to_string() } else { ext };
-    let dir = Path::new(&file_path)
-        .parent()
-        .ok_or("invalid path")?
-        .join("assets");
+    let dir = note.parent().ok_or("invalid path")?.join("assets");
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -99,8 +110,7 @@ fn save_asset(
     }
     let full = dir.join(&name);
     fs::write(&full, bytes).map_err(|e| e.to_string())?;
-    note_self_write(&writes, &full.to_string_lossy());
-    Ok(format!("assets/{name}"))
+    Ok((format!("assets/{name}"), full))
 }
 
 fn worth_reporting(path: &Path) -> bool {
@@ -243,4 +253,61 @@ pub fn run() {
                 }
             }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn scratch(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("brief-test-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn reports_markdown_and_folders_but_not_other_files() {
+        assert!(worth_reporting(Path::new("/p/CLAUDE.md")));
+        assert!(worth_reporting(Path::new("/p/notes.MARKDOWN")));
+        assert!(worth_reporting(Path::new("/p/new-folder")));
+        assert!(!worth_reporting(Path::new("/p/image.png")));
+        assert!(!worth_reporting(Path::new("/p/.CLAUDE.md.tmp-brief")));
+    }
+
+    #[test]
+    fn ignores_skipped_folders() {
+        assert!(!worth_reporting(Path::new("/p/node_modules/x/readme.md")));
+        assert!(!worth_reporting(Path::new("/p/.git/HEAD.md")));
+        assert!(!worth_reporting(Path::new("/Users/me/Library/notes.md")));
+    }
+
+    #[test]
+    fn atomic_write_replaces_the_file_and_leaves_no_temporary() {
+        let dir = scratch("atomic");
+        let file = dir.join("a.md");
+        fs::write(&file, "old").unwrap();
+        let mut marked = false;
+        atomic_write(&file, "new text\n", || marked = true).unwrap();
+        assert!(marked);
+        assert_eq!(fs::read_to_string(&file).unwrap(), "new text\n");
+        let leftovers: Vec<_> = fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
+            .collect();
+        assert_eq!(leftovers, vec!["a.md"]);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn saves_an_asset_beside_the_note_and_returns_a_relative_path() {
+        let dir = scratch("asset");
+        let note = dir.join("note.md");
+        let (relative, full) = store_asset(&note, &[1, 2, 3], ".PNG!").unwrap();
+        assert!(relative.starts_with("assets/image-"));
+        assert!(relative.ends_with(".PNG"));
+        assert_eq!(fs::read(&full).unwrap(), vec![1, 2, 3]);
+        assert_eq!(full.parent().unwrap(), dir.join("assets"));
+        fs::remove_dir_all(&dir).unwrap();
+    }
 }
