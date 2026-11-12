@@ -89,7 +89,7 @@ type State = {
   init: () => Promise<void>;
   chooseFolder: () => Promise<void>;
   setRoot: (path: string) => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: (silent?: boolean) => Promise<void>;
   toggleDir: (path: string) => void;
   expandTo: (path: string) => void;
   collapseAll: () => void;
@@ -339,10 +339,10 @@ export const useStore = create<State>((set, get) => ({
     void startWatching(path);
   },
 
-  refresh: async () => {
+  refresh: async (silent = false) => {
     const { folder, showHidden, madeDirs } = get();
     if (!folder) return;
-    set({ loading: true });
+    if (!silent) set({ loading: true });
     try {
       const tree = await fs.readTree(folder, showHidden, madeDirs);
       set({ tree, notes: fs.flattenTree(tree), error: null, loading: false });
@@ -667,7 +667,17 @@ export const useStore = create<State>((set, get) => ({
   // The watcher reports paths that changed under the root. Our own writes are
   // filtered out before they get here.
   handleFsChange: async (paths) => {
-    await get().refresh();
+    // Only rescan when the tree could have changed: a markdown file, or a
+    // folder (no extension) that is visible. Dotfile churn in a home folder
+    // must not trigger a scan.
+    const { folder, showHidden } = get();
+    const relevant = paths.some((p) => {
+      const rel = folder && p.startsWith(folder) ? p.slice(folder.length) : p;
+      if (!showHidden && rel.split(/[\\/]/).some((part) => part.startsWith("."))) return false;
+      return true;
+    });
+    if (!relevant) return;
+    await get().refresh(true);
     const notices: Record<string, ChangeNotice> = {};
     let reload: { path: string; text: string } | null = null;
 
