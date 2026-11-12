@@ -205,6 +205,9 @@ fn frontend_ready(
     ready: tauri::State<FrontendReady>,
 ) {
     ready.0.store(true, Ordering::SeqCst);
+    if let Some(window) = app.get_webview_window("main") {
+        traffic_lights::place(&window.as_ref().window());
+    }
     let files = std::mem::take(&mut *pending.0.lock().unwrap());
     if !files.is_empty() {
         let _ = app.emit("open-file", files);
@@ -217,6 +220,8 @@ fn file_paths(urls: Vec<tauri::Url>) -> Vec<String> {
         .map(|path| path.to_string_lossy().to_string())
         .collect()
 }
+
+mod traffic_lights;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -237,6 +242,26 @@ pub fn run() {
             start_watch,
             stop_watch
         ])
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                traffic_lights::place(&window.as_ref().window());
+            }
+            Ok(())
+        })
+        // AppKit puts the buttons back on resize, full screen, theme and scale
+        // changes, so they are centred again each time.
+        .on_window_event(|window, event| {
+            use tauri::WindowEvent;
+            if matches!(
+                event,
+                WindowEvent::Resized(_)
+                    | WindowEvent::Focused(_)
+                    | WindowEvent::ThemeChanged(_)
+                    | WindowEvent::ScaleFactorChanged { .. }
+            ) {
+                traffic_lights::place(window);
+            }
+        })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {

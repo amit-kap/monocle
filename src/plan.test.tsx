@@ -776,15 +776,25 @@ describe("window chrome", () => {
   });
 
   it("keeps the traffic lights centred on the 40px top row", async () => {
-    const { TOP_ROW_HEIGHT, TRAFFIC_LIGHT_OFFSET } = await import("./lib/layout");
-    const files = import.meta.glob("../src-tauri/tauri.conf.json", {
-      query: "?raw",
-      import: "default",
-      eager: true,
-    }) as Record<string, string>;
-    const conf = JSON.parse(Object.values(files)[0]);
-    const y = conf.app.windows[0].trafficLightPosition.y;
-    expect(y).toBe(TOP_ROW_HEIGHT / 2 + TRAFFIC_LIGHT_OFFSET);
+    const { TOP_ROW_HEIGHT } = await import("./lib/layout");
+    const rust = Object.values(
+      import.meta.glob("../src-tauri/src/traffic_lights.rs", {
+        query: "?raw",
+        import: "default",
+        eager: true,
+      }) as Record<string, string>,
+    )[0];
+    // The native side centres the lights on a row of the same height.
+    expect(rust).toContain(`pub const TOP_ROW_HEIGHT: f64 = ${TOP_ROW_HEIGHT}.0;`);
+    // No hand-tuned position is left in the window config.
+    const conf = Object.values(
+      import.meta.glob("../src-tauri/tauri.conf.json", {
+        query: "?raw",
+        import: "default",
+        eager: true,
+      }) as Record<string, string>,
+    )[0];
+    expect(conf).not.toContain("trafficLightPosition");
     // The three top rows all use the same height class.
     for (const name of ["Sidebar", "TopBar", "RightPanel"]) {
       const src = (
