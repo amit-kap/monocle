@@ -56,6 +56,7 @@
     font: 400 1.0625rem/1.6 var(--sans);
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
+    position: relative;
   }
 
   /* The lamp: one pool of warm light falling from the top right. */
@@ -67,6 +68,8 @@
     background: radial-gradient(ellipse 55% 60% at 80% -12%, var(--glow), transparent 72%);
     animation: lamp-on 2.4s ease-out both;
   }
+  /* The same light again, rising from the bottom left. */
+  .lamp-b { inset: auto 0 0 0; background: radial-gradient(ellipse 55% 60% at 20% 112%, var(--glow), transparent 72%); }
   @keyframes lamp-on { from { opacity: 0; } to { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .lamp { animation: none; } }
 
@@ -188,9 +191,11 @@
   }
 </style>
 <link rel="stylesheet" href="demo.css">
+<link rel="stylesheet" href="art.css">
 </head>
 <body>
 <div class="lamp" aria-hidden="true"></div>
+<div class="lamp lamp-b" aria-hidden="true"></div>
 
 <div class="wrap" id="top">
   <header class="top">
@@ -261,7 +266,14 @@
           <h2>Edits that stay valid Markdown</h2>
           <p>Change a plan in blocks, with headings, to-dos, tables and code. Every block and mark survives a save, so the file stays readable to the agent that wrote it.</p>
         </div>
-        <div class="ph" role="img" aria-label="Image placeholder">Image placeholder<br>Edits that stay valid Markdown</div>
+        <div class="art" id="art-blocks" role="img" aria-label="A page split into blocks: heading, to-do, table and code. One block lifts, is edited and settles back into place.">
+          <svg viewBox="25 26 570 380" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+  <g class="slab"><polygon class="o" points="296.2,69.8 498.9,186.8 498.9,198.5 296.2,81.5"/><polygon class="o" points="532.6,167.3 498.9,186.8 498.9,198.5 532.6,179.0"/><polygon class="o" points="330.0,50.3 532.6,167.3 498.9,186.8 296.2,69.8"/><line class="t" x1="326.6" y1="67.8" x2="431.3" y2="128.3" stroke-width="6" opacity="0.7"/></g>
+  <g class="slab lift-a"><polygon class="o" points="242.2,101.0 444.8,218.0 444.8,229.7 242.2,112.7"/><polygon class="o" points="489.9,192.0 444.8,218.0 444.8,229.7 489.9,203.7"/><polygon class="o" points="287.2,75.0 489.9,192.0 444.8,218.0 242.2,101.0"/><polygon class="g" points="290.6,88.6 310.9,100.4 290.6,112.0 270.3,100.4"/><line class="t" x1="315.4" y1="114.6" x2="418.9" y2="174.5" stroke-width="3" opacity="0.5"/><polyline class="tick" pathLength="1" points="282.2,97.4 282.2,103.9 305.8,101.3"/></g>
+  <g class="slab lift-b"><polygon class="o" points="165.6,145.2 368.3,262.2 368.3,273.9 165.6,156.9"/><polygon class="o" points="435.8,223.2 368.3,262.2 368.3,273.9 435.8,234.9"/><polygon class="o" points="233.2,106.2 435.8,223.2 368.3,262.2 165.6,145.2"/><line class="g" x1="235.4" y1="117.9" x2="415.6" y2="221.9"/><line class="g" x1="185.9" y1="146.5" x2="366.0" y2="250.5"/><line class="g" x1="235.4" y1="117.9" x2="185.9" y2="146.5"/><line class="g" x1="415.6" y1="221.9" x2="366.0" y2="250.5"/><line class="g" x1="210.7" y1="132.2" x2="390.8" y2="236.2"/><line class="g" x1="295.4" y1="152.5" x2="245.9" y2="181.1"/><line class="g" x1="355.6" y1="187.3" x2="306.0" y2="215.9"/><line class="t" x1="232.1" y1="130.2" x2="263.6" y2="148.4" stroke-width="2.5" opacity="0.4"/><line class="t" x1="291.7" y1="164.7" x2="326.6" y2="184.8" stroke-width="2.5" opacity="0.4"/><line class="t" x1="351.4" y1="199.2" x2="386.3" y2="219.3" stroke-width="2.5" opacity="0.4"/><line class="t" x1="207.3" y1="144.6" x2="245.6" y2="166.7" stroke-width="2.5" opacity="0.4"/><line class="t" x1="267.0" y1="179.0" x2="292.8" y2="194.0" stroke-width="2.5" opacity="0.4"/><line class="t" x1="326.6" y1="213.5" x2="367.2" y2="236.8" stroke-width="2.5" opacity="0.4"/></g>
+  <g class="slab"><polygon class="o" points="93.6,186.8 296.2,303.8 296.2,315.5 93.6,198.5"/><polygon class="o" points="359.3,267.4 296.2,303.8 296.2,315.5 359.3,279.1"/><polygon class="o" points="156.6,150.4 359.3,267.4 296.2,303.8 93.6,186.8"/><line class="t" x1="161.1" y1="168.6" x2="244.4" y2="216.7" stroke-width="3" opacity="0.5"/><line class="t" x1="163.4" y1="188.1" x2="267.0" y2="247.9" stroke-width="3" opacity="0.5"/><line class="t" x1="147.6" y1="197.2" x2="201.7" y2="228.4" stroke-width="3" opacity="0.5"/></g>
+</svg>
+        </div>
       </li>
       <li>
         <div class="copy">
@@ -291,6 +303,9 @@
 </div>
 
 <script src="demo.js"></script>
+<script src="art.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module" src="art3d.js"></script>
 <script>
   // Star count; the badge stays hidden if the request fails.
   (async () => {

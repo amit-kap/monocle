@@ -1,0 +1,39 @@
+/* Isometric outline art. One camera, 1.5px lines in the text colour, brass for the one thing that moves. */
+.art {
+  aspect-ratio: 3 / 2; border: 1px solid var(--border-strong); border-radius: 12px;
+  background: var(--bg-soft); color: var(--text); overflow: hidden;
+}
+.art svg { display: block; width: 100%; height: 100%; }
+.art .o, .art .g, .art .t, .art .tick { fill: none; stroke: currentColor; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.art .o { fill: var(--bg); stroke-width: 1.5; }
+.art .g { stroke-width: 1.5; opacity: .6; }
+.art .t { vector-effect: none; }
+.art .tick { stroke: var(--brass); stroke-width: 2.5; stroke-dasharray: 1; stroke-dashoffset: 0; vector-effect: none; }
+
+/* One block lifts at a time, is edited, and seats back exactly. A 14s loop: the to-do, then the table. */
+.art.play .lift-a { animation: lift 14s cubic-bezier(.4, 0, .2, 1) infinite; }
+.art.play .lift-b { animation: lift 14s cubic-bezier(.4, 0, .2, 1) 7s infinite; }
+.art.play .lift-a .o, .art.play .lift-b .o { animation: brass 14s linear infinite; }
+.art.play .lift-b .o { animation-delay: 7s; }
+.art.play .lift-a .tick { animation: draw 14s ease-in-out infinite; }
+@keyframes lift {
+  0% { transform: translateY(0); }
+  2.5% { transform: translateY(-16px); }
+  7% { transform: translateY(-16px); }
+  9.5% { transform: translateY(0); }
+  100% { transform: translateY(0); }
+}
+@keyframes brass {
+  0%, 11% { stroke: currentColor; }
+  2.5%, 8% { stroke: var(--brass); }
+  100% { stroke: currentColor; }
+}
+@keyframes draw {
+  0%, 2.5% { stroke-dashoffset: 1; }
+  5.5%, 8% { stroke-dashoffset: 0; }
+  9.5%, 100% { stroke-dashoffset: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .art.play .lift-a, .art.play .lift-b, .art.play .o, .art.play .tick { animation: none; }
+  .art .tick { stroke-dashoffset: 0; }
+}
