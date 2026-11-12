@@ -162,6 +162,13 @@ function key(init: KeyboardEventInit) {
 const row = (path: string) => q(`[data-tree-row="${path}"]`);
 const rowPaths = () => qa("[data-tree-row]").map((r) => r.dataset.treeRow);
 
+async function openSearch() {
+  if (!q("input[data-search]")) {
+    click(q("[data-search-button]"));
+    await tick();
+  }
+}
+
 async function boot(setup: Partial<ReturnType<typeof useStore.getState>> = {}) {
   localStorage.clear();
   localStorage.setItem("monocle:lastFolder", ROOT);
@@ -275,7 +282,8 @@ describe("G2 root and tree", () => {
     await boot();
     const aside = q("aside:not([aria-label])")!;
     expect(aside.textContent).not.toContain("New file");
-    expect(q("input[aria-label='Search Projects']")).not.toBeNull();
+    expect(q("[data-search-button]")!.textContent).toBe("Search");
+    expect(q("input[data-search]")).toBeNull();
     expect(aside.textContent).not.toContain("FILES");
     const rootButton = q("[data-root-button]")!;
     expect(rootButton.textContent).toContain("Projects");
@@ -810,6 +818,7 @@ describe("search box", () => {
   it("shows a clear button once there is text, and clearing restores the tree", async () => {
     await boot();
     expect(q("[data-search-clear]")).toBeNull();
+    await openSearch();
     const input = q<HTMLInputElement>("input[data-search]")!;
     await act(async () => {
       const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
@@ -825,6 +834,7 @@ describe("search box", () => {
 
   it("folders open while searching and can still be collapsed by the chevron", async () => {
     await boot();
+    await openSearch();
     const input = q<HTMLInputElement>("input[data-search]")!;
     await act(async () => {
       const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
@@ -835,5 +845,27 @@ describe("search box", () => {
     click(q(`[data-tree-row="${ROOT}/docs"] button[aria-label='Collapse folder']`));
     await tick();
     expect(row(`${ROOT}/docs/architecture.md`)).toBeNull();
+  });
+});
+
+describe("search button", () => {
+  it("becomes the input when clicked, and Close puts the button back and clears the text", async () => {
+    await boot();
+    expect(q("input[data-search]")).toBeNull();
+    await openSearch();
+    const input = q<HTMLInputElement>("input[data-search]")!;
+    expect(input).not.toBeNull();
+    expect(q("[data-search-close]")!.textContent).toBe("Close");
+    await act(async () => {
+      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      set.call(input, "docs");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    click(q("[data-search-close]"));
+    await tick();
+    expect(q("input[data-search]")).toBeNull();
+    expect(q("[data-search-button]")).not.toBeNull();
+    // The tree is whole again.
+    expect(row(`${ROOT}/README.md`)).not.toBeNull();
   });
 });

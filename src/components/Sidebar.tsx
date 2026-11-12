@@ -333,6 +333,14 @@ export function Sidebar() {
   // the keyboard, so it follows the last input rather than focus alone.
   const [keyboardRing, setKeyboardRing] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
+  function closeSearch() {
+    setQuery("");
+    setSearchOpen(false);
+  }
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -378,6 +386,7 @@ export function Sidebar() {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
         event.preventDefault();
+        setSearchOpen(true);
         searchRef.current?.focus();
         searchRef.current?.select();
       }
@@ -590,8 +599,7 @@ export function Sidebar() {
 
   function onSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
-      setQuery("");
-      event.currentTarget.blur();
+      closeSearch();
       return;
     }
     if (event.key === "Enter") {
@@ -645,38 +653,61 @@ export function Sidebar() {
 
           {folder && tree.length > 0 && (
             <div className="px-2 pb-2 pt-2">
-              <div className="relative">
-                <SearchGlyph className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--text-faint)]" />
-                <input
-                  ref={searchRef}
-                  data-search
-                  spellCheck={false}
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  autoComplete="off"
-                  value={query}
-                  onChange={(event) => setQuery(event.currentTarget.value)}
-                  onKeyDown={onSearchKeyDown}
-                  placeholder={`Search ${baseName(folder)}`}
-                  aria-label={`Search ${baseName(folder)}`}
-                  className="h-8 w-full rounded-[var(--radius)] border border-transparent bg-[var(--bg-active)] pl-8 pr-8 text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-[var(--accent)]"
-                />
-                {query && (
+              {!searchOpen ? (
+                <button
+                  type="button"
+                  data-search-button
+                  title="Search (⌘P)"
+                  onClick={() => setSearchOpen(true)}
+                  className="flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                >
+                  <SearchGlyph className="size-4 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">Search</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <div className="relative min-w-0 flex-1">
+                    <SearchGlyph className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--text-faint)]" />
+                    <input
+                      ref={searchRef}
+                      data-search
+                      spellCheck={false}
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      autoComplete="off"
+                      value={query}
+                      onChange={(event) => setQuery(event.currentTarget.value)}
+                      onKeyDown={onSearchKeyDown}
+                      placeholder={`Search ${baseName(folder)}`}
+                      aria-label={`Search ${baseName(folder)}`}
+                      className="h-8 w-full rounded-[var(--radius)] border border-transparent bg-[var(--bg-active)] pl-8 pr-8 text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-[var(--accent)]"
+                    />
+                    {query && (
+                      <button
+                        type="button"
+                        title="Clear search"
+                        aria-label="Clear search"
+                        data-search-clear
+                        onClick={() => {
+                          setQuery("");
+                          searchRef.current?.focus();
+                        }}
+                        className="absolute right-1 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                      >
+                        <XIcon className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
                   <button
                     type="button"
-                    title="Clear search"
-                    aria-label="Clear search"
-                    data-search-clear
-                    onClick={() => {
-                      setQuery("");
-                      searchRef.current?.focus();
-                    }}
-                    className="absolute right-1 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                    data-search-close
+                    onClick={closeSearch}
+                    className="h-8 shrink-0 rounded-[var(--radius)] px-2 text-[13px] font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
                   >
-                    <XIcon className="size-3.5" />
+                    Close
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
 

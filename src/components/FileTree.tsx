@@ -176,8 +176,8 @@ function Row({
       }}
       // The row spans the pane, so its hover and selection do too; the indent
       // is padding on the left, which moves only the content.
-      style={{ paddingLeft: (isDir ? 12 : 17) + depth * 18 }}
-      className={`group/row relative flex h-8 cursor-default items-center gap-2 rounded-[var(--radius)] pr-3 text-[13px] outline-none ${
+      style={{ paddingLeft: (isDir ? 0 : 5) + depth * 18 }}
+      className={`group/row relative flex h-8 cursor-default items-center gap-2 rounded-[var(--radius)] pr-0 text-[13px] outline-none ${
         focused && handlers.keyboardRing ? "tree-ring" : ""} ${tone}`}
     >
       {isDir && (
