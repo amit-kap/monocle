@@ -4,8 +4,12 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { Sidebar } from "./components/Sidebar";
 import { EditorPane } from "./components/EditorPane";
-import { AppearanceMenu } from "./components/AppearanceMenu";
+import { SettingsModal } from "./components/SettingsModal";
 import { ModalHost } from "./components/ModalHost";
+import { FolderPage } from "./components/FolderPage";
+import { TopBar } from "./components/TopBar";
+import { RightPanel } from "./components/RightPanel";
+import { StatusBar } from "./components/StatusBar";
 import { bufferMarkdown } from "./lib/editorBuffer";
 import { useStore } from "./store/useStore";
 import {
@@ -21,6 +25,9 @@ function App() {
   const activePath = useStore((s) => s.activePath);
   const error = useStore((s) => s.error);
   const setError = useStore((s) => s.setError);
+  const folderPage = useStore((s) => s.folderPage);
+  const toggleLeft = useStore((s) => s.toggleLeft);
+  const toggleRight = useStore((s) => s.toggleRight);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -45,8 +52,43 @@ function App() {
     };
   }, [init]);
 
+  // Outside edits to markdown under the root arrive from the file watcher.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    listen<string[]>("fs-change", (event) => {
+      void useStore.getState().handleFsChange(event.payload);
+    })
+      .then((fn) => {
+        if (cancelled) fn();
+        else unlisten = fn;
+      })
+      .catch(() => {
+        // not running under Tauri
+      });
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []);
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key === ",") {
+        event.preventDefault();
+        const state = useStore.getState();
+        if (state.settingsOpen) state.closeSettings();
+        else state.openSettings();
+        return;
+      }
+      // ⌘\ hides the sidebar, ⌥⌘\ the right panel. `code`, not `key`: with
+      // Option held, macOS reports a different character for the backslash.
+      if ((event.metaKey || event.ctrlKey) && event.code === "Backslash") {
+        event.preventDefault();
+        if (event.altKey) toggleRight();
+        else toggleLeft();
+        return;
+      }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
         // The unsaved-changes prompt owns the keyboard while it is open.
         if (useModalPrompt.getState().pending) return;
@@ -56,7 +98,7 @@ function App() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [createNote]);
+  }, [createNote, toggleLeft, toggleRight]);
 
   const activeName = notes.find((note) => note.path === activePath)?.name ?? null;
 
@@ -103,18 +145,19 @@ function App() {
     <div className="relative flex h-full w-full overflow-hidden">
       <Sidebar />
       <div className="flex h-full min-w-0 flex-1 flex-col">
-        <div className="relative flex h-10 shrink-0 items-center border-b border-[var(--border)] px-4">
-          <div data-tauri-drag-region className="absolute inset-0" />
-          <span className="pointer-events-none relative max-w-full truncate text-[13px] font-medium text-[var(--text-muted)]">
-            {activeName ?? "Monocle"}
-          </span>
-          <div className="absolute right-3 top-0 flex h-10 items-center">
-            <AppearanceMenu />
-          </div>
+        <TopBar />
+        <div
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
+          style={{ display: folderPage ? "none" : undefined }}
+        >
+          <EditorPane />
         </div>
-        <EditorPane />
+        {folderPage && <FolderPage />}
+        <StatusBar />
       </div>
+      <RightPanel />
       <ModalHost />
+      <SettingsModal />
       {error && (
         <button
           type="button"

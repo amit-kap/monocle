@@ -10,6 +10,8 @@ export type TreeRow = {
   depth: number;
   /** Folders only: whether the row is showing its children. */
   open: boolean;
+  /** The row this one sits under, or null at the top level. */
+  parent: string | null;
 };
 
 /**
@@ -20,29 +22,24 @@ export function visibleRows(
   nodes: TreeNode[],
   options: { expanded: Set<string>; forceExpand?: boolean },
   depth = 0,
+  parent: string | null = null,
 ): TreeRow[] {
   const rows: TreeRow[] = [];
   for (const node of nodes) {
     if (node.kind === "file") {
-      rows.push({ path: node.path, kind: "file", depth, open: false });
+      rows.push({ path: node.path, kind: "file", depth, open: false, parent });
       continue;
     }
     const open = Boolean(options.forceExpand) || options.expanded.has(node.path);
-    rows.push({ path: node.path, kind: "dir", depth, open });
+    rows.push({ path: node.path, kind: "dir", depth, open, parent });
     if (open && node.children) {
-      rows.push(...visibleRows(node.children, options, depth + 1));
+      rows.push(...visibleRows(node.children, options, depth + 1, node.path));
     }
   }
   return rows;
 }
 
 export type TreeStep = { index: number; toggle?: boolean };
-
-/** The folder a row sits in, or null for a top-level row. */
-function parentPath(row: TreeRow): string | null {
-  const cut = row.path.lastIndexOf("/");
-  return cut > 0 ? row.path.slice(0, cut) : null;
-}
 
 /**
  * Where a key press moves the focus. `index` is the focused row, or -1 when
@@ -93,7 +90,7 @@ export function stepRow(
       if (row.kind === "dir" && row.open && canToggle) {
         return { index: current, toggle: true };
       }
-      const parent = parentPath(row);
+      const parent = row.parent;
       if (parent === null) return null;
       const found = rows.findIndex((candidate) => candidate.path === parent);
       return found === -1 ? null : { index: found };

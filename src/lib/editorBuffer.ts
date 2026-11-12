@@ -13,3 +13,17 @@ export function setBufferSerializer(fn: (() => string) | null): void {
 export function bufferMarkdown(): string | null {
   return serialize ? serialize() : null;
 }
+
+// Which heading the cursor is under, for "copy current section". Only the
+// editor knows where the cursor is; it registers a provider while mounted.
+
+let cursorHeading: (() => number) | null = null;
+
+export function setCursorHeadingProvider(fn: (() => number) | null): void {
+  cursorHeading = fn;
+}
+
+/** Index of the heading the cursor is under (counting from the top), or -1. */
+export function cursorHeadingIndex(): number {
+  return cursorHeading ? cursorHeading() : -1;
+}

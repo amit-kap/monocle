@@ -1,6 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@tauri-apps/api/path", () => ({ dirname: vi.fn() }));
+vi.mock("@tauri-apps/api/path", () => ({
+  dirname: vi.fn(),
+  homeDir: vi.fn(async () => "/home/me"),
+}));
 vi.mock("../lib/fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/fs")>();
   return {
@@ -8,8 +11,10 @@ vi.mock("../lib/fs", async (importOriginal) => {
     readTree: vi.fn(async () => []),
     readNote: vi.fn(async () => "original"),
     writeNote: vi.fn(async () => {}),
-    createNoteFile: vi.fn(async () => "/notes/Untitled.md"),
-    deleteNoteFile: vi.fn(async () => {}),
+    createNoteFile: vi.fn(async () => "/notes/untitled.md"),
+    trashPath: vi.fn(async () => {}),
+    createDirectory: vi.fn(async () => "/notes/untitled folder"),
+    startWatch: vi.fn(async () => {}),
     renameNoteFile: vi.fn(async () => "/notes/Renamed.md"),
   };
 });
@@ -22,13 +27,13 @@ const { setBufferSerializer } = await import("../lib/editorBuffer");
 const fs = await import("../lib/fs");
 const readTree = vi.mocked(fs.readTree);
 const writeNote = vi.mocked(fs.writeNote);
-const deleteNoteFile = vi.mocked(fs.deleteNoteFile);
+const trashPath = vi.mocked(fs.trashPath);
 
 /** Every describe starts from a clean, modal-free store. */
 function resetStore(): void {
   readTree.mockClear();
   writeNote.mockClear();
-  deleteNoteFile.mockClear();
+  trashPath.mockClear();
   useModalPrompt.setState({ pending: null });
   setBufferSerializer(null);
   localStorage.removeItem("monocle:lastFolder");
@@ -107,10 +112,10 @@ describe("useStore", () => {
     expect(useStore.getState().editorFocusRequest).toBe(1);
   });
 
-  it("asks for the caret for a brand-new note", async () => {
+  it("opens a brand-new note with its name ready to type", async () => {
     await useStore.getState().createNote();
-    expect(useStore.getState().activePath).toBe("/notes/Untitled.md");
-    expect(useStore.getState().editorFocusRequest).toBe(1);
+    expect(useStore.getState().activePath).toBe("/notes/untitled.md");
+    expect(useStore.getState().renamingPath).toBe("/notes/untitled.md");
   });
 });
 
@@ -180,50 +185,70 @@ describe("switching notes with unsaved edits", () => {
     expect(writeNote).not.toHaveBeenCalled();
   });
 
-  it("asks before changing the root folder too", async () => {
-    const choosing = useStore.getState().chooseFolder();
-    expect(useModalPrompt.getState().pending?.title).toBe("Unsaved changes");
-    answerModal(DISMISS);
-    await choosing;
+  it("changing the root keeps the open note, unsaved edits and all", async () => {
+    await useStore.getState().setRoot("/elsewhere");
+    expect(useModalPrompt.getState().pending).toBeNull();
+    expect(useStore.getState().activePath).toBe("/notes/A.md");
+    expect(useStore.getState().status).toBe("dirty");
   });
 });
 
-describe("deleting a note", () => {
+describe("moving to the Trash", () => {
   beforeEach(resetStore);
 
-  it("asks first, naming the note and marking the action dangerous", async () => {
-    const deleting = useStore.getState().deleteNote("/notes/A.md");
+  const tree = [
+    { name: "A.md", path: "/notes/A.md", kind: "file" as const },
+    {
+      name: "docs",
+      path: "/notes/docs",
+      kind: "dir" as const,
+      children: [
+        { name: "x.md", path: "/notes/docs/x.md", kind: "file" as const },
+        { name: "y.md", path: "/notes/docs/y.md", kind: "file" as const },
+      ],
+    },
+  ];
+
+  it("moves a file straight away, without asking", async () => {
+    useStore.setState({ tree });
+    await useStore.getState().trashEntry("/notes/A.md");
+    expect(useModalPrompt.getState().pending).toBeNull();
+    expect(trashPath).toHaveBeenCalledWith("/notes/A.md");
+  });
+
+  it("asks before moving a folder that holds files, naming the count", async () => {
+    useStore.setState({ tree });
+    const trashing = useStore.getState().trashEntry("/notes/docs");
     const asked = useModalPrompt.getState().pending;
-    expect(asked?.title).toBe("Delete note");
-    expect(asked?.body).toContain("A.md");
-    expect(asked?.actions).toEqual([
-      { value: "delete", label: "Delete", tone: "danger" },
-    ]);
-    expect(deleteNoteFile).not.toHaveBeenCalled();
-    answerModal("delete");
-    await deleting;
+    expect(asked?.body).toContain("docs");
+    expect(asked?.body).toContain("2 files");
+    expect(trashPath).not.toHaveBeenCalled();
+    answerModal("trash");
+    await trashing;
+    expect(trashPath).toHaveBeenCalledWith("/notes/docs");
   });
 
-  it("keeps the note when the user dismisses the prompt", async () => {
-    const deleting = useStore.getState().deleteNote("/notes/A.md");
+  it("keeps the folder when the user cancels", async () => {
+    useStore.setState({ tree });
+    const trashing = useStore.getState().trashEntry("/notes/docs");
     answerModal(DISMISS);
-    await deleting;
-    expect(deleteNoteFile).not.toHaveBeenCalled();
+    await trashing;
+    expect(trashPath).not.toHaveBeenCalled();
   });
 
-  it("deletes once the user confirms", async () => {
-    const deleting = useStore.getState().deleteNote("/notes/A.md");
-    answerModal("delete");
-    await deleting;
-    expect(deleteNoteFile).toHaveBeenCalledWith("/notes/A.md");
-  });
-
-  it("clears the open note when the deleted one was open", async () => {
-    await useStore.getState().openNote("/notes/A.md");
-    const deleting = useStore.getState().deleteNote("/notes/A.md");
-    answerModal("delete");
-    await deleting;
+  it("shows the parent folder's page when the open note was trashed", async () => {
+    useStore.setState({ tree, activePath: "/notes/docs/x.md" });
+    const trashing = useStore.getState().trashEntry("/notes/docs");
+    answerModal("trash");
+    await trashing;
     expect(useStore.getState().activePath).toBeNull();
+    expect(useStore.getState().folderPage).toBe("/notes");
+  });
+
+  it("never trashes the root folder", async () => {
+    useStore.setState({ tree });
+    await useStore.getState().trashEntry("/notes");
+    expect(trashPath).not.toHaveBeenCalled();
   });
 });
 
@@ -282,7 +307,7 @@ describe("hidden files", () => {
   it("rescans with them when the toggle is turned on", async () => {
     await useStore.getState().setShowHidden(true);
     expect(useStore.getState().showHidden).toBe(true);
-    expect(readTree).toHaveBeenLastCalledWith("/notes", true);
+    expect(readTree).toHaveBeenLastCalledWith("/notes", true, expect.anything());
   });
 
   it("keeps the choice for the next launch", async () => {
@@ -292,12 +317,12 @@ describe("hidden files", () => {
 
     await useStore.getState().init();
     expect(useStore.getState().showHidden).toBe(true);
-    expect(readTree).toHaveBeenLastCalledWith("/notes", true);
+    expect(readTree).toHaveBeenLastCalledWith("/notes", true, expect.anything());
   });
 
   it("scans without them by default", async () => {
     await useStore.getState().refresh();
-    expect(readTree).toHaveBeenLastCalledWith("/notes", false);
+    expect(readTree).toHaveBeenLastCalledWith("/notes", false, expect.anything());
   });
 });
 
@@ -330,5 +355,200 @@ describe("page tint", () => {
     useStore.getState().setTint("rose");
     expect(useStore.getState().tint).toBe("rose");
     expect(localStorage.getItem("monocle:pageTint")).toBe("rose");
+  });
+});
+
+describe("side panes", () => {
+  beforeEach(() => {
+    resetStore();
+    localStorage.removeItem("monocle:leftOpen");
+    localStorage.removeItem("monocle:rightOpen");
+    localStorage.removeItem("monocle:rightTab");
+    useStore.setState({ leftOpen: true, rightOpen: true, rightTab: "outline" });
+  });
+
+  it("toggles each pane on its own and remembers it", () => {
+    useStore.getState().toggleLeft();
+    expect(useStore.getState().leftOpen).toBe(false);
+    expect(useStore.getState().rightOpen).toBe(true);
+    expect(localStorage.getItem("monocle:leftOpen")).toBe("0");
+
+    useStore.getState().toggleRight();
+    expect(useStore.getState().rightOpen).toBe(false);
+    expect(localStorage.getItem("monocle:rightOpen")).toBe("0");
+  });
+
+  it("reopens a closed pane", () => {
+    useStore.getState().toggleLeft();
+    useStore.getState().toggleLeft();
+    expect(useStore.getState().leftOpen).toBe(true);
+    expect(localStorage.getItem("monocle:leftOpen")).toBe("1");
+  });
+
+  it("remembers the right panel's tab", () => {
+    useStore.getState().setRightTab("changes");
+    expect(useStore.getState().rightTab).toBe("changes");
+    expect(localStorage.getItem("monocle:rightTab")).toBe("changes");
+  });
+});
+
+
+describe("changes made outside the app", () => {
+  const readNote = vi.mocked(fs.readNote);
+
+  afterEach(() => {
+    readNote.mockReset();
+    readNote.mockImplementation(async () => "original");
+  });
+
+  beforeEach(async () => {
+    resetStore();
+    readNote.mockReset();
+    readNote.mockResolvedValue("one\ntwo\n");
+    useStore.setState({ changes: {} });
+    await useStore.getState().openNote("/notes/A.md");
+  });
+
+  it("shows an outside edit to the open, untouched note and records it", async () => {
+    readNote.mockResolvedValue("one\nTWO\n");
+    await useStore.getState().handleFsChange(["/notes/A.md"]);
+    const state = useStore.getState();
+    expect(state.activeContent).toBe("one\nTWO\n");
+    expect(state.changes["/notes/A.md"]).toMatchObject({ before: "one\ntwo\n", after: "one\nTWO\n" });
+  });
+
+  it("keeps unsaved edits in the editor and only records the change", async () => {
+    useStore.getState().markDirty();
+    const loadId = useStore.getState().loadId;
+    readNote.mockResolvedValue("one\nTWO\n");
+    await useStore.getState().handleFsChange(["/notes/A.md"]);
+    expect(useStore.getState().loadId).toBe(loadId);
+    expect(useStore.getState().changes["/notes/A.md"]).toBeDefined();
+    expect(useStore.getState().status).toBe("dirty");
+  });
+
+  it("marks a file that is not open, comparing with what we last saw", async () => {
+    readNote.mockResolvedValueOnce("b1\n");
+    await useStore.getState().openNote("/notes/B.md");
+    await useStore.getState().openNote("/notes/A.md");
+    readNote.mockResolvedValue("b2\n");
+    await useStore.getState().handleFsChange(["/notes/B.md"]);
+    expect(useStore.getState().changes["/notes/B.md"]).toMatchObject({ before: "b1\n", after: "b2\n" });
+  });
+
+  it("ignores a change that leaves the text as it was", async () => {
+    await useStore.getState().handleFsChange(["/notes/A.md"]);
+    expect(useStore.getState().changes).toEqual({});
+  });
+
+  it("ignores files that are not markdown", async () => {
+    readNote.mockResolvedValue("x");
+    await useStore.getState().handleFsChange(["/notes/image.png"]);
+    expect(useStore.getState().changes).toEqual({});
+  });
+
+  it("Keep change clears the notice and leaves the new text", async () => {
+    readNote.mockResolvedValue("one\nTWO\n");
+    await useStore.getState().handleFsChange(["/notes/A.md"]);
+    await useStore.getState().keepChange("/notes/A.md");
+    expect(useStore.getState().changes).toEqual({});
+    expect(useStore.getState().activeContent).toBe("one\nTWO\n");
+  });
+
+  it("Revert writes the earlier text back and clears the notice", async () => {
+    readNote.mockResolvedValue("one\nTWO\n");
+    await useStore.getState().handleFsChange(["/notes/A.md"]);
+    writeNote.mockClear();
+    await useStore.getState().revertChange("/notes/A.md");
+    expect(writeNote).toHaveBeenCalledWith("/notes/A.md", "one\ntwo\n");
+    expect(useStore.getState().changes).toEqual({});
+    expect(useStore.getState().activeContent).toBe("one\ntwo\n");
+  });
+
+  it("with unsaved edits, Keep change loads the outside version", async () => {
+    useStore.getState().markDirty();
+    readNote.mockResolvedValue("one\nTWO\n");
+    await useStore.getState().handleFsChange(["/notes/A.md"]);
+    await useStore.getState().keepChange("/notes/A.md");
+    expect(useStore.getState().activeContent).toBe("one\nTWO\n");
+    expect(useStore.getState().status).toBe("idle");
+  });
+
+  it("with unsaved edits, Revert saves the editor's text over the outside edit", async () => {
+    useStore.getState().markDirty();
+    setBufferSerializer(() => "mine\n");
+    readNote.mockResolvedValue("one\nTWO\n");
+    await useStore.getState().handleFsChange(["/notes/A.md"]);
+    writeNote.mockClear();
+    await useStore.getState().revertChange("/notes/A.md");
+    expect(writeNote).toHaveBeenCalledWith("/notes/A.md", "mine\n");
+  });
+});
+
+describe("saving", () => {
+  beforeEach(resetStore);
+
+  it("never rewrites a note whose text is what is on disk", async () => {
+    await useStore.getState().openNote("/notes/A.md");
+    writeNote.mockClear();
+    await useStore.getState().save("original");
+    expect(writeNote).not.toHaveBeenCalled();
+    expect(useStore.getState().status).toBe("idle");
+  });
+
+  it("writes when the text changed", async () => {
+    await useStore.getState().openNote("/notes/A.md");
+    await useStore.getState().save("edited");
+    expect(writeNote).toHaveBeenCalledWith("/notes/A.md", "edited");
+    expect(useStore.getState().status).toBe("saved");
+  });
+});
+
+describe("the root folder", () => {
+  beforeEach(resetStore);
+
+  it("remembers the last four roots, most recent first, without duplicates", async () => {
+    for (const dir of ["/a", "/b", "/c", "/d", "/e"]) await useStore.getState().setRoot(dir);
+    expect(useStore.getState().recentRoots).toEqual(["/d", "/c", "/b", "/a"]);
+    await useStore.getState().setRoot("/c");
+    expect(useStore.getState().recentRoots).toEqual(["/e", "/d", "/b", "/a"]);
+  });
+
+  it("opens on the home folder the first time", async () => {
+    localStorage.removeItem("monocle:lastFolder");
+    useStore.setState({ folder: null });
+    await useStore.getState().init();
+    expect(useStore.getState().folder).toBe("/home/me");
+  });
+
+  it("reopens the last root", async () => {
+    localStorage.setItem("monocle:lastFolder", "/work");
+    await useStore.getState().init();
+    expect(useStore.getState().folder).toBe("/work");
+  });
+
+  it("remembers what was expanded, per root", async () => {
+    await useStore.getState().setRoot("/one");
+    useStore.getState().toggleDir("/one/docs");
+    await useStore.getState().setRoot("/two");
+    expect(useStore.getState().expanded.size).toBe(0);
+    await useStore.getState().setRoot("/one");
+    expect(useStore.getState().expanded.has("/one/docs")).toBe(true);
+  });
+
+  it("the chevron folds without changing what is open", async () => {
+    await useStore.getState().openNote("/notes/A.md");
+    useStore.getState().toggleDir("/notes/docs");
+    expect(useStore.getState().activePath).toBe("/notes/A.md");
+    expect(useStore.getState().folderPage).toBeNull();
+  });
+
+  it("opening a folder shows its page and unfolds the trail to it", async () => {
+    await useStore.getState().openFolder("/notes/docs/deep");
+    const state = useStore.getState();
+    expect(state.folderPage).toBe("/notes/docs/deep");
+    expect(state.activePath).toBeNull();
+    expect(state.expanded.has("/notes/docs")).toBe(true);
+    expect(state.expanded.has("/notes/docs/deep")).toBe(true);
   });
 });

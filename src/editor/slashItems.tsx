@@ -16,68 +16,29 @@ function chain(editor: Editor, range: Range) {
   return editor.chain().focus().deleteRange(range);
 }
 
+// The block menu offers the blocks that have no shortcut worth remembering.
+// Headings, lists, quotes and rules come from markdown shortcuts as you type
+// (`## `, `- `, `> `, `---`). A Mermaid diagram block comes after v1.
 export const slashItems: SlashItem[] = [
   {
-    title: "Text",
-    keywords: ["paragraph", "plain", "body"],
-    icon: <Glyph>T</Glyph>,
-    run: (editor, range) => chain(editor, range).setParagraph().run(),
-  },
-  {
-    title: "Heading 1",
-    keywords: ["h1", "title", "large"],
-    icon: <Glyph>H1</Glyph>,
+    title: "Table",
+    keywords: ["table", "grid", "rows", "columns"],
+    icon: <Glyph>▦</Glyph>,
     run: (editor, range) =>
-      chain(editor, range).setNode("heading", { level: 1 }).run(),
+      chain(editor, range)
+        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+        .run(),
   },
   {
-    title: "Heading 2",
-    keywords: ["h2", "subtitle"],
-    icon: <Glyph>H2</Glyph>,
-    run: (editor, range) =>
-      chain(editor, range).setNode("heading", { level: 2 }).run(),
-  },
-  {
-    title: "Heading 3",
-    keywords: ["h3", "subtitle", "small"],
-    icon: <Glyph>H3</Glyph>,
-    run: (editor, range) =>
-      chain(editor, range).setNode("heading", { level: 3 }).run(),
-  },
-  {
-    title: "Bullet List",
-    keywords: ["unordered", "ul", "bullet", "list"],
-    icon: <Glyph>•</Glyph>,
-    run: (editor, range) => chain(editor, range).toggleBulletList().run(),
-  },
-  {
-    title: "Numbered List",
-    keywords: ["ordered", "ol", "number", "list"],
-    icon: <Glyph>1.</Glyph>,
-    run: (editor, range) => chain(editor, range).toggleOrderedList().run(),
-  },
-  {
-    title: "To-do List",
+    title: "Task list",
     keywords: ["todo", "task", "checkbox", "check", "list"],
     icon: <Glyph>☐</Glyph>,
     run: (editor, range) => chain(editor, range).toggleTaskList().run(),
   },
   {
-    title: "Quote",
-    keywords: ["blockquote", "citation", "quote"],
-    icon: <Glyph>❝</Glyph>,
-    run: (editor, range) => chain(editor, range).toggleBlockquote().run(),
-  },
-  {
-    title: "Code Block",
+    title: "Code block",
     keywords: ["code", "pre", "snippet", "mono"],
     icon: <Glyph>{"</>"}</Glyph>,
     run: (editor, range) => chain(editor, range).toggleCodeBlock().run(),
-  },
-  {
-    title: "Divider",
-    keywords: ["hr", "line", "separator", "rule"],
-    icon: <Glyph>—</Glyph>,
-    run: (editor, range) => chain(editor, range).setHorizontalRule().run(),
   },
 ];

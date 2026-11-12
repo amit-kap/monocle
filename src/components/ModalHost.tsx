@@ -1,23 +1,9 @@
 import { useEffect, useRef } from "react";
+import { X } from "lucide-react";
 import { DISMISS, answerModal, useModalPrompt } from "../store/useModalPrompt";
 
 function XIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
-  );
+  return <X size={16} aria-hidden />;
 }
 
 /**

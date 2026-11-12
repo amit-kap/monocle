@@ -1,24 +1,40 @@
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
 } from "react";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useStore } from "../store/useStore";
 import { filterTree } from "../lib/fs";
 import { SIDEBAR, clampWidth, readWidth, storeWidth } from "../lib/layout";
 import { scrollDelta } from "../lib/scroll";
 import { stepRow, visibleRows, type TreeRow } from "../lib/treeNav";
-import { FileTree } from "./FileTree";
-import { MenuCheck } from "./MenuCheck";
+import { ancestorsUpToHome, baseName, foldTree } from "../lib/treeView";
+import { copyPathReference } from "../lib/agentActions";
+import type { TreeNode } from "../types";
+import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { FileTree, renameTarget } from "./FileTree";
+import {
+  ChevronsUpDown,
+  ClockIcon,
+  CopyIcon,
+  EllipsisIcon,
+  FolderIcon,
+  FolderRootIcon,
+  FolderSearchIcon,
+  PlusIcon,
+  RefreshGlyph,
+  RevealGlyph,
+  SearchGlyph,
+  TrashGlyph,
+  TypeIcon,
+  XIcon,
+} from "./icons";
+import { PaneToggle } from "./PaneToggle";
+import { TrafficLightsSlot } from "./TrafficLightsSlot";
 import { ResizeHandle } from "./ResizeHandle";
-
-function baseName(path: string): string {
-  return path.split("/").pop() ?? path;
-}
 
 /** The tree renders its rows in visual order, so the DOM is the row list. */
 function rowElement(nav: HTMLElement | null, path: string): HTMLElement | null {
@@ -38,179 +54,276 @@ function revealRow(nav: HTMLElement | null, path: string): void {
   );
 }
 
-function FolderIcon() {
+function where(path: string, home: string | null): string {
+  if (home && path === home) return "Home folder";
+  if (home && path.startsWith(`${home}/`))
+    return `~/${path.slice(home.length + 1)}`;
+  return path;
+}
+
+/**
+ * The root folder: a button at the foot of the sidebar that shows only the
+ * folder's name, and a menu that opens upward with every folder above it up to
+ * home, the last four roots, and the system folder picker.
+ */
+function RootBar() {
+  const folder = useStore((s) => s.folder);
+  const home = useStore((s) => s.home);
+  const recentRoots = useStore((s) => s.recentRoots);
+  const setRoot = useStore((s) => s.setRoot);
+  const chooseFolder = useStore((s) => s.chooseFolder);
+  const loading = useStore((s) => s.loading);
+  const expanded = useStore((s) => s.expanded);
+  const refresh = useStore((s) => s.refresh);
+  const collapseAll = useStore((s) => s.collapseAll);
+  const expandAll = useStore((s) => s.expandAll);
+  const [open, setOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const anyExpanded = expanded.size > 0;
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open && !moreOpen) return;
+    function onDown(event: MouseEvent) {
+      if (!ref.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setMoreOpen(false);
+      }
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setMoreOpen(false);
+      }
+    }
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, moreOpen]);
+
+  const ups = folder && home ? ancestorsUpToHome(folder, home) : [];
+  const recents = recentRoots.filter((p) => p !== folder && !ups.includes(p));
+
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M1.5 4.5A1.5 1.5 0 0 1 3 3h3l1.5 1.8H13A1.5 1.5 0 0 1 14.5 6.3v5.2A1.5 1.5 0 0 1 13 13H3a1.5 1.5 0 0 1-1.5-1.5v-7Z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div
+      ref={ref}
+      className="relative flex shrink-0 items-center gap-1 border-t border-[var(--border)] p-2"
+    >
+      <button
+        type="button"
+        title="Change root folder"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        data-root-button
+        onClick={() => {
+          setMoreOpen(false);
+          setOpen((v) => !v);
+        }}
+        className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]"
+      >
+        <FolderRootIcon />
+        <span className="min-w-0 flex-1 truncate font-semibold text-[var(--text)]">
+          {folder ? baseName(folder) : "Choose a folder"}
+        </span>
+        <ChevronsUpDown className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        title="More"
+        aria-label="More"
+        aria-haspopup="menu"
+        aria-expanded={moreOpen}
+        data-more-button
+        onClick={() => {
+          setOpen(false);
+          setMoreOpen((v) => !v);
+        }}
+        className={`grid size-8 shrink-0 place-items-center rounded-[var(--radius)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] ${
+          moreOpen
+            ? "bg-[var(--bg-active)] text-[var(--text)]"
+            : "text-[var(--text-muted)]"
+        }`}
+      >
+        <EllipsisIcon />
+      </button>
+
+      {moreOpen && (
+        <div
+          role="menu"
+          data-more-menu
+          className="block-menu"
+          style={{ position: "absolute", right: 8, bottom: 48, zIndex: 40 }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="block-menu-item"
+            disabled={!folder || loading}
+            onClick={() => {
+              setMoreOpen(false);
+              void refresh();
+            }}
+          >
+            <span className="grid w-[18px] place-items-center">
+              <RefreshGlyph className="size-4" />
+            </span>
+            Refresh
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="block-menu-item"
+            onClick={() => {
+              setMoreOpen(false);
+              if (anyExpanded) collapseAll();
+              else expandAll();
+            }}
+          >
+            <span className="grid w-[18px] place-items-center">
+              <ChevronsUpDown className="size-4" />
+            </span>
+            {anyExpanded ? "Collapse all" : "Expand all"}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="block-menu-item"
+            disabled={!folder}
+            onClick={() => {
+              setMoreOpen(false);
+              if (folder) void revealItemInDir(folder);
+            }}
+          >
+            <span className="grid w-[18px] place-items-center">
+              <RevealGlyph className="size-4" />
+            </span>
+            Reveal in Finder
+          </button>
+        </div>
+      )}
+      {open && (
+        <div
+          role="menu"
+          data-root-menu
+          className="block-menu"
+          style={{
+            position: "absolute",
+            left: 8,
+            right: 8,
+            bottom: 48,
+            zIndex: 40,
+          }}
+        >
+          {ups.length > 0 && (
+            <>
+              <div className="block-menu-label">Go up to</div>
+              {ups.map((dir) => (
+                <button
+                  key={dir}
+                  type="button"
+                  role="menuitem"
+                  className="block-menu-item"
+                  onClick={() => {
+                    setOpen(false);
+                    void setRoot(dir);
+                  }}
+                >
+                  <span className="grid w-[18px] place-items-center">
+                    <FolderIcon className="size-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate">{baseName(dir)}</span>
+                    <span className="block truncate text-[11px] text-[var(--text-faint)]">
+                      {where(dir, home)}
+                    </span>
+                  </span>
+                </button>
+              ))}
+              <div className="block-menu-sep" />
+            </>
+          )}
+          {recents.length > 0 && (
+            <>
+              <div className="block-menu-label">Recent</div>
+              {recents.map((dir) => (
+                <button
+                  key={dir}
+                  type="button"
+                  role="menuitem"
+                  className="block-menu-item"
+                  onClick={() => {
+                    setOpen(false);
+                    void setRoot(dir);
+                  }}
+                >
+                  <span className="grid w-[18px] place-items-center">
+                    <ClockIcon className="size-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate">{baseName(dir)}</span>
+                    <span className="block truncate text-[11px] text-[var(--text-faint)]">
+                      {where(dir, home)}
+                    </span>
+                  </span>
+                </button>
+              ))}
+              <div className="block-menu-sep" />
+            </>
+          )}
+          <button
+            type="button"
+            role="menuitem"
+            className="block-menu-item"
+            onClick={() => {
+              setOpen(false);
+              void chooseFolder();
+            }}
+          >
+            <span className="grid w-[18px] place-items-center">
+              <FolderSearchIcon className="size-4" />
+            </span>
+            Choose another folder…
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
-
-function RefreshIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M13 8a5 5 0 1 1-1.6-3.7"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-      <path
-        d="M13.3 2.4v2.7h-2.7"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.3" />
-      <path
-        d="M10.5 10.5 14 14"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function MoreIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-      <circle cx="3.4" cy="8" r="1.15" />
-      <circle cx="8" cy="8" r="1.15" />
-      <circle cx="12.6" cy="8" r="1.15" />
-    </svg>
-  );
-}
-
-/** One icon slot for every menu row, matching the block menu's. */
-function MenuIcon({ children }: { children: ReactNode }) {
-  return <span className="block-menu-icon">{children}</span>;
-}
-
-function PlusMenuIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M8 3.5v9M3.5 8h9"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function CollapseAllIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="m4 7.5 4-4 4 4M4 12.5l4-4 4 4"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ExpandAllIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="m4 3.5 4 4 4-4M4 8.5l4 4 4-4"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function RevealIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M2.2 5.2a3 3 0 0 1 3-3H8v11.6H5.2a3 3 0 0 1-3-3V5.2Z"
-        fill="currentColor"
-        opacity=".16"
-        stroke="none"
-      />
-      <rect
-        x="2.2"
-        y="2.2"
-        width="11.6"
-        height="11.6"
-        rx="3"
-        stroke="currentColor"
-        strokeWidth="1.2"
-      />
-      <circle cx="5.9" cy="6.4" r="0.7" fill="currentColor" />
-      <circle cx="10.1" cy="6.4" r="0.7" fill="currentColor" />
-      <path
-        d="M5.4 9.2c.6.9 1.5 1.4 2.6 1.4s2-.5 2.6-1.4"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M1.8 8s2.4-4 6.2-4 6.2 4 6.2 4-2.4 4-6.2 4S1.8 8 1.8 8Z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <circle cx="8" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.3" />
-    </svg>
-  );
-}
-
 
 export function Sidebar() {
   const folder = useStore((s) => s.folder);
+  const home = useStore((s) => s.home);
   const tree = useStore((s) => s.tree);
   const loading = useStore((s) => s.loading);
   const error = useStore((s) => s.error);
   const expanded = useStore((s) => s.expanded);
-  const selectedDir = useStore((s) => s.selectedDir);
+  const folderPage = useStore((s) => s.folderPage);
   const activePath = useStore((s) => s.activePath);
-  const chooseFolder = useStore((s) => s.chooseFolder);
+  const renamingPath = useStore((s) => s.renamingPath);
+  const changes = useStore((s) => s.changes);
   const createNote = useStore((s) => s.createNote);
   const openNote = useStore((s) => s.openNote);
-  const renameNote = useStore((s) => s.renameNote);
-  const deleteNote = useStore((s) => s.deleteNote);
+  const openFolder = useStore((s) => s.openFolder);
+  const renameEntry = useStore((s) => s.renameEntry);
+  const startRename = useStore((s) => s.startRename);
+  const trashEntry = useStore((s) => s.trashEntry);
+  const setRoot = useStore((s) => s.setRoot);
   const toggleDir = useStore((s) => s.toggleDir);
-  const collapseAll = useStore((s) => s.collapseAll);
-  const expandAll = useStore((s) => s.expandAll);
-  const refresh = useStore((s) => s.refresh);
-  const showHidden = useStore((s) => s.showHidden);
-  const setShowHidden = useStore((s) => s.setShowHidden);
   const requestEditorFocus = useStore((s) => s.requestEditorFocus);
+  const leftOpen = useStore((s) => s.leftOpen);
+  const toggleLeft = useStore((s) => s.toggleLeft);
 
   const [query, setQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [rowMenu, setRowMenu] = useState<{
+    node: TreeNode;
+    x: number;
+    y: number;
+  } | null>(null);
   const [width, setWidth] = useState(() => readWidth(SIDEBAR, localStorage));
+  const [resizing, setResizing] = useState(false);
   // The row the keyboard is on, and the row the ⌘P search is on. They are
   // separate: while the search box has focus the tree cannot take focus, so
   // the search carries its own highlight.
@@ -219,8 +332,15 @@ export function Sidebar() {
   // WebKit focuses the first row on its own at launch; the brass ring is for
   // the keyboard, so it follows the last input rather than focus alone.
   const [keyboardRing, setKeyboardRing] = useState(false);
-  const headerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
+  function closeSearch() {
+    setQuery("");
+    setSearchOpen(false);
+  }
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -229,11 +349,13 @@ export function Sidebar() {
 
   function startResize(startX: number) {
     const startWidth = width;
+    setResizing(true);
     function onMove(event: MouseEvent) {
       const next = startWidth + (event.clientX - startX);
       setWidth(clampWidth(next, SIDEBAR.min, SIDEBAR.max));
     }
     function onUp() {
+      setResizing(false);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
       document.body.style.cursor = "";
@@ -265,36 +387,59 @@ export function Sidebar() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
         event.preventDefault();
         setSearchOpen(true);
+        searchRef.current?.focus();
+        searchRef.current?.select();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  useEffect(() => {
-    if (searchOpen) searchRef.current?.focus();
-    else setQuery("");
-  }, [searchOpen]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onDown(event: MouseEvent) {
-      if (!headerRef.current?.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    window.addEventListener("mousedown", onDown);
-    return () => window.removeEventListener("mousedown", onDown);
-  }, [menuOpen]);
-
   const filtered = useMemo(() => filterTree(tree, query), [tree, query]);
+  // The sidebar draws the folded tree: single-child folders merge into one row.
+  const shown = useMemo(() => foldTree(filtered), [filtered]);
   const searching = query.trim().length > 0;
-  const anyExpanded = expanded.size > 0;
-  const rows = useMemo(
-    () => visibleRows(filtered, { expanded, forceExpand: searching }),
-    [filtered, expanded, searching],
+  // While searching every matching folder opens, and the user can still shut
+  // one: the folders they closed are remembered until the query changes.
+  const [searchCollapsed, setSearchCollapsed] = useState<Set<string>>(
+    new Set(),
   );
-  const files = useMemo(() => rows.filter((row) => row.kind === "file"), [rows]);
+  useEffect(() => {
+    setSearchCollapsed(new Set());
+  }, [query]);
+  const effectiveExpanded = useMemo(() => {
+    if (!searching) return expanded;
+    const open = new Set<string>();
+    const walk = (nodes: TreeNode[]) => {
+      for (const node of nodes) {
+        if (node.kind !== "dir") continue;
+        if (!searchCollapsed.has(node.path)) open.add(node.path);
+        if (node.children) walk(node.children);
+      }
+    };
+    walk(shown);
+    return open;
+  }, [searching, expanded, shown, searchCollapsed]);
+  const toggleRow = (path: string) => {
+    if (!searching) {
+      toggleDir(path);
+      return;
+    }
+    setSearchCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
+  const rows = useMemo(
+    () => visibleRows(shown, { expanded: effectiveExpanded }),
+    [shown, effectiveExpanded],
+  );
+  const files = useMemo(
+    () => rows.filter((row) => row.kind === "file"),
+    [rows],
+  );
   // A value to depend on: the results, as one string.
   const fileKey = files.map((row) => row.path).join("\n");
 
@@ -306,6 +451,21 @@ export function Sidebar() {
   useEffect(() => {
     if (highlight) revealRow(navRef.current, highlight);
   }, [highlight]);
+
+  /** Find a row's node in the folded tree. */
+  function nodeAt(path: string): TreeNode | null {
+    function walk(nodes: TreeNode[]): TreeNode | null {
+      for (const node of nodes) {
+        if (node.path === path) return node;
+        if (node.kind === "dir" && node.children) {
+          const hit = walk(node.children);
+          if (hit) return hit;
+        }
+      }
+      return null;
+    }
+    return walk(shown);
+  }
 
   /** Open a note from the tree, keeping the focus where the keyboard is. */
   async function openFromTree(path: string) {
@@ -320,11 +480,70 @@ export function Sidebar() {
     }
   }
 
-  function moveTo(row: TreeRow, open: boolean) {
+  async function openFolderRow(node: TreeNode) {
+    // The name unfolds the folder and opens its page.
+    const state = useStore.getState();
+    if (!state.expanded.has(node.path)) toggleDir(node.path);
+    await openFolder(node.openPath ?? node.path);
+  }
+
+  function moveTo(row: TreeRow) {
     setFocusedPath(row.path);
     rowElement(navRef.current, row.path)?.focus({ preventScroll: true });
     revealRow(navRef.current, row.path);
-    if (open) void openFromTree(row.path);
+  }
+
+  function menuItems(node: TreeNode): MenuItem[] {
+    const target = renameTarget(node);
+    if (node.kind === "dir") {
+      const dir = node.openPath ?? node.path;
+      return [
+        {
+          label: "New file here",
+          icon: <PlusIcon className="size-4" />,
+          onSelect: () => void createNote(dir),
+        },
+        { separator: true },
+        {
+          label: "Rename",
+          icon: <TypeIcon className="size-4" />,
+          onSelect: () => startRename(target),
+        },
+        {
+          label: "Set as root folder",
+          icon: <FolderRootIcon className="size-4" />,
+          onSelect: () => void setRoot(dir),
+        },
+        { separator: true },
+        {
+          label: "Move to Trash",
+          icon: <TrashGlyph className="size-4" />,
+          danger: true,
+          onSelect: () => void trashEntry(dir),
+        },
+      ];
+    }
+    return [
+      {
+        label: "Rename",
+        icon: <TypeIcon className="size-4" />,
+        onSelect: () => startRename(target),
+      },
+      {
+        label: "Copy path for agent",
+        icon: <CopyIcon className="size-4" />,
+        onSelect: () => {
+          if (home) void copyPathReference(node.path, home);
+        },
+      },
+      { separator: true },
+      {
+        label: "Move to Trash",
+        icon: <TrashGlyph className="size-4" />,
+        danger: true,
+        onSelect: () => void trashEntry(node.path),
+      },
+    ];
   }
 
   function onTreeKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
@@ -335,41 +554,58 @@ export function Sidebar() {
     // The key came from the focused row, so that is the row to move from. (The
     // focus state cannot be relied on for this: a window that isn't frontmost
     // still moves the caret but fires no focus events.)
-    const from = target.closest<HTMLElement>("[data-tree-row]")?.dataset.treeRow
-      ?? focusedPath;
+    const from =
+      target.closest<HTMLElement>("[data-tree-row]")?.dataset.treeRow ??
+      focusedPath;
     const focused = rows.find((row) => row.path === from);
+    const node = from ? nodeAt(from) : null;
 
-    if (event.key === "Enter" || event.key === " ") {
-      if (!focused) return;
+    // F2 renames the selected row; ⌘⌫ moves it to the Trash.
+    if (event.key === "F2" && node) {
       event.preventDefault();
-      if (focused.kind === "dir") toggleDir(focused.path);
+      startRename(renameTarget(node));
+      return;
+    }
+    if (event.key === "Backspace" && (event.metaKey || event.ctrlKey) && node) {
+      event.preventDefault();
+      void trashEntry(
+        node.kind === "dir" ? (node.openPath ?? node.path) : node.path,
+      );
+      return;
+    }
+
+    // Enter opens: a file in the editor, a folder as its page.
+    if (event.key === "Enter" || event.key === " ") {
+      if (!focused || !node) return;
+      event.preventDefault();
+      if (focused.kind === "dir") void openFolderRow(node);
       else void openFromTree(focused.path);
       return;
     }
 
     const index = rows.findIndex((row) => row.path === from);
-    const step = stepRow(rows, index, event.key, { canToggle: !searching });
+    const step = stepRow(rows, index, event.key, { canToggle: true });
     if (!step) return;
     const row = rows[step.index];
     if (!row) return;
     event.preventDefault();
     if (step.toggle) {
-      toggleDir(row.path);
+      toggleRow(row.path);
       return;
     }
-    moveTo(row, row.kind === "file");
+    // Arrows move; they never open.
+    moveTo(row);
   }
 
   function onSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
-      setSearchOpen(false);
+      closeSearch();
       return;
     }
     if (event.key === "Enter") {
       const target = highlight ?? files[0]?.path;
       if (!target) return;
       event.preventDefault();
-      setSearchOpen(false);
       void openNote(target).then(() => {
         // Only take the caret if the note actually opened.
         if (useStore.getState().activePath === target) requestEditorFocus();
@@ -386,215 +622,176 @@ export function Sidebar() {
   }
 
   return (
+    // Collapsed, not unmounted: the search box and the tree's focus survive. The
+    // aside animates its width; the content keeps its own, so it slides under
+    // the edge instead of squashing.
     <aside
-      className="relative flex h-full shrink-0 flex-col bg-[var(--bg-sidebar)]"
-      style={{ width }}
+      className="relative h-full shrink-0 bg-[var(--bg-sidebar)] motion-reduce:!transition-none"
+      style={{
+        width: leftOpen ? width : 0,
+        visibility: leftOpen ? "visible" : "hidden",
+        transition: resizing
+          ? "none"
+          : `width 200ms ease, visibility 0s linear ${leftOpen ? 0 : 200}ms`,
+      }}
+      aria-hidden={!leftOpen}
+      inert={!leftOpen}
     >
-      {/* The window row, 40px like the note's toolbar beside it. The traffic
-          lights are drawn over its left end, so it holds only the drag region
-          and the sidebar's own actions. */}
-      <div className="relative flex h-10 shrink-0 items-center justify-end gap-0.5 px-3">
-        <div data-tauri-drag-region className="absolute inset-0" />
-        <button
-          type="button"
-          title="Search notes"
-          onClick={() => setSearchOpen((open) => !open)}
-          disabled={!folder || tree.length === 0}
-          className={`relative grid h-7 w-7 place-items-center rounded-[6px] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:opacity-30 disabled:hover:bg-transparent ${
-            searchOpen
-              ? "bg-[var(--bg-active)] text-[var(--text)]"
-              : "text-[var(--text-muted)]"
-          }`}
-        >
-          <SearchIcon />
-        </button>
-        <button
-          type="button"
-          title="Refresh"
-          onClick={() => void refresh()}
-          disabled={!folder || loading}
-          className="relative grid h-7 w-7 place-items-center rounded-[6px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:opacity-30 disabled:hover:bg-transparent"
-        >
-          <RefreshIcon />
-        </button>
-        <button
-          type="button"
-          title="More"
-          onClick={() => setMenuOpen((open) => !open)}
-          className={`relative grid h-7 w-7 place-items-center rounded-[6px] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] ${
-            menuOpen
-              ? "bg-[var(--bg-active)] text-[var(--text)]"
-              : "text-[var(--text-muted)]"
-          }`}
-        >
-          <MoreIcon />
-        </button>
-      </div>
-
-      {/* The root folder keeps a row of its own; the menu hangs off it. */}
-      <div
-        ref={headerRef}
-        className="relative flex h-9 shrink-0 items-center px-3"
-      >
-        <button
-          type="button"
-          title={folder ? "Change root folder" : "Choose a folder"}
-          onClick={() => void chooseFolder()}
-          className="flex min-w-0 items-center gap-1.5 rounded-[var(--radius)] px-1.5 py-1 text-[13px] font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
-        >
-          <FolderIcon />
-          <span className="truncate">{folder ? baseName(folder) : "Monocle"}</span>
-        </button>
-
-        {menuOpen && (
-          <div className="block-menu" style={{ position: "absolute", right: 8, top: 32 }}>
-            <button
-              type="button"
-              className="block-menu-item"
-              disabled={!folder}
-              onClick={() => {
-                setMenuOpen(false);
-                void createNote();
-              }}
-            >
-              <MenuIcon>
-                <PlusMenuIcon />
-              </MenuIcon>
-              Add file
-            </button>
-            <button
-              type="button"
-              className="block-menu-item"
-              disabled={!folder || loading}
-              onClick={() => {
-                setMenuOpen(false);
-                void refresh();
-              }}
-            >
-              <MenuIcon>
-                <RefreshIcon />
-              </MenuIcon>
-              Refresh
-            </button>
-            <button
-              type="button"
-              className="block-menu-item"
-              onClick={() => {
-                setMenuOpen(false);
-                if (anyExpanded) collapseAll();
-                else expandAll();
-              }}
-            >
-              <MenuIcon>
-                {anyExpanded ? <CollapseAllIcon /> : <ExpandAllIcon />}
-              </MenuIcon>
-              {anyExpanded ? "Collapse all" : "Expand all"}
-            </button>
-            <div className="block-menu-sep" />
-            <button
-              type="button"
-              className="block-menu-item"
-              disabled={!folder}
-              onClick={() => {
-                setMenuOpen(false);
-                if (folder) void revealItemInDir(folder);
-              }}
-            >
-              <MenuIcon>
-                <RevealIcon />
-              </MenuIcon>
-              Reveal in Finder
-            </button>
-            <button
-              type="button"
-              className="block-menu-item"
-              onClick={() => {
-                setMenuOpen(false);
-                void setShowHidden(!showHidden);
-              }}
-            >
-              <MenuIcon>
-                <EyeIcon />
-              </MenuIcon>
-              Show hidden files
-              {showHidden && <MenuCheck />}
-            </button>
+      <div className="h-full overflow-hidden">
+        <div className="flex h-full flex-col" style={{ width }}>
+          {/* The window row, 40px like the note's toolbar beside it. The traffic
+          lights are drawn over its left end. */}
+          <div className="relative flex h-10 shrink-0 items-center justify-start gap-0.5 px-3">
+            <div data-tauri-drag-region className="absolute inset-0" />
+            <div className="relative">
+              <TrafficLightsSlot />
+            </div>
+            <div className="relative">
+              <PaneToggle side="left" open onClick={toggleLeft} />
+            </div>
           </div>
-        )}
+
+          {folder && tree.length > 0 && (
+            <div className="px-2 pb-2 pt-2">
+              {!searchOpen ? (
+                <button
+                  type="button"
+                  data-search-button
+                  title="Search (⌘P)"
+                  onClick={() => setSearchOpen(true)}
+                  className="flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                >
+                  <SearchGlyph className="size-4 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">Search</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <div className="relative min-w-0 flex-1">
+                    <SearchGlyph className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--text-faint)]" />
+                    <input
+                      ref={searchRef}
+                      data-search
+                      spellCheck={false}
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      autoComplete="off"
+                      value={query}
+                      onChange={(event) => setQuery(event.currentTarget.value)}
+                      onKeyDown={onSearchKeyDown}
+                      placeholder={`Search ${baseName(folder)}`}
+                      aria-label={`Search ${baseName(folder)}`}
+                      className="h-8 w-full rounded-[var(--radius)] border border-transparent bg-[var(--bg-active)] pl-8 pr-8 text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-[var(--accent)]"
+                    />
+                    {query && (
+                      <button
+                        type="button"
+                        title="Clear search"
+                        aria-label="Clear search"
+                        data-search-clear
+                        onClick={() => {
+                          setQuery("");
+                          searchRef.current?.focus();
+                        }}
+                        className="absolute right-1 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                      >
+                        <XIcon className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    data-search-close
+                    onClick={closeSearch}
+                    className="h-8 shrink-0 rounded-[var(--radius)] px-2 text-[13px] font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          <nav
+            ref={navRef}
+            onKeyDown={onTreeKeyDown}
+            className="flex-1 overflow-y-auto px-2 pb-3"
+          >
+            {folder && error && (
+              <p className="mx-1 mb-2 rounded-[var(--radius)] bg-[var(--bg-active)] px-2 py-1.5 text-[12px] leading-snug text-[var(--danger)] [overflow-wrap:anywhere]">
+                {error}
+              </p>
+            )}
+            {!folder && (
+              <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
+                No folder open
+              </p>
+            )}
+            {folder && loading && (
+              <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
+                Scanning…
+              </p>
+            )}
+            {folder && !loading && tree.length === 0 && (
+              <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
+                No markdown files here
+              </p>
+            )}
+            {folder && !loading && tree.length > 0 && filtered.length === 0 && (
+              <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
+                No matches
+              </p>
+            )}
+
+            <FileTree
+              nodes={shown}
+              activePath={activePath}
+              folderPage={folderPage}
+              expanded={effectiveExpanded}
+              forceExpand={false}
+              tabbablePath={focusedPath ?? activePath}
+              highlightPath={highlight}
+              keyboardRing={keyboardRing}
+              renamingPath={renamingPath}
+              changes={changes}
+              onToggle={toggleRow}
+              onOpenFolder={(node) => void openFolderRow(node)}
+              onOpen={(path) => {
+                void openNote(path);
+              }}
+              onMenu={(node, x, y) => setRowMenu({ node, x, y })}
+              onRename={(path, name) => {
+                const clean = name.trim();
+                if (!clean || clean === baseName(path)) {
+                  startRename(null);
+                  return;
+                }
+                void renameEntry(path, clean);
+              }}
+              onCancelRename={() => startRename(null)}
+              onFocusRow={setFocusedPath}
+            />
+          </nav>
+
+          <RootBar />
+
+          {rowMenu && (
+            <ContextMenu
+              x={rowMenu.x}
+              y={rowMenu.y}
+              items={menuItems(rowMenu.node)}
+              onClose={() => setRowMenu(null)}
+            />
+          )}
+        </div>
       </div>
 
-      {searchOpen && folder && tree.length > 0 && (
-        <div className="px-2 pb-2">
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(event) => setQuery(event.currentTarget.value)}
-            onKeyDown={onSearchKeyDown}
-            placeholder="Search notes"
-            className="w-full rounded-[var(--radius)] border border-transparent bg-[var(--bg-active)] px-2 py-1 text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-[var(--accent)]"
-          />
-        </div>
-      )}
-
-      <nav
-        ref={navRef}
-        onKeyDown={onTreeKeyDown}
-        className="flex-1 overflow-y-auto px-2 pb-3"
-      >
-        {folder && error && (
-          <p className="mx-1 mb-2 rounded-[var(--radius)] bg-[var(--bg-active)] px-2 py-1.5 text-[12px] leading-snug text-[var(--danger)] [overflow-wrap:anywhere]">
-            {error}
-          </p>
-        )}
-        {!folder && (
-          <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
-            No folder open
-          </p>
-        )}
-        {folder && loading && (
-          <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
-            Scanning…
-          </p>
-        )}
-        {folder && !loading && tree.length === 0 && (
-          <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
-            No notes yet
-          </p>
-        )}
-        {folder && !loading && tree.length > 0 && filtered.length === 0 && (
-          <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
-            No matches
-          </p>
-        )}
-
-        <FileTree
-          nodes={filtered}
-          activePath={activePath}
-          selectedDir={selectedDir}
-          expanded={expanded}
-          forceExpand={searching}
-          tabbablePath={focusedPath ?? activePath}
-          highlightPath={highlight}
-          keyboardRing={keyboardRing}
-          onToggle={toggleDir}
-          onOpen={(path) => {
-            // Picking a note answers the search.
-            setSearchOpen(false);
-            void openNote(path);
-          }}
-          onAddNote={(path) => void createNote(path)}
-          onReveal={(path) => void revealItemInDir(path)}
-          onRename={(path, name) => void renameNote(path, name)}
-          onDelete={(path) => void deleteNote(path)}
-          onFocusRow={setFocusedPath}
+      {leftOpen && (
+        <ResizeHandle
+          style={{ left: "100%" }}
+          onResizeStart={(event) => startResize(event.clientX)}
+          onReset={() => setWidth(SIDEBAR.default)}
         />
-      </nav>
-
-      <ResizeHandle
-        style={{ left: "100%" }}
-        onResizeStart={(event) => startResize(event.clientX)}
-        onReset={() => setWidth(SIDEBAR.default)}
-      />
+      )}
     </aside>
   );
 }

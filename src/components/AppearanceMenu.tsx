@@ -91,6 +91,107 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: ReactNode }[] = [
   { value: "dark", label: "Dark theme", icon: <MoonIcon /> },
 ];
 
+/**
+ * Theme, page tint and page width. They live in the Settings window; the popover
+ * below reuses them.
+ */
+export function AppearanceControls() {
+  const [theme, setTheme] = useState<Theme>(getStoredTheme);
+  const tint = useStore((s) => s.tint);
+  const setTint = useStore((s) => s.setTint);
+  const contentWidth = useStore((s) => s.contentWidth);
+  const setContentWidth = useStore((s) => s.setContentWidth);
+  // Page tint and page width describe the page, so they only apply once a note
+  // is open. Theme does not: it dresses the whole window.
+  const hasNote = useStore((s) => s.activePath !== null);
+
+  function chooseTheme(next: Theme) {
+    setTheme(next);
+    storeTheme(next);
+  }
+
+  return (
+    <>
+      <div className="appearance-group">
+        <span className="appearance-label" id="appearance-theme">
+          Theme
+        </span>
+        <div
+          role="group"
+          aria-labelledby="appearance-theme"
+          className="theme-switch"
+        >
+          {THEME_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              title={option.label}
+              aria-label={option.label}
+              aria-pressed={theme === option.value}
+              onClick={() => chooseTheme(option.value)}
+            >
+              {option.icon}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="appearance-group" data-disabled={!hasNote}>
+        <span className="appearance-label" id="appearance-tint">
+          Page tint
+        </span>
+        <div
+          role="group"
+          aria-labelledby="appearance-tint"
+          className="tint-row"
+        >
+          {TINTS.map((spec) => (
+            <button
+              key={spec.id}
+              type="button"
+              title={spec.label}
+              aria-label={spec.label}
+              aria-pressed={tint === spec.id}
+              disabled={!hasNote}
+              onClick={() => setTint(spec.id)}
+              className="tint-chip"
+              style={
+                {
+                  "--chip-light": spec.light,
+                  "--chip-dark": spec.dark,
+                } as CSSProperties
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="appearance-group" data-disabled={!hasNote}>
+        <div className="appearance-head">
+          <label className="appearance-label" htmlFor="appearance-width">
+            Page width
+          </label>
+          <span className="appearance-value">{contentWidth}</span>
+        </div>
+        <input
+          id="appearance-width"
+          type="range"
+          className="width-input"
+          min={CONTENT.min}
+          max={CONTENT.max}
+          step={10}
+          value={contentWidth}
+          disabled={!hasNote}
+          onChange={(event) =>
+            setContentWidth(Number(event.currentTarget.value))
+          }
+        />
+      </div>
+
+    </>
+  );
+}
+
 // Long enough for the exit transition in styles.css to finish before the panel
 // leaves the DOM.
 const POPOVER_EXIT = 110;
@@ -102,13 +203,10 @@ const POPOVER_EXIT = 110;
 export function AppearanceMenu() {
   const [open, setOpen] = useState(false);
   // The panel outlives `open` by one animation so it can fade out: `rendered`
-  // keeps it mounted, and the CSS reads `data-open` for which way to move.
+  // keeps it mounted, and the CSS reads `data-closing` for the way out. Being
+  // open is the resting style, so nothing here can hide a panel that should
+  // be showing.
   const [rendered, setRendered] = useState(false);
-  const [theme, setTheme] = useState<Theme>(getStoredTheme);
-  const tint = useStore((s) => s.tint);
-  const setTint = useStore((s) => s.setTint);
-  const contentWidth = useStore((s) => s.contentWidth);
-  const setContentWidth = useStore((s) => s.setContentWidth);
   const anchorRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -122,13 +220,12 @@ export function AppearanceMenu() {
     return () => window.clearTimeout(timer);
   }, [open, rendered]);
 
-  // Flip the panel to its open style one frame after it mounts, so the closed
-  // state is painted first and the transition has somewhere to travel from.
+  // Tell the panel which way it is going; the enter is a keyframe on mount, so
+  // only the way out needs a cue.
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
-    if (open) void panel.offsetHeight;
-    panel.dataset.open = open ? "true" : "false";
+    panel.dataset.closing = open ? "false" : "true";
   }, [open, rendered]);
 
   useEffect(() => {
@@ -146,11 +243,6 @@ export function AppearanceMenu() {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
-
-  function chooseTheme(next: Theme) {
-    setTheme(next);
-    storeTheme(next);
-  }
 
   return (
     <div ref={anchorRef} className="relative">
@@ -180,79 +272,7 @@ export function AppearanceMenu() {
             </h2>
           </div>
 
-          <div className="appearance-group">
-            <span className="appearance-label" id="appearance-theme">
-              Theme
-            </span>
-            <div
-              role="group"
-              aria-labelledby="appearance-theme"
-              className="theme-switch"
-            >
-              {THEME_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  title={option.label}
-                  aria-label={option.label}
-                  aria-pressed={theme === option.value}
-                  onClick={() => chooseTheme(option.value)}
-                >
-                  {option.icon}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="appearance-group">
-            <span className="appearance-label" id="appearance-tint">
-              Page tint
-            </span>
-            <div
-              role="group"
-              aria-labelledby="appearance-tint"
-              className="tint-row"
-            >
-              {TINTS.map((spec) => (
-                <button
-                  key={spec.id}
-                  type="button"
-                  title={spec.label}
-                  aria-label={spec.label}
-                  aria-pressed={tint === spec.id}
-                  onClick={() => setTint(spec.id)}
-                  className="tint-chip"
-                  style={
-                    {
-                      "--chip-light": spec.light,
-                      "--chip-dark": spec.dark,
-                    } as CSSProperties
-                  }
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="appearance-group">
-            <div className="appearance-head">
-              <label className="appearance-label" htmlFor="appearance-width">
-                Page width
-              </label>
-              <span className="appearance-value">{contentWidth}</span>
-            </div>
-            <input
-              id="appearance-width"
-              type="range"
-              className="width-input"
-              min={CONTENT.min}
-              max={CONTENT.max}
-              step={10}
-              value={contentWidth}
-              onChange={(event) =>
-                setContentWidth(Number(event.currentTarget.value))
-              }
-            />
-          </div>
+          <AppearanceControls />
         </div>
       )}
     </div>

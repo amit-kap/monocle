@@ -3,10 +3,38 @@
 
 export const SIDEBAR = {
   key: "monocle:sidebarWidth",
-  min: 180,
-  max: 480,
+  min: 200,
+  max: 440,
   default: 240,
 } as const;
+
+export const RIGHT_PANEL = {
+  key: "monocle:rightWidth",
+  min: 220,
+  max: 460,
+  default: 280,
+} as const;
+
+export const LEFT_OPEN_KEY = "monocle:leftOpen";
+export const RIGHT_OPEN_KEY = "monocle:rightOpen";
+export const RIGHT_TAB_KEY = "monocle:rightTab";
+
+// A pane is open unless the user closed it, so anything unreadable means open.
+export function readOpen(key: string, store: Storage): boolean {
+  try {
+    return store.getItem(key) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+export function storeOpen(key: string, store: Storage, open: boolean): void {
+  try {
+    store.setItem(key, open ? "1" : "0");
+  } catch {
+    // Storage can be blocked; the pane just won't be remembered.
+  }
+}
 
 export const CONTENT = {
   key: "monocle:contentWidth",
@@ -56,3 +84,9 @@ export function readWidth(spec: WidthSpec, store: Storage): number {
 export function storeWidth(spec: WidthSpec, store: Storage, value: number): void {
   store.setItem(spec.key, String(value));
 }
+// The window's top row is 40px (`h-10`) in the sidebar, the note's top bar and
+// the right panel. The macOS traffic lights are centred on that row by
+// src-tauri/src/traffic_lights.rs, which has its own TOP_ROW_HEIGHT; a test
+// fails if the two differ, so the lights follow the row and need no tuning.
+export const TOP_ROW_HEIGHT = 40;
+export const TRAFFIC_LIGHT_SLOT_WIDTH = 72;

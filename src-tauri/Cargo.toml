@@ -1,6 +1,6 @@
 [package]
 name = "monocle"
-version = "0.4.2"
+version = "0.5.0"
 description = "A simple markdown editor"
 authors = ["you"]
 edition = "2021"
@@ -24,7 +24,14 @@ tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+trash = "5.3.0"
+notify = "8.2.2"
 
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSGeometry"] }
+objc2-app-kit = { version = "0.3", features = ["NSWindow", "NSButton", "NSControl", "NSView", "NSResponder"] }
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
