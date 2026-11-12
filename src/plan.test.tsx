@@ -805,3 +805,35 @@ describe("first launch", () => {
     expect(localStorage.getItem("monocle:lastFolder")).toBe(state.home);
   });
 });
+
+describe("search box", () => {
+  it("shows a clear button once there is text, and clearing restores the tree", async () => {
+    await boot();
+    expect(q("[data-search-clear]")).toBeNull();
+    const input = q<HTMLInputElement>("input[data-search]")!;
+    await act(async () => {
+      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      set.call(input, "docs");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(q("[data-search-clear]")).not.toBeNull();
+    click(q("[data-search-clear]"));
+    await tick();
+    expect(q<HTMLInputElement>("input[data-search]")!.value).toBe("");
+    expect(q("[data-search-clear]")).toBeNull();
+  });
+
+  it("folders open while searching and can still be collapsed by the chevron", async () => {
+    await boot();
+    const input = q<HTMLInputElement>("input[data-search]")!;
+    await act(async () => {
+      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      set.call(input, "architecture");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(row(`${ROOT}/docs/architecture.md`)).not.toBeNull();
+    click(q(`[data-tree-row="${ROOT}/docs"] button[aria-label='Collapse folder']`));
+    await tick();
+    expect(row(`${ROOT}/docs/architecture.md`)).toBeNull();
+  });
+});

@@ -92,6 +92,10 @@ function RenameInput({
         if (event.key === "Enter") finish(true, event.currentTarget.value);
         if (event.key === "Escape") finish(false, "");
       }}
+      spellCheck={false}
+      autoCorrect="off"
+      autoCapitalize="off"
+      autoComplete="off"
       className="min-w-0 flex-1 rounded border border-[var(--accent)] bg-[var(--bg)] px-1 py-0.5 text-[13px] text-[var(--text)] outline-none"
     />
   );

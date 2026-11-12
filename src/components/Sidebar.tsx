@@ -30,6 +30,7 @@ import {
   SearchGlyph,
   TrashGlyph,
   TypeIcon,
+  XIcon,
 } from "./icons";
 import { PaneToggle } from "./PaneToggle";
 import { TrafficLightsSlot } from "./TrafficLightsSlot";
@@ -389,9 +390,42 @@ export function Sidebar() {
   // The sidebar draws the folded tree: single-child folders merge into one row.
   const shown = useMemo(() => foldTree(filtered), [filtered]);
   const searching = query.trim().length > 0;
+  // While searching every matching folder opens, and the user can still shut
+  // one: the folders they closed are remembered until the query changes.
+  const [searchCollapsed, setSearchCollapsed] = useState<Set<string>>(
+    new Set(),
+  );
+  useEffect(() => {
+    setSearchCollapsed(new Set());
+  }, [query]);
+  const effectiveExpanded = useMemo(() => {
+    if (!searching) return expanded;
+    const open = new Set<string>();
+    const walk = (nodes: TreeNode[]) => {
+      for (const node of nodes) {
+        if (node.kind !== "dir") continue;
+        if (!searchCollapsed.has(node.path)) open.add(node.path);
+        if (node.children) walk(node.children);
+      }
+    };
+    walk(shown);
+    return open;
+  }, [searching, expanded, shown, searchCollapsed]);
+  const toggleRow = (path: string) => {
+    if (!searching) {
+      toggleDir(path);
+      return;
+    }
+    setSearchCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
   const rows = useMemo(
-    () => visibleRows(shown, { expanded, forceExpand: searching }),
-    [shown, expanded, searching],
+    () => visibleRows(shown, { expanded: effectiveExpanded }),
+    [shown, effectiveExpanded],
   );
   const files = useMemo(
     () => rows.filter((row) => row.kind === "file"),
@@ -541,13 +575,13 @@ export function Sidebar() {
     }
 
     const index = rows.findIndex((row) => row.path === from);
-    const step = stepRow(rows, index, event.key, { canToggle: !searching });
+    const step = stepRow(rows, index, event.key, { canToggle: true });
     if (!step) return;
     const row = rows[step.index];
     if (!row) return;
     event.preventDefault();
     if (step.toggle) {
-      toggleDir(row.path);
+      toggleRow(row.path);
       return;
     }
     // Arrows move; they never open.
@@ -564,7 +598,6 @@ export function Sidebar() {
       const target = highlight ?? files[0]?.path;
       if (!target) return;
       event.preventDefault();
-      setQuery("");
       void openNote(target).then(() => {
         // Only take the caret if the note actually opened.
         if (useStore.getState().activePath === target) requestEditorFocus();
@@ -617,13 +650,32 @@ export function Sidebar() {
                 <input
                   ref={searchRef}
                   data-search
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  autoComplete="off"
                   value={query}
                   onChange={(event) => setQuery(event.currentTarget.value)}
                   onKeyDown={onSearchKeyDown}
                   placeholder={`Search ${baseName(folder)}`}
                   aria-label={`Search ${baseName(folder)}`}
-                  className="h-8 w-full rounded-[var(--radius)] border border-transparent bg-[var(--bg-active)] pl-8 pr-2 text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-[var(--accent)]"
+                  className="h-8 w-full rounded-[var(--radius)] border border-transparent bg-[var(--bg-active)] pl-8 pr-8 text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-[var(--accent)]"
                 />
+                {query && (
+                  <button
+                    type="button"
+                    title="Clear search"
+                    aria-label="Clear search"
+                    data-search-clear
+                    onClick={() => {
+                      setQuery("");
+                      searchRef.current?.focus();
+                    }}
+                    className="absolute right-1 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                  >
+                    <XIcon className="size-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -663,18 +715,16 @@ export function Sidebar() {
               nodes={shown}
               activePath={activePath}
               folderPage={folderPage}
-              expanded={expanded}
-              forceExpand={searching}
+              expanded={effectiveExpanded}
+              forceExpand={false}
               tabbablePath={focusedPath ?? activePath}
               highlightPath={highlight}
               keyboardRing={keyboardRing}
               renamingPath={renamingPath}
               changes={changes}
-              onToggle={toggleDir}
+              onToggle={toggleRow}
               onOpenFolder={(node) => void openFolderRow(node)}
               onOpen={(path) => {
-                // Picking a note answers the search.
-                setQuery("");
                 void openNote(path);
               }}
               onMenu={(node, x, y) => setRowMenu({ node, x, y })}

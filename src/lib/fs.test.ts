@@ -173,3 +173,35 @@ describe("the plan's file rules", () => {
     expect(node.size).toBe(1400);
   });
 });
+
+describe("filterTree", () => {
+  const tree = [
+    {
+      name: "CompLibs",
+      path: "/p/CompLibs",
+      kind: "dir" as const,
+      children: [
+        {
+          name: "glaze",
+          path: "/p/CompLibs/glaze",
+          kind: "dir" as const,
+          children: [{ name: "README.md", path: "/p/CompLibs/glaze/README.md", kind: "file" as const }],
+        },
+      ],
+    },
+    { name: "notes.md", path: "/p/notes.md", kind: "file" as const },
+  ];
+
+  it("matches a file by name", async () => {
+    const { filterTree } = await import("./fs");
+    expect(filterTree(tree, "notes").map((n) => n.name)).toEqual(["notes.md"]);
+  });
+
+  it("matches a folder by name and keeps everything inside it", async () => {
+    const { filterTree } = await import("./fs");
+    const [top] = filterTree(tree, "glaze");
+    expect(top.name).toBe("CompLibs");
+    expect(top.children?.[0].name).toBe("glaze");
+    expect(top.children?.[0].children?.[0].name).toBe("README.md");
+  });
+});

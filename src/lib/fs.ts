@@ -162,6 +162,11 @@ export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
     if (node.kind === "file") {
       if (node.name.toLowerCase().includes(q)) out.push(node);
     } else if (node.children) {
+      // A folder whose own name matches stays with everything in it.
+      if (node.name.toLowerCase().includes(q)) {
+        out.push(node);
+        continue;
+      }
       const children = filterTree(node.children, q);
       if (children.length > 0) out.push({ ...node, children });
     }
