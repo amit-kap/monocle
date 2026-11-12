@@ -219,18 +219,19 @@ afterEach(() => {
 describe("G0 decisions are honoured", () => {
   it("keeps the current search (⌘P, a filter in the sidebar), not a ⌘K overlay", async () => {
     await boot();
-    expect(text()).toContain("⌘P");
     expect(text()).not.toContain("⌘K");
-    click(q("[data-nav='search']"));
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "p", metaKey: true, bubbles: true }));
+    });
     await tick();
-    const input = q<HTMLInputElement>("input[placeholder='Search notes']");
+    const input = q<HTMLInputElement>("input[placeholder='Search Projects']");
     expect(input).not.toBeNull();
   });
 
   it("has no appearance button in the top bar: appearance lives in Settings", async () => {
     await boot();
     expect(q("button[aria-label='Appearance']")).toBeNull();
-    click(q("button[aria-label='Settings']"));
+    act(() => useStore.getState().openSettings());
     await tick();
     click(q("[data-settings-section='appearance']"));
     await tick();
@@ -270,16 +271,17 @@ describe("G1 shell", () => {
 });
 
 describe("G2 root and tree", () => {
-  it("lays the sidebar out: New file, Search, FILES, tree, root button with Settings beside it", async () => {
+  it("lays the sidebar out: search box and tree, root button with the More menu beside it at the foot, no Settings button, no FILES label", async () => {
     await boot();
     const aside = q("aside:not([aria-label])")!;
-    const order = ["New file", "Search", "FILES"].map((label) => aside.textContent!.indexOf(label));
-    expect(order).toEqual([...order].sort((a, b) => a - b));
-    expect(order.every((i) => i >= 0)).toBe(true);
+    expect(aside.textContent).not.toContain("New file");
+    expect(q("input[aria-label='Search Projects']")).not.toBeNull();
+    expect(aside.textContent).not.toContain("FILES");
     const rootButton = q("[data-root-button]")!;
     expect(rootButton.textContent).toContain("Projects");
     expect(rootButton.textContent).not.toContain("/Users");
-    expect(rootButton.nextElementSibling?.getAttribute("aria-label")).toBe("Settings");
+    expect(rootButton.nextElementSibling?.getAttribute("aria-label")).toBe("More");
+    expect(q("button[aria-label='Settings']")).toBeNull();
   });
 
   it("the root menu lists Go up to, Recent and Choose another folder", async () => {
@@ -334,7 +336,7 @@ describe("G2 root and tree", () => {
     ]);
   });
 
-  it("the folder page shows the title, counts and the three buttons", async () => {
+  it("the folder page shows the title, counts and the two buttons", async () => {
     await boot();
     await act(async () => {
       await useStore.getState().openFolder(`${ROOT}/docs`);
@@ -344,8 +346,8 @@ describe("G2 root and tree", () => {
     expect(page.textContent).toContain("2 items");
     expect(page.textContent).toContain("tokens in files here");
     expect(page.textContent).toContain("Set as root folder");
-    expect(page.textContent).toContain("New folder");
     expect(page.textContent).toContain("New file");
+    expect(page.textContent).not.toContain("New folder");
     click(page.querySelector(`[data-folder-row="${ROOT}/docs/architecture.md"]`));
     await tick();
     expect(useStore.getState().activePath).toBe(`${ROOT}/docs/architecture.md`);
@@ -386,7 +388,9 @@ describe("G2 root and tree", () => {
     await boot();
     // The new file exists on disk by the time the tree is rescanned.
     fsMock.tree = [...TREE, file("untitled.md", ROOT, 0)];
-    click(q("[data-nav='new']"));
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "n", metaKey: true, bubbles: true }));
+    });
     await tick(20);
     expect(useStore.getState().activePath).toBe(`${ROOT}/untitled.md`);
     expect(useStore.getState().renamingPath).toBe(`${ROOT}/untitled.md`);
@@ -675,7 +679,7 @@ describe("G7 trash, copy, settings", () => {
 
   it("the hidden-files toggle lives in Settings, off by default", async () => {
     await boot();
-    click(q("button[aria-label='Settings']"));
+    act(() => useStore.getState().openSettings());
     await tick();
     const toggle = q("[data-hidden-toggle]")!;
     expect(toggle.getAttribute("aria-checked")).toBe("false");
@@ -744,5 +748,60 @@ describe("G7 trash, copy, settings", () => {
       await done;
     });
     expect(fsMock.trashed).toEqual([`${ROOT}/docs`]);
+  });
+});
+
+describe("sidebar search", () => {
+  it("has no sort button", async () => {
+    await boot();
+    expect(q("[data-sort-button]")).toBeNull();
+  });
+});
+
+describe("window chrome", () => {
+  it("reserves the traffic lights' room in a div of its own", async () => {
+    await boot();
+    const slot = q("[data-traffic-lights]") as HTMLElement;
+    expect(slot).not.toBeNull();
+    expect(slot.style.width).toBe("72px");
+    expect(slot.style.height).toBe("40px");
+  });
+
+  it("keeps the traffic lights centred on the 40px top row", async () => {
+    const { TOP_ROW_HEIGHT, TRAFFIC_LIGHT_OFFSET } = await import("./lib/layout");
+    const files = import.meta.glob("../src-tauri/tauri.conf.json", {
+      query: "?raw",
+      import: "default",
+      eager: true,
+    }) as Record<string, string>;
+    const conf = JSON.parse(Object.values(files)[0]);
+    const y = conf.app.windows[0].trafficLightPosition.y;
+    expect(y).toBe(TOP_ROW_HEIGHT / 2 + TRAFFIC_LIGHT_OFFSET);
+    // The three top rows all use the same height class.
+    for (const name of ["Sidebar", "TopBar", "RightPanel"]) {
+      const src = (
+        Object.values(
+          import.meta.glob("./components/*.tsx", { query: "?raw", import: "default", eager: true }),
+        ) as string[]
+      ).find((_text, i) => Object.keys(import.meta.glob("./components/*.tsx"))[i].endsWith(`/${name}.tsx`));
+      expect(src).toContain("relative flex h-10");
+    }
+  });
+});
+
+describe("first launch", () => {
+  it("opens the home folder as root and selects the first markdown file", async () => {
+    await boot();
+    localStorage.removeItem("monocle:lastFolder");
+    useStore.setState({ folder: null, tree: [], notes: [], activePath: null });
+    await act(async () => {
+      await useStore.getState().init();
+    });
+    const state = useStore.getState();
+    expect(state.folder).toBe(state.home);
+    expect(state.activePath).toBe(state.notes[0].path);
+    expect(state.activePath).not.toBeNull();
+    // From then on the app returns to where it was left, without re-picking.
+    expect(localStorage.getItem("monocle:lastFolder")).toBe(state.home);
   });
 });

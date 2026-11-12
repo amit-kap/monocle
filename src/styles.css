@@ -995,6 +995,12 @@ body {
   pointer-events: none;
 }
 
+/* The row remembers where the keyboard was, but the ring follows real focus:
+   with focus elsewhere (a page button, the search box) there is one ring only. */
+.tree-ring:not(:focus)::after {
+  display: none;
+}
+
 /* Hierarchy guides: an open folder lets a thread down from its chevron to the
    rows it owns. The group carries the indent and the thread, so its place is the
    same at every level: 14px in — the row's 8px gutter plus half of the 12px
@@ -1005,7 +1011,6 @@ body {
    centres), so the thread clears the chevron's tip by 4px. */
 .tree-children {
   position: relative;
-  padding-left: 18px;
   animation: tree-expand 140ms ease;
 }
 
@@ -1014,7 +1019,7 @@ body {
   position: absolute;
   top: -10px;
   bottom: 0;
-  left: 14px;
+  left: calc(-4px + var(--depth, 1) * 18px);
   width: 1px;
   background: var(--border-strong);
   pointer-events: none;
@@ -1334,4 +1339,14 @@ body {
 }
 :root[data-theme="dark"] .theme-switch > button[aria-pressed="true"] {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* One focus ring everywhere: the brass accent, for keyboard focus only.
+   Without this WebKit draws its own blue ring on buttons. */
+button:focus {
+  outline: none;
+}
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }

@@ -84,3 +84,11 @@ export function readWidth(spec: WidthSpec, store: Storage): number {
 export function storeWidth(spec: WidthSpec, store: Storage, value: number): void {
   store.setItem(spec.key, String(value));
 }
+// The window's top row is 40px (`h-10`) in the sidebar, the note's top bar and
+// the right panel. The macOS traffic lights are placed by
+// `trafficLightPosition.y` in src-tauri/tauri.conf.json, and they centre on the
+// row when y = TOP_ROW_HEIGHT / 2 + TRAFFIC_LIGHT_OFFSET. A test enforces it, so
+// changing the row height or that value fails until the other follows.
+export const TOP_ROW_HEIGHT = 40;
+export const TRAFFIC_LIGHT_OFFSET = 2.5;
+export const TRAFFIC_LIGHT_SLOT_WIDTH = 72;

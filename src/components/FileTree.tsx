@@ -131,9 +131,11 @@ function Row({
   selected,
   focused,
   highlighted,
+  depth,
   handlers,
 }: {
   node: TreeNode;
+  depth: number;
   open: boolean;
   selected: boolean;
   focused: boolean;
@@ -168,9 +170,11 @@ function Row({
         event.preventDefault();
         handlers.onMenu(node, event.clientX, event.clientY);
       }}
-      className={`group/row relative flex ${isDir ? "h-8" : "h-9"} cursor-default items-center gap-2 rounded-[var(--radius)] pr-2 text-[13px] outline-none ${
-        isDir ? "ps-1" : "ps-[9px]"
-      } ${focused && handlers.keyboardRing ? "tree-ring" : ""} ${tone}`}
+      // The row spans the pane, so its hover and selection do too; the indent
+      // is padding on the left, which moves only the content.
+      style={{ paddingLeft: (isDir ? 12 : 17) + depth * 18 }}
+      className={`group/row relative flex h-8 cursor-default items-center gap-2 rounded-[var(--radius)] pr-3 text-[13px] outline-none ${
+        focused && handlers.keyboardRing ? "tree-ring" : ""} ${tone}`}
     >
       {isDir && (
         <button
@@ -227,8 +231,9 @@ function Row({
 
 export function FileTree({
   nodes,
+  depth = 0,
   ...handlers
-}: { nodes: TreeNode[] } & Handlers) {
+}: { nodes: TreeNode[]; depth?: number } & Handlers) {
   return (
     <div className="flex flex-col gap-0.5">
       {nodes.map((node) => {
@@ -248,11 +253,15 @@ export function FileTree({
                 selected={selected}
                 focused={focused}
                 highlighted={highlighted}
+                depth={depth}
                 handlers={handlers}
               />
               {open && node.children && (
-                <div className="tree-children">
-                  <FileTree nodes={node.children} {...handlers} />
+                <div
+                  className="tree-children"
+                  style={{ "--depth": depth + 1 } as React.CSSProperties}
+                >
+                  <FileTree nodes={node.children} depth={depth + 1} {...handlers} />
                 </div>
               )}
             </div>
@@ -266,6 +275,7 @@ export function FileTree({
             selected={node.path === handlers.activePath}
             focused={focused}
             highlighted={highlighted}
+            depth={depth}
             handlers={handlers}
           />
         );

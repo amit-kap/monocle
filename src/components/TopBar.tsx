@@ -8,6 +8,7 @@ import { copyFullContents, pathReferenceFor } from "../lib/agentActions";
 import { formatTokens, estimateTokens } from "../lib/tokens";
 import type { ViewMode } from "../types";
 import { PaneToggle } from "./PaneToggle";
+import { TrafficLightsSlot } from "./TrafficLightsSlot";
 import { ChevronDown, CodeXmlIcon, Columns2Icon, CopyIcon, TypeIcon } from "./icons";
 
 const VIEWS: { id: ViewMode; title: string; icon: typeof TypeIcon }[] = [
@@ -112,16 +113,21 @@ export function TopBar({ trailing }: { trailing?: React.ReactNode }) {
   return (
     <div
       className="relative flex h-10 shrink-0 items-center gap-2 border-b border-[var(--border)] pr-3"
-      // With the sidebar shut the traffic lights sit over this bar, so the bar
-      // makes room for them, and the sidebar toggle takes the spot it had
+      // With the sidebar shut the traffic lights sit over this bar: a slot
+      // reserves their room, and the sidebar toggle takes the spot it had
       // inside the sidebar.
-      style={{ paddingLeft: leftOpen ? 16 : 84 }}
+      style={{ paddingLeft: leftOpen ? 16 : 12 }}
     >
       <div data-tauri-drag-region className="absolute inset-0" />
       {!leftOpen && (
-        <div className="relative">
-          <PaneToggle side="left" open={false} onClick={toggleLeft} />
-        </div>
+        <>
+          <div className="relative">
+            <TrafficLightsSlot />
+          </div>
+          <div className="relative">
+            <PaneToggle side="left" open={false} onClick={toggleLeft} />
+          </div>
+        </>
       )}
 
       <nav

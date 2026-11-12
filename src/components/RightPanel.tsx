@@ -63,14 +63,18 @@ function OutlineTab() {
     };
   }, [liveText, activePath]);
 
-  const smallest = headings.length ? Math.min(...headings.map((h) => h.level)) : 1;
+  const smallest = headings.length
+    ? Math.min(...headings.map((h) => h.level))
+    : 1;
 
   return (
     <>
       <Block>
         <Caption left="SECTIONS" right="≈ TOKENS" />
         {headings.length === 0 && (
-          <p className="text-[13px] text-[var(--text-faint)]">No headings yet.</p>
+          <p className="text-[13px] text-[var(--text-faint)]">
+            No headings yet.
+          </p>
         )}
         {headings.map((heading) => (
           <button
@@ -91,10 +95,16 @@ function OutlineTab() {
       <Block>
         <Caption left="CHECKS" right={String(checks.length)} />
         {checks.length === 0 && (
-          <p className="text-[13px] text-[var(--text-muted)]">No problems found.</p>
+          <p className="text-[13px] text-[var(--text-muted)]">
+            No problems found.
+          </p>
         )}
         {checks.map((check, i) => (
-          <div key={`${check.message}:${i}`} data-check className="mt-2 flex gap-2 text-[13px] leading-5">
+          <div
+            key={`${check.message}:${i}`}
+            data-check
+            className="mt-2 flex gap-2 text-[13px] leading-5"
+          >
             <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
             <div>
               {check.message}
@@ -119,7 +129,9 @@ function ContextTab() {
   const [linked, setLinked] = useState<{ path: string; tokens: number }[]>([]);
   const [backlinks, setBacklinks] = useState<string[]>([]);
   const own = estimateTokens(liveText);
-  const linkKey = activePath ? linkedFiles(liveText, activePath).join("\n") : "";
+  const linkKey = activePath
+    ? linkedFiles(liveText, activePath).join("\n")
+    : "";
 
   useEffect(() => {
     if (!activePath) return;
@@ -136,7 +148,10 @@ function ContextTab() {
         }
       }),
     ).then((rows) => {
-      if (!cancelled) setLinked(rows.filter((r): r is { path: string; tokens: number } => r !== null));
+      if (!cancelled)
+        setLinked(
+          rows.filter((r): r is { path: string; tokens: number } => r !== null),
+        );
     });
     return () => {
       cancelled = true;
@@ -173,33 +188,51 @@ function ContextTab() {
         <Caption left="WHAT AN AGENT LOADS" />
         <div className="flex min-h-7 items-center text-[13px]">
           <span className="flex-1 text-[var(--text-muted)]">This file</span>
-          <span data-context-own className="tabular-nums">{formatTokens(own)}</span>
+          <span data-context-own className="tabular-nums">
+            {formatTokens(own)}
+          </span>
         </div>
         {linked.map((f) => (
-          <div key={f.path} data-context-linked className="flex min-h-7 items-center text-[13px]">
-            <span className="flex-1 truncate text-[var(--text-muted)]">Linked: {baseName(f.path)}</span>
+          <div
+            key={f.path}
+            data-context-linked
+            className="flex min-h-7 items-center text-[13px]"
+          >
+            <span className="flex-1 truncate text-[var(--text-muted)]">
+              Linked: {baseName(f.path)}
+            </span>
             <span className="tabular-nums">{formatTokens(f.tokens)}</span>
           </div>
         ))}
         <div className="flex min-h-7 items-center text-[13px]">
           <span className="flex-1 text-[var(--text-muted)]">Total</span>
-          <b data-context-total className="tabular-nums">≈ {formatTokens(total)}</b>
+          <b data-context-total className="tabular-nums">
+            ≈ {formatTokens(total)}
+          </b>
         </div>
       </Block>
       <Block>
         <Caption left="LINKED FROM" />
         {backlinks.length === 0 && (
-          <p className="text-[13px] text-[var(--text-muted)]">No other file links here.</p>
+          <p className="text-[13px] text-[var(--text-muted)]">
+            No other file links here.
+          </p>
         )}
         {backlinks.map((path) => (
-          <div key={path} data-context-backlink className="min-h-7 truncate text-[13px] leading-7">
+          <div
+            key={path}
+            data-context-backlink
+            className="min-h-7 truncate text-[13px] leading-7"
+          >
             {baseName(path)}
           </div>
         ))}
       </Block>
       <Block>
         <Caption left="LOCATION" />
-        <div className="break-all font-mono text-[12px] leading-[18px]">{activePath}</div>
+        <div className="break-all font-mono text-[12px] leading-[18px]">
+          {activePath}
+        </div>
       </Block>
     </>
   );
@@ -208,20 +241,27 @@ function ContextTab() {
 /** An outside edit to the open file: the lines that changed, and what to do about them. */
 function ChangesTab() {
   const activePath = useStore((s) => s.activePath);
-  const notice = useStore((s) => (s.activePath ? s.changes[s.activePath] : undefined));
+  const notice = useStore((s) =>
+    s.activePath ? s.changes[s.activePath] : undefined,
+  );
   const diskText = useStore((s) => s.diskText);
   const keepChange = useStore((s) => s.keepChange);
   const revertChange = useStore((s) => s.revertChange);
 
   const lines = useMemo(
-    () => (notice && notice.before !== null ? changedHunks(diffLines(notice.before, notice.after)) : []),
+    () =>
+      notice && notice.before !== null
+        ? changedHunks(diffLines(notice.before, notice.after))
+        : [],
     [notice],
   );
   if (!activePath) return null;
   if (!notice) {
     return (
       <Block>
-        <p className="text-[13px] text-[var(--text-muted)]">No changes since you opened this file.</p>
+        <p className="text-[13px] text-[var(--text-muted)]">
+          No changes since you opened this file.
+        </p>
       </Block>
     );
   }
@@ -230,18 +270,24 @@ function ChangesTab() {
   return (
     <Block>
       <Caption left="CHANGED ON DISK" />
-      <p className="text-[13px] leading-5">Edited outside the app {timeAgo(notice.at)}.</p>
+      <p className="text-[13px] leading-5">
+        Edited outside the app {timeAgo(notice.at)}.
+      </p>
       {unsaved && (
         <p className="mt-1 text-[12px] leading-[18px] text-[var(--text-muted)]">
-          You have unsaved edits. Keep change loads the outside version and replaces them. Revert
-          saves your edits over it.
+          You have unsaved edits. Keep change loads the outside version and
+          replaces them. Revert saves your edits over it.
         </p>
       )}
       <div
         data-diff
         className="my-2.5 whitespace-pre-wrap rounded-lg bg-[var(--bg-hover-strong)] px-2.5 py-2 font-mono text-[12px] leading-5"
       >
-        {lines.length === 0 && <span className="text-[var(--text-muted)]">No earlier version to compare.</span>}
+        {lines.length === 0 && (
+          <span className="text-[var(--text-muted)]">
+            No earlier version to compare.
+          </span>
+        )}
         {lines.map((line, i) => (
           <div
             key={i}
@@ -287,7 +333,8 @@ export function changeSummary(before: string | null, after: string): string {
   const { added, removed } = diffStats(diffLines(before, after));
   const parts: string[] = [];
   if (added) parts.push(`${added} ${added === 1 ? "line" : "lines"} added`);
-  if (removed) parts.push(`${removed} ${removed === 1 ? "line" : "lines"} removed`);
+  if (removed)
+    parts.push(`${removed} ${removed === 1 ? "line" : "lines"} removed`);
   return parts.join(", ") || "changed";
 }
 
@@ -301,8 +348,13 @@ export function RightPanel() {
   const toggleRight = useStore((s) => s.toggleRight);
   const setRightTab = useStore((s) => s.setRightTab);
   const activePath = useStore((s) => s.activePath);
-  const hasChange = useStore((s) => Boolean(s.activePath && s.changes[s.activePath]));
-  const [width, setWidth] = useState(() => readWidth(RIGHT_PANEL, localStorage));
+  const hasChange = useStore((s) =>
+    Boolean(s.activePath && s.changes[s.activePath]),
+  );
+  const [width, setWidth] = useState(() =>
+    readWidth(RIGHT_PANEL, localStorage),
+  );
+  const [resizing, setResizing] = useState(false);
 
   useEffect(() => {
     storeWidth(RIGHT_PANEL, localStorage, width);
@@ -310,12 +362,14 @@ export function RightPanel() {
 
   function startResize(startX: number) {
     const startWidth = width;
+    setResizing(true);
     function onMove(event: MouseEvent) {
       // The handle is on the left edge, so dragging left widens the panel.
       const next = startWidth - (event.clientX - startX);
       setWidth(clampWidth(next, RIGHT_PANEL.min, RIGHT_PANEL.max));
     }
     function onUp() {
+      setResizing(false);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
       document.body.style.cursor = "";
@@ -327,62 +381,79 @@ export function RightPanel() {
     document.body.style.userSelect = "none";
   }
 
-  if (!open) return null;
-
   return (
     <aside
-      className="relative flex h-full shrink-0 flex-col bg-[var(--bg-sidebar)]"
-      style={{ width }}
+      className="relative h-full shrink-0 bg-[var(--bg-sidebar)] motion-reduce:!transition-none"
+      style={{
+        width: open ? width : 0,
+        visibility: open ? "visible" : "hidden",
+        transition: resizing
+          ? "none"
+          : `width 200ms ease, visibility 0s linear ${open ? 0 : 200}ms`,
+      }}
       aria-label="Inspector"
+      aria-hidden={!open}
+      inert={!open}
     >
-      <div className="relative flex h-10 shrink-0 items-center gap-0.5 border-b border-[var(--border)] px-3">
-        <div data-tauri-drag-region className="absolute inset-0" />
-        <div role="tablist" className="relative flex items-center gap-0.5">
-          {RIGHT_TABS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={tab === id}
-              data-tab={id}
-              onClick={() => setRightTab(id)}
-              className={`flex h-[26px] items-center gap-1.5 rounded-[6px] px-2.5 text-[12px] ${
-                tab === id
-                  ? "bg-[var(--bg-active)] font-semibold text-[var(--text)]"
-                  : "font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
-              }`}
-            >
-              {TAB_LABEL[id]}
-              {id === "changes" && hasChange && (
-                <span className="size-1.5 rounded-full bg-[var(--accent)]" data-changes-dot />
-              )}
-            </button>
-          ))}
-        </div>
-        <div className="relative ml-auto">
-          <PaneToggle side="right" open onClick={toggleRight} />
+      <div className="h-full overflow-hidden">
+        <div className="flex h-full flex-col" style={{ width }}>
+          <div className="relative flex h-10 shrink-0 items-center gap-0.5 border-b border-[var(--border)] px-3">
+            <div data-tauri-drag-region className="absolute inset-0" />
+            <div role="tablist" className="relative flex items-center gap-0.5">
+              {RIGHT_TABS.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  data-tab={id}
+                  onClick={() => setRightTab(id)}
+                  className={`flex h-[26px] items-center gap-1.5 rounded-[6px] px-2.5 text-[12px] ${
+                    tab === id
+                      ? "bg-[var(--bg-active)] font-semibold text-[var(--text)]"
+                      : "font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                  }`}
+                >
+                  {TAB_LABEL[id]}
+                  {id === "changes" && hasChange && (
+                    <span
+                      className="size-1.5 rounded-full bg-[var(--accent)]"
+                      data-changes-dot
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="relative ml-auto">
+              <PaneToggle side="right" open onClick={toggleRight} />
+            </div>
+          </div>
+
+          <div role="tabpanel" className="flex-1 overflow-y-auto">
+            {!activePath ? (
+              <Block>
+                <p className="text-[13px] leading-5 text-[var(--text-faint)]">
+                  {EMPTY[tab]}
+                </p>
+              </Block>
+            ) : tab === "outline" ? (
+              <OutlineTab />
+            ) : tab === "context" ? (
+              <ContextTab />
+            ) : (
+              <ChangesTab />
+            )}
+          </div>
         </div>
       </div>
 
-      <div role="tabpanel" className="flex-1 overflow-y-auto">
-        {!activePath ? (
-          <Block>
-            <p className="text-[13px] leading-5 text-[var(--text-faint)]">{EMPTY[tab]}</p>
-          </Block>
-        ) : tab === "outline" ? (
-          <OutlineTab />
-        ) : tab === "context" ? (
-          <ContextTab />
-        ) : (
-          <ChangesTab />
-        )}
-      </div>
-
-      <ResizeHandle
-        style={{ left: 0 }}
-        onResizeStart={(event) => startResize(event.clientX)}
-        onReset={() => setWidth(RIGHT_PANEL.default)}
-      />
+      {open && (
+        <ResizeHandle
+          style={{ left: 0 }}
+          onResizeStart={(event) => startResize(event.clientX)}
+          onReset={() => setWidth(RIGHT_PANEL.default)}
+        />
+      )}
     </aside>
   );
 }

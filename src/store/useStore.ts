@@ -287,10 +287,14 @@ export const useStore = create<State>((set, get) => ({
     } catch {
       home = null;
     }
-    // First launch opens the home folder; after that, wherever it was left.
-    const folder = localStorage.getItem(LAST_FOLDER_KEY) ?? home;
+    // First launch opens the home folder and the first note in it; after that,
+    // wherever it was left.
+    const saved = localStorage.getItem(LAST_FOLDER_KEY);
+    const firstLaunch = saved === null;
+    const folder = saved ?? home;
     set({ home });
     if (!folder) return;
+    if (firstLaunch) localStorage.setItem(LAST_FOLDER_KEY, folder);
     set({
       folder,
       expanded: readExpanded(folder),
@@ -298,6 +302,13 @@ export const useStore = create<State>((set, get) => ({
     });
     await get().refresh();
     void startWatching(folder);
+    if (firstLaunch) {
+      const first = get().notes[0];
+      if (first && !get().activePath) {
+        get().expandTo(first.path);
+        await get().openNote(first.path);
+      }
+    }
   },
 
   chooseFolder: async () => {
