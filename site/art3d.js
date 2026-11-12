@@ -194,6 +194,7 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
   theme(); size();
   const rest = () => { const p = slots(home); slabs.forEach((s) => { s.z = p.get(s); s.lift = s.fl = s.eb = s.bb = 0; }); };
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { theme(); draw(); });
+  rest(); draw();
 
   if (still) { rest(); draw(); return; }
   cv.addEventListener("pointermove", hover);

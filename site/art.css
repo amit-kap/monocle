@@ -37,3 +37,6 @@
   .art.play .lift-a, .art.play .lift-b, .art.play .o, .art.play .tick { animation: none; }
   .art .tick { stroke-dashoffset: 0; }
 }
+
+/* Shown only until the 3D frame loads (or if WebGL is unavailable). */
+.ph-note { display: grid; place-content: center; height: 100%; padding: 1.5rem; color: var(--muted); font-size: .875rem; text-align: center; }
