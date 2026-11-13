@@ -88,6 +88,7 @@ function stage(host, build) {
   host.replaceChildren(cv);
   new ResizeObserver(draw).observe(host);
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  addEventListener("themechange", draw);
   draw();
 }
 

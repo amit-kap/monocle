@@ -145,7 +145,8 @@ if (host) (() => {
 
   theme(); size();
   new ResizeObserver(() => { size(); if (still || !raf) still ? drawStill() : (pose(clock), renderer.render(scene, cam)); }).observe(host);
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { theme(); still ? drawStill() : (pose(clock), renderer.render(scene, cam)); });
+  const repaint = () => { theme(); still ? drawStill() : (pose(clock), renderer.render(scene, cam)); };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", repaint); addEventListener("themechange", repaint);
   artwork.then(() => { if (!raf) (still ? drawStill() : (pose(clock), renderer.render(scene, cam))); });
   let raf = 0, t0 = 0, clock = MOVE + .6;   // first frame: a folder at rest with its files in
   if (still) { drawStill(); return; }
