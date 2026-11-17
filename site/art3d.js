@@ -1,9 +1,7 @@
 // "Edits that stay valid Markdown": a page split into slabs, built live with three.js.
 // Blocks reorder themselves: one rises, flashes brass, slides over its neighbour (which slides under it into the gap), lands and goes grey.
 import * as THREE from "three";
-import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
-import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
-import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMaterial, barMaterial, addBelt } from "./art-style.js";
 
 (() => {
   const host = document.getElementById("art-blocks");
@@ -13,11 +11,9 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch (_) { return; }
   // Render at 2x or more; the lines are real screen-space lines (not GL hairlines), so they stay crisp at any scale.
-  const PR = Math.min(Math.max(devicePixelRatio || 1, 2), 3);
   renderer.setPixelRatio(PR);
   const lineMats = [];
-  const lineMat = () => { const m = new LineMaterial({ linewidth: 0.75 * PR, worldUnits: false, alphaToCoverage: true }); lineMats.push(m); return m; };
-  const edgeLines = (geo, m) => new LineSegments2(new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(geo)), m);
+  const lineMat = () => lineMaterial(lineMats);
   const cv = renderer.domElement;
   cv.style.cssText = "display:block;width:100%;height:100%";
   const fallback = host.querySelector("svg"); if (fallback) fallback.style.display = "none";
@@ -27,19 +23,13 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, -200, 200);
   cam.position.set(20, 20, 20); cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
 
-  // Colours follow the page theme: low-contrast hairlines on a lightly tinted fill, brass for the block in motion.
-  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-  const C = (v) => new THREE.Color(css(v));
-  const col = { line: new THREE.Color(), lineHot: new THREE.Color(), fill: new THREE.Color(), bar: new THREE.Color(), brass: new THREE.Color() };
+  // Colours come from art-style.js, so every card looks the same.
+  const col = { line: new THREE.Color(), lineHot: new THREE.Color(), fill: new THREE.Color(), bar: new THREE.Color() };
+  const trackMat = new THREE.MeshBasicMaterial();
   function theme() {
-    const panel = C("--bg-soft"), text = C("--text");
-    col.brass.set(css("--brass"));
-    col.fill.copy(panel); // blocks are the card's own colour: pure outlines that still hide what's behind them
-    col.line.copy(panel).lerp(text, .17); // sampled from the reference renders: outlines sit ~17% of the way from the card colour to the text colour
-    col.lineHot.copy(text);
-    railMat.color.copy(col.line);
-    col.panel = col.panel || new THREE.Color(); col.panel.copy(panel);
-    col.bar.copy(text);
+    const th = readTheme();
+    col.fill.copy(th.folder); col.line.copy(th.line); col.lineHot.copy(th.hot); col.bar.copy(th.ink);
+    trackMat.color.copy(th.track); railMat.color.copy(th.line);
   }
 
   const T = 0.9, X = 18, FLAT = 0.02, LIFT = 2.6, BUMP = 0.9, GAP = 0.8;
@@ -48,14 +38,14 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
   function slab(depth) {
     const g = new THREE.Group();
     const box = new THREE.BoxGeometry(X, T, depth);
-    const fillMat = new THREE.MeshBasicMaterial({ polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+    const fillMat = fillMaterial();
     const fill = new THREE.Mesh(box, fillMat);
     const edgeMat = lineMat();
     const edges = edgeLines(box, edgeMat);
     const top = new THREE.Group(); top.position.y = T / 2 + FLAT;
     g.add(fill, edges, top);
     scene.add(g);
-    const s = { g, top, fill, fillMat, edgeMat, depth, barMat: new THREE.MeshBasicMaterial({ transparent: true, opacity: .5 }),
+    const s = { g, top, fill, fillMat, edgeMat, depth, barMat: barMaterial(),
       hover: 0, hoverTarget: 0, lift: 0, fl: 0, eb: 0, bb: 0, z: 0 };
     slabs.push(s); return s;
   }
@@ -93,11 +83,8 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
   [[1.6, 9, 1.2], [3.2, 12.4, 2.6], [3.2, 8, 4]].forEach(([a, b, y]) => bar(code, a, b, y, .45));
 
   // Two 1px rails run past the blocks, along the direction they slide, across the whole frame.
-  const railMat = lineMat(); railMat.linewidth = 1 * PR;
-  [-1, 1].forEach((side) => {
-    const geo = new LineSegmentsGeometry().setPositions([side * (X / 2 + 1.6), -0.01, -120, side * (X / 2 + 1.6), -0.01, 120]);
-    scene.add(new LineSegments2(geo, railMat));
-  });
+  const railMat = lineMat();
+  addBelt(scene, X / 2 + 1.6, 120, railMat, trackMat);
 
   // Slot centres for a given order, along the page.
   const TOTAL = slabs.reduce((n, s) => n + s.depth, 0) + GAP * (slabs.length - 1);
@@ -130,7 +117,7 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
   function size() {
     const w = host.clientWidth, h = host.clientHeight, aspect = w / h, pad = 1.22;
     renderer.setSize(w, h, false);
-    lineMats.forEach((m) => m.resolution.set(w * PR, h * PR));
+    resizeLines(lineMats, w, h);
     const vh = Math.max(bounds.h * pad, bounds.w * pad / aspect), vw = vh * aspect;
     cam.left = bounds.cx - vw / 2; cam.right = bounds.cx + vw / 2; cam.top = bounds.cy + vh / 2; cam.bottom = bounds.cy - vh / 2;
     cam.updateProjectionMatrix();
@@ -172,10 +159,9 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
     slabs.forEach((s) => {
       s.hover += (s.hoverTarget - s.hover) * 0.2;
       s.g.position.set(0, T / 2 + s.lift * LIFT + s.hover * BUMP, s.z);
-      s.fillMat.color.copy(col.fill).lerp(col.brass, clamp(s.fl) * 0.7);
-      s.edgeMat.color.copy(col.line).lerp(col.lineHot, s.hover).lerp(col.brass, clamp(s.eb));
+      s.fillMat.color.copy(col.fill);
+      s.edgeMat.color.copy(col.line).lerp(col.lineHot, s.hover);
       s.barMat.color.copy(col.bar);
-      s.barMat.opacity = .5 + .3 * clamp(s.bb);
     });
     renderer.render(scene, cam);
   }

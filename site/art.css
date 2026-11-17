@@ -1,12 +1,17 @@
+/* Neutral grey card palette (cool, no warm tint): card fill = block fill, hairlines sit just off it. JS reads these too. */
+:root { --art-bg: #fafafa; --art-folder: #f6f6f6; --art-track: #ffffff; --art-ink: #000; --art-hot: #3a3a3a; --art-border: #d9d9d9; --art-shadow: none; }
+:root[data-theme="dark"] { --art-bg: #1d1d1d; --art-folder: #191919; --art-track: #222222; --art-ink: #7d7d7d; --art-hot: #bdbdbd; --art-border: #2a2a2a; --art-shadow: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) { --art-bg: #1d1d1d; --art-folder: #191919; --art-track: #222222; --art-ink: #7d7d7d; --art-hot: #bdbdbd; --art-border: #2a2a2a; --art-shadow: none; } }
+
 /* Isometric outline art. One camera, 1.5px lines in the text colour, brass for the one thing that moves. */
 .art {
-  aspect-ratio: 3 / 2; border: 1px solid var(--border-strong); border-radius: 12px;
-  background: var(--bg-soft); color: var(--text); overflow: hidden;
+  aspect-ratio: 3 / 2; border: 1px solid var(--art-border); border-radius: 14px; box-shadow: var(--art-shadow);
+  background: var(--art-bg); color: var(--text); overflow: hidden;
 }
 .art svg { display: block; width: 100%; height: 100%; }
 .art .o, .art .g, .art .t, .art .tick { fill: none; stroke: currentColor; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.art .o { fill: var(--bg); stroke-width: 1.5; }
-.art .g { stroke-width: 1.5; opacity: .6; }
+.art .o { fill: var(--art-bg); stroke-width: 1; }
+.art .g { stroke-width: 1; opacity: .6; }
 .art .t { vector-effect: none; }
 .art .tick { stroke: var(--brass); stroke-width: 2.5; stroke-dasharray: 1; stroke-dashoffset: 0; vector-effect: none; }
 
