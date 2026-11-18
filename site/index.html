@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monocle — a Markdown editor for your agents' files</title>
 <meta name="description" content="Free Mac editor for the plans, notes and CLAUDE.md files your agents write. Plain .md on disk, live token count, no lock-in.">
-<meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#f5f4f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16171b" media="(prefers-color-scheme: dark)">
 <meta property="og:title" content="Monocle — a Markdown editor for your agents' files">
 <meta property="og:description" content="Read what your agents wrote, fix it in place, and see what it costs in tokens. Free for Mac.">
@@ -20,15 +20,15 @@
   :root {
     --gap: clamp(5rem, 11vw, 9rem);   /* the one space between sections: hero, screenshot, each feature, closing, footer */
     color-scheme: light dark;
-    --bg: #fbfaf7;
-    --bg-soft: #f3f1ec;
+    --bg: #f5f4f1;   /* low-chroma stone, as the taste-skill recommends, not a yellow cream */
+    --bg-soft: #ecebe6;
     --text: #23211c;
     --muted: #6e6a62;
+    --text-2: #46423a;   /* running copy: near full ink (about 9.8:1); --muted is only for small notes */
     --border: #e6e2d9;
     --border-strong: #d6d0c3;
     --accent: #a87526;
     --brass: #8f6119; /* the accent, darkened to pass AA under bone text */
-        --glow: rgba(168, 117, 38, 0.22);
     --shadow: 0 30px 60px rgba(35, 33, 28, 0.12), 0 4px 14px rgba(35, 33, 28, 0.06);
     --serif: "Newsreader", ui-serif, Georgia, Cambria, serif;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -41,11 +41,11 @@
       --bg-soft: #1c1d22;
       --text: #ece8df;
       --muted: #a19c92;
+      --text-2: #cfcabf;
       --border: #2c2e34;
       --border-strong: #3a3c43;
       --accent: #e2b65c;
       --brass: #e2b65c;
-      --glow: rgba(226, 182, 92, 0.18);
       --shadow: 0 30px 60px rgba(0, 0, 0, 0.45), 0 4px 14px rgba(0, 0, 0, 0.3);
     }
   }
@@ -55,11 +55,11 @@
     --bg-soft: #1c1d22;
     --text: #ece8df;
     --muted: #a19c92;
+    --text-2: #cfcabf;
     --border: #2c2e34;
     --border-strong: #3a3c43;
     --accent: #e2b65c;
     --brass: #e2b65c;
-    --glow: rgba(226, 182, 92, 0.18);
     --shadow: 0 30px 60px rgba(0, 0, 0, 0.45), 0 4px 14px rgba(0, 0, 0, 0.3);
   }
   :root[data-theme="light"] { color-scheme: light; }
@@ -76,19 +76,6 @@
     position: relative;
   }
 
-  /* The lamp: one pool of warm light falling from the top right. */
-  .lamp {
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 46rem;
-    pointer-events: none;
-    background: radial-gradient(ellipse 55% 60% at 80% -12%, var(--glow), transparent 72%);
-    animation: lamp-on 2.4s ease-out both;
-  }
-  /* The same light again, rising from the bottom left. */
-  .lamp-b { inset: auto 0 0 0; background: radial-gradient(ellipse 55% 60% at 20% 112%, var(--glow), transparent 72%); }
-  @keyframes lamp-on { from { opacity: 0; } to { opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { .lamp { animation: none; } }
 
   .wrap { position: relative; width: min(100% - 3rem, 68rem); margin-inline: auto; }
 
@@ -97,7 +84,7 @@
   .top .gh {
     margin-left: auto; display: inline-flex; align-items: center; gap: .5rem;
     height: 36px; padding: 0 .85rem; border: 1px solid var(--border-strong); border-radius: 999px;
-    font-size: .875rem; font-weight: 500; color: var(--text); text-decoration: none;
+    font-size: .9375rem; font-weight: 500; color: var(--text); text-decoration: none;
     transition: background .15s ease, border-color .15s ease;
   }
   .top .gh:hover { background: var(--bg-soft); border-color: var(--muted); }
@@ -125,10 +112,10 @@
   .gh-stars svg { width: 14px; height: 14px; color: var(--brass); }
   .gh-stars b { font-weight: 600; color: var(--text); }
   .top img { width: 40px; height: 40px; border-radius: 10px; }
-  .top > span { font-size: 1.125rem; font-weight: 600; letter-spacing: -0.005em; }
+  .top > span { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.005em; }
 
   /* Hero */
-  .hero { padding-block: clamp(4rem, 10vw, 7.5rem) var(--gap); text-align: center; }
+  .hero { padding-block: clamp(4rem, 10vw, 7.5rem) calc(var(--gap) * .6); text-align: center; }
   h1 {
     margin: 0 auto;
     max-width: 18ch;
@@ -136,7 +123,7 @@
     letter-spacing: -0.028em;
     text-wrap: balance;
   }
-  .lede { margin: 2.25rem auto 0; max-width: 34rem; font-size: 1.1875rem; color: var(--muted); text-wrap: pretty; }
+  .lede { margin: 2.25rem auto 0; max-width: 34rem; font-size: 1.25rem; color: var(--text-2); text-wrap: pretty; }
 
   .hero .cta { flex-direction: column; justify-content: center; gap: 1.5rem; margin-top: 3.25rem; }
   .meta { white-space: pre-line; }
@@ -153,7 +140,7 @@
       linear-gradient(180deg, #f6dc9a 0%, #d9a94f 30%, #a8741f 62%, #e2b65c 100%) border-box;
     background-color: #1d1e24; /* the glass's base tone, under the gradients */
     color: #f4efe3;
-    font: 600 1rem/1 var(--sans);
+    font: 600 1.0625rem/1 var(--sans);
     text-decoration: none;
     box-shadow:
       inset 0 0 0 1px rgba(0, 0, 0, .55),
@@ -198,29 +185,29 @@
   }
   .list li:nth-child(even) .copy { order: 2; }
   .copy { padding-top: 1rem; }
-  .copy h2 { margin: 0 0 .75rem; font: 400 clamp(1.75rem, 3.4vw, 2.25rem)/1.15 var(--serif); letter-spacing: -0.015em; text-wrap: balance; }
-  .copy p { margin: 0; max-width: 28rem; color: var(--muted); text-wrap: pretty; }
+  .copy h2 { margin: 0 0 .75rem; font: 400 clamp(1.75rem, 3.4vw, 2.5rem)/1.15 var(--serif); letter-spacing: -0.015em; text-wrap: balance; }
+  .copy p { margin: 0; max-width: 28rem; color: var(--text-2); text-wrap: pretty; }
   /* Placeholder until the real image exists. */
   .ph {
     aspect-ratio: 3 / 2; border: 1px solid var(--border-strong); border-radius: 12px;
     background: var(--bg-soft); display: grid; place-content: center; padding: 1.5rem;
-    color: var(--muted); font-size: .875rem; text-align: center;
+    color: var(--muted); font-size: .9375rem; text-align: center;
   }
   kbd {
     display: inline-block; padding: .4em .7em; margin-inline: .1em; border: 1px solid var(--border-strong); border-radius: 5px;
     background: var(--bg-soft); color: var(--text); font: .85em var(--mono);
   }
-  code { font: .88em var(--mono); color: var(--text); }
+  code { font: .9375rem var(--mono); color: var(--text); }
   .lede code, .copy p code { color: var(--brass); }
 
   .fine { margin: 2.25rem auto 0; max-width: 30rem; font-size: .9375rem; color: var(--muted); text-wrap: balance; }
 
   /* Closing */
-  .close { padding-block: var(--gap); text-align: center; }
+  .close { padding-block: calc(var(--gap) * 1.5) var(--gap); text-align: center; }
   .close .cta { justify-content: center; margin-top: 3.25rem; }
-  .close h2 { margin: 0 auto; max-width: 16ch; font: 300 clamp(2.25rem, 5.5vw, 3.75rem)/1.04 var(--serif); letter-spacing: -0.022em; text-wrap: balance; }
+  .close h2 { margin: 0 auto; max-width: 16ch; font: 300 clamp(2.75rem, 7.2vw, 5.25rem)/1.04 var(--serif); letter-spacing: -0.022em; text-wrap: balance; }
 
-  footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; border-top: 1px solid var(--border); padding-block: 2.5rem 4.5rem; font-size: .875rem; color: var(--muted); }
+  footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; border-top: 1px solid var(--border); padding-block: 2.5rem 4.5rem; font-size: .9375rem; color: var(--muted); }
   footer a { color: inherit; text-decoration: none; }
   footer a:hover { color: var(--text); }
   footer nav { display: flex; gap: 1.5rem; }
@@ -237,8 +224,6 @@
 <link rel="stylesheet" href="art.css">
 </head>
 <body>
-<div class="lamp" aria-hidden="true"></div>
-<div class="lamp lamp-b" aria-hidden="true"></div>
 
 <div class="wrap" id="top">
   <header class="top">
@@ -269,7 +254,7 @@
     </section>
 
     <figure class="shot">
-      <div class="frame" id="demo" role="group" aria-label="Interactive demo of Monocle with an agents' folder open">
+      <div class="frame" id="demo" data-ui role="group" aria-label="Interactive demo of Monocle with an agents' folder open">
         <aside class="d-side">
           <div class="d-top">
             <div class="d-lights" aria-hidden="true"><i></i><i></i><i></i></div>
