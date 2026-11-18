@@ -67,12 +67,12 @@ if (host) (() => {
       const sh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), m);
       sh.rotation.x = -Math.PI / 2; sh.position.set(0, .02 + k * .005, 0); sh.renderOrder = -1; g.add(sh);
     });
-    box(g, 7, .3, 6.4, 0, .15, 0, em, fm); box(g, 7, 1.8, .25, 0, 1.2, -3.075, em, fm); box(g, 2.6, .5, .25, -2.2, 2.35, -3.075, em, fm); box(g, .25, 1.2, 6.4, -3.375, .9, 0, em, fm);
+    box(g, 7, .9, 6.4, 0, .45, 0, em, fm); box(g, 7, 1.8, .25, 0, 1.8, -3.075, em, fm); box(g, 2.6, .5, .25, -2.2, 2.95, -3.075, em, fm); box(g, .25, 1.2, 6.4, -3.375, 1.5, 0, em, fm);
     const sheets = [0, 1, 2].map((k) => {
       const mat = lm(1), sf = fillMat.clone(), s = box(g, 5.2, .22, 3.6, 0, 9, 0, mat, sf);   // dropped straight on top of one another
       const holders = {};                                                                      // each file can carry any of the three marks
       KINDS.forEach((kd) => { const h = new THREE.Group(); h.position.set(0, .13, 0); h.visible = false; const m = mark(kd === "openai" ? "chatgpt" : kd); m.scale.setScalar(.7); h.add(m); s.add(h); holders[kd] = h; });
-      return { g: s, mat, fm: sf, rest: .42 + k * .3, holders };
+      return { g: s, mat, fm: sf, rest: 1.02 + k * .3, holders };
     });
     folders.push({ g, em, fm, sheets });
   }

@@ -67,42 +67,28 @@ import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMateria
     sh.lineTo(-x, -y + r); sh.absarc(-x + r, -y + r, r, Math.PI, Math.PI * 1.5, false);
     return new THREE.ShapeGeometry(sh, 10);
   }
-  function bar(s, x0, x1, yy, w) {
+  const W = .32, TITLE = .72;   // two weights: text, and a bigger one for a title
+  function bar(s, x0, x1, yy, w = W) {
     const p = new THREE.Mesh(pill(x1 - x0, w), s.barMat);
     p.rotation.x = -Math.PI / 2;
     p.position.set(-X / 2 + (x0 + x1) / 2, 0, -s.depth / 2 + yy);
     s.top.add(p); return p;
   }
-  function vbar(s, xx, y0, y1, w) {
+  function vbar(s, xx, y0, y1, w = W) {
     const p = new THREE.Mesh(pill(w, y1 - y0), s.barMat);
     p.rotation.x = -Math.PI / 2;
     p.position.set(-X / 2 + xx, 0, -s.depth / 2 + (y0 + y1) / 2);
     s.top.add(p); return p;
   }
-  function rod(s, p, q) {
-    const L = Math.hypot(q[0] - p[0], q[1] - p[1]);
-    const m = new THREE.Mesh(pill(L, .3), s.barMat);
-    m.rotation.set(-Math.PI / 2, 0, 0); m.rotateZ(-Math.atan2(q[1] - p[1], q[0] - p[0]));
-    m.position.set(-X / 2 + (p[0] + q[0]) / 2, 0, -s.depth / 2 + (p[1] + q[1]) / 2);
-    s.top.add(m);
-  }
-
-  const heading = slab(3); bar(heading, 1.2, 10.5, 1.5, .9);
-  const list = slab(3.8);                                    // a bulleted list: a dot and a line, three times
-  [.95, 1.9, 2.85].forEach((y, i) => { bar(list, 1.2, 1.7, y, .5); bar(list, 2.5, [9.5, 12, 7.5][i], y, .4); });
-  const todo = slab(4);
-  [1.1, 2.9].forEach((y) => bar(todo, 1.2, 3.0, y, .14));
-  [1.2, 3.0].forEach((x) => vbar(todo, x, 1.1, 2.9, .14));
-  rod(todo, [1.5, 2.05], [2.0, 2.6]); rod(todo, [2.0, 2.6], [2.85, 1.45]);
-  bar(todo, 4.3, 13.5, 2, .5);
-  const table = slab(6);
-  [.8, 3, 5.2].forEach((y) => bar(table, 1, 17, y, .1));
-  [1, 6.33, 11.67, 17].forEach((x) => vbar(table, x, .8, 5.2, .1));
-  [[1.8, 4.6], [7.1, 10.2], [12.4, 15.5]].forEach(([a, b]) => { bar(table, a, b, 1.9, .3); bar(table, a, b - .6, 4.1, .3); });
-  const quote = slab(3.2);                                   // a block quote: a rule down the left, two lines of text
-  vbar(quote, 1.3, .6, 2.6, .4); bar(quote, 2.6, 13.8, 1.2, .4); bar(quote, 2.6, 9.4, 2.1, .4);
-  const code = slab(5.6);
-  [[1.6, 9, 1.2], [3.2, 12.4, 2.6], [3.2, 8, 4]].forEach(([a, b, y]) => bar(code, a, b, y, .45));
+  // Every block is the same size (D deep, X wide); its marks are centred in it.
+  const D = 5.4, M = D / 2;
+  const heading = slab(D); bar(heading, 1.2, 10.5, M, TITLE);           // a title: the one block that is a single line
+  const list = slab(D);                                                   // a bulleted list: a dot and a line, three times
+  [M - .7, M, M + .7].forEach((y, i) => { bar(list, 1.2, 1.2 + W, y); bar(list, 2.5, [9.5, 12, 7.5][i], y); });
+  const quote = slab(D);                                                  // a block quote: a rule down the left, two lines of text
+  vbar(quote, 1.3, M - 1.1, M + 1.1); bar(quote, 2.6, 13.8, M - .5); bar(quote, 2.6, 9.4, M + .5);
+  const code = slab(D);                                                   // a title, then two lines of text close together
+  bar(code, 1.2, 9, M - 1.3, TITLE); bar(code, 1.2, 12.4, M + .1); bar(code, 1.2, 8, M + .8);
 
   // Two 1px rails run past the blocks, along the direction they slide, across the whole frame.
   const railMat = lineMat();
@@ -115,7 +101,7 @@ import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMateria
     order.forEach((s) => { out.set(s, y + s.depth / 2 - TOTAL / 2); y += s.depth + GAP; });
     return out;
   }
-  const home = [heading, list, todo, table, quote, code];
+  const home = [heading, list, quote, code];
 
   // Frame the page centred on its resting pose, with room above for a lifted block.
   function extent(lift) {
@@ -151,7 +137,7 @@ import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMateria
   const clamp = (x) => Math.min(1, Math.max(0, x));
   const ramp = (t, a, b) => clamp((t - a) / (b - a));
   const STEP = 4.4, SPEED = 1.69;
-  const PAIRS = [[2, 3], [0, 1], [4, 5], [1, 2], [3, 4], [2, 3], [0, 1], [4, 5], [3, 4], [1, 2]];
+  const PAIRS = [[1, 2], [0, 1], [2, 3], [1, 2], [2, 3], [0, 1]];
   let cache = { step: 0, order: home.slice() };
   function plan(step) {
     if (step < cache.step) cache = { step: 0, order: home.slice() };

@@ -44,7 +44,7 @@ if (host) (() => {
   }
 
   // The belt runs along x (card 1's runs along z); the rails sit at z = ±RAIL.
-  const RAIL = 8.4, P = 15.8, N = 7, R = 4.8, T = 1.1;   // RAIL and the frame below match card 1, mirrored
+  const RAIL = 8.4, P = 15.8, N = 7, R = 4.8, T = .9;   // RAIL and the frame below match card 1, mirrored
   addBelt(scene, RAIL, 150, railMat, trackMat, "x");
 
   // A coin: a disc standing on its rim, axis across the belt (z), so its faces look sideways, with a raised inner disc on each face.
