@@ -96,14 +96,12 @@ if (plain) stage(plain, (a) => {
   a.box(4.5, 4.5, 4.5, 11.5, 2.25, 0);                                                                                       // the agent
 });
 
-// 3. Set it up your way: one page, re-dressed: a page, a column, a tree with a cursor.
-const theme = document.getElementById("art-theme");
-if (theme) stage(theme, (a) => {
+// 3. Know what it costs the context window: a page, and its sections measured as columns.
+const tokens = document.getElementById("art-tokens");
+if (tokens) stage(tokens, (a) => {
   a.rail = 17;
-  a.box(15, .6, 8, 3, .3, 0);                                                                       // base
-  const page = a.box(11, 14, .5, 3, 7.6, 0, {});                                        // the tinted page
-  [[-4, 3.5, 5.6], [-4, 4.4, 4.6], [-4, 2.6, 3.8], [-4, 4.4, 3], [-4, 3.2, 2.2], [-4, 4.4, 1.4], [-4, 1.8, .6]].forEach(([p, q, y]) => a.barFront(page, p, q, y * 1.3 - 3.6, .5));
-  const tree = a.box(9, .4, 7.4, -12.5, .2, 3.6);                                                    // the tree
-  [-2.2, 0, 2.2].forEach((z, i) => a.barTop(tree, -3.4, [2, 3, 1.6][i], z, .6));
-  a.box(8, .5, 1.7, -12.5, .65, 3.6, { noFill: true });                                 // the row cursor
+  const page = a.box(9, .4, 12, -8, .2, 0);                                                                  // the page
+  [[1, 7.2, -4.2], [1, 5.4, -2.7], [1, 7.6, -1.2], [1, 4.6, .3], [1, 6.8, 1.8], [1, 3.8, 3.3]].forEach(([p, q, z]) => a.barTop(page, p - 5, q - 5, z, .5));
+  a.box(15, .4, 4, 7, .2, 0);                                                                                // the meter's base
+  [3, 6.5, 4, 9, 5.5].forEach((h, i) => a.box(2, h, 2, 1.5 + i * 3.2, .4 + h / 2, 0));                       // a column per section
 });

@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monocle — a Markdown editor for your agents' files</title>
-<meta name="description" content="Monocle is a Mac Markdown editor for the plans, notes and instructions your agents write. Plain .md files, nothing else.">
+<meta name="description" content="Free Mac editor for the plans, notes and CLAUDE.md files your agents write. Plain .md on disk, live token count, no lock-in.">
 <meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16171b" media="(prefers-color-scheme: dark)">
 <meta property="og:title" content="Monocle — a Markdown editor for your agents' files">
-<meta property="og:description" content="Read and edit the plans, notes and instructions your agents write.">
+<meta property="og:description" content="Read what your agents wrote, fix it in place, and see what it costs in tokens. Free for Mac.">
 <meta property="og:type" content="website">
 <script>try { var t = localStorage.getItem("monocle-theme"); if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <link rel="icon" type="image/png" href="assets/icon.png">
@@ -205,6 +205,10 @@
   code { font: .88em var(--mono); color: var(--text); }
   .lede code, .copy p code { color: var(--brass); }
 
+  .strip { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem 0; margin: clamp(3rem, 6vw, 4.5rem) 0 0; font-size: .9375rem; color: var(--muted); }
+  .strip span + span::before { content: "·"; margin-inline: .9rem; }
+  .fine { margin: 1.75rem auto 0; max-width: 30rem; font-size: .9375rem; color: var(--muted); text-wrap: balance; }
+
   /* Closing */
   .close { padding-block: clamp(4rem, 10vw, 8rem) clamp(3rem, 6vw, 4.5rem); text-align: center; }
   .close .cta { justify-content: center; }
@@ -251,10 +255,10 @@
   <main>
     <section class="hero">
       <h1>A Markdown editor for your agents' files.</h1>
-      <p class="lede">Agents write plans, notes and instructions as <code>.md</code> files. Monocle opens the folder so you can read and edit them.</p>
+      <p class="lede">Claude Code, Codex and friends write plans, specs and <code>CLAUDE.md</code> files. Monocle lets you read them like documents and fix them in place, with a token count always in view.</p>
       <div class="cta">
         <a class="btn" id="download" href="https://github.com/amit-kap/monocle/releases/latest">Download Monocle</a>
-        <p class="meta" id="meta">Mac with Apple silicon.</p>
+        <p class="meta" id="meta">Free · macOS · Apple silicon.</p>
       </div>
     </section>
 
@@ -289,22 +293,22 @@
     <ul class="list">
       <li>
         <div class="copy">
-          <h2>Your agents' files, in one place</h2>
-          <p>Pick the folder your agents work in. Monocle lists every <code>.md</code> file in it, from plans and notes to <code>AGENTS.md</code>, and a refresh brings in what they wrote since.</p>
+          <h2>Watch the agent write</h2>
+          <p>Point Monocle at a repo. Every <code>.md</code> shows up, from <code>plan.md</code> to <code>.claude/CLAUDE.md</code>. When an agent changes a file, the tree updates on its own, and <code>node_modules</code> stays out.</p>
         </div>
-        <div class="art" id="art-files" role="img" aria-label="Sheets leaving an open folder and landing in one stack, the top sheet outlined in brass."><div class="ph-note">Image placeholder<br>Your agents' files, in one place</div></div>
+        <div class="art" id="art-files" role="img" aria-label="Folders ride a belt; three files drop into each as it stops."><div class="ph-note">Image placeholder<br>Watch the agent write</div></div>
       </li>
       <li>
         <div class="copy">
-          <h2>Plain files, nothing in between</h2>
-          <p>There is no database, no sync service and no format of its own. Your agents and every other tool read and write the same <code>.md</code> files Monocle edits.</p>
+          <h2>Know what it costs the context window</h2>
+          <p>A live <code>≈</code> token count, tokens per section, and the files an agent loads along with this one. Trim <code>CLAUDE.md</code> before it trims you.</p>
         </div>
-        <div class="art" id="art-plain" role="img" aria-label="One sheet read by a lens, standing for Monocle, and by a cube, standing for an agent."><div class="ph-note">Image placeholder<br>Plain files, nothing in between</div></div>
+        <div class="art" id="art-tokens" role="img" aria-label="A page beside a row of columns of different heights, standing for the token count of each section."><div class="ph-note">Image placeholder<br>Know what it costs the context window</div></div>
       </li>
       <li>
         <div class="copy">
-          <h2>Edits that stay valid Markdown</h2>
-          <p>Change a plan in blocks, with headings, to-dos, tables and code. Every block and mark survives a save, so the file stays readable to the agent that wrote it.</p>
+          <h2>Edits that don't touch the rest</h2>
+          <p>Fix one bullet and only that line changes on disk, so lists aren't reformatted and your git diffs stay small. Any tool or agent can read the result.</p>
         </div>
         <div class="art" id="art-blocks" role="img" aria-label="A page split into blocks: heading, to-do, table and code. One block lifts, is edited and settles back into place.">
           <svg viewBox="25 26 570 380" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
@@ -317,18 +321,21 @@
       </li>
       <li>
         <div class="copy">
-          <h2>Set it up your way</h2>
-          <p>Light, dark or system, with a tinted page and a column width you set yourself. Walk the tree with the arrow keys.</p>
+          <h2>Hand it back</h2>
+          <p>Copy an <code>@path</code> the agent can follow, or the whole file. See exactly what the agent changed since you opened it.</p>
         </div>
-        <div class="art" id="art-theme" role="img" aria-label="A tinted page with a column of text beside a file tree with a highlighted row."><div class="ph-note">Image placeholder<br>Set it up your way</div></div>
+        <div class="art" id="art-plain" role="img" aria-label="One sheet read by a lens, standing for Monocle, and by a cube, standing for an agent."><div class="ph-note">Image placeholder<br>Hand it back</div></div>
       </li>
     </ul>
+
+    <p class="strip"><span>⌘P to search</span><span>Rich, source or side by side</span><span>Light, dark, tint</span><span>Autosave</span></p>
 
     <section class="close">
       <h2>Open your agents' folder.</h2>
       <div class="cta">
         <a class="btn" id="download-2" href="https://github.com/amit-kap/monocle/releases/latest">Download Monocle</a>
       </div>
+      <p class="fine">Monocle is free, keeps your files on your own disk, and only edits <code>.md</code> files.</p>
     </section>
   </main>
 
@@ -383,7 +390,7 @@
       if (!dmg) return;
       document.querySelectorAll("#download, #download-2").forEach((a) => (a.href = dmg.browser_download_url));
       const mb = Math.round(dmg.size / 1048576);
-      document.getElementById("meta").textContent = `Version ${rel.tag_name.replace(/^v/, "")}, ${mb} MB, Mac with Apple silicon.`;
+      document.getElementById("meta").textContent = `Free · Version ${rel.tag_name.replace(/^v/, "")} · ${mb} MB · macOS, Apple silicon.`;
     } catch (_) { /* keep the releases-page fallback */ }
   })();
 </script>
