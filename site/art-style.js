@@ -1,4 +1,4 @@
-// One style for every feature card (art3d.js, art-line.js, art-frames.js).
+// One style for every feature card (art3d.js, art-line.js, art-coins.js, art-pass.js).
 // Colours come from the --art-* variables in art.css; the numbers below are the rest of the look. Change them here only.
 import * as THREE from "three";
 import { LineSegments2 } from "three/addons/lines/LineSegments2.js";

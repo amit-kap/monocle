@@ -205,8 +205,6 @@
   code { font: .88em var(--mono); color: var(--text); }
   .lede code, .copy p code { color: var(--brass); }
 
-  .strip { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem 0; margin: clamp(3rem, 6vw, 4.5rem) 0 0; font-size: .9375rem; color: var(--muted); }
-  .strip span + span::before { content: "·"; margin-inline: .9rem; }
   .fine { margin: 1.75rem auto 0; max-width: 30rem; font-size: .9375rem; color: var(--muted); text-wrap: balance; }
 
   /* Closing */
@@ -324,11 +322,9 @@
           <h2>Hand it back</h2>
           <p>Copy an <code>@path</code> the agent can follow, or the whole file. See exactly what the agent changed since you opened it.</p>
         </div>
-        <div class="art" id="art-plain" role="img" aria-label="One sheet read by a lens, standing for Monocle, and by a cube, standing for an agent."><div class="ph-note">Image placeholder<br>Hand it back</div></div>
+        <div class="art" id="art-pass" role="img" aria-label="Pages ride a belt through a gate; after it, the one line the agent changed is brass."><div class="ph-note">Image placeholder<br>Hand it back</div></div>
       </li>
     </ul>
-
-    <p class="strip"><span>⌘P to search</span><span>Rich, source or side by side</span><span>Light, dark, tint</span><span>Autosave</span></p>
 
     <section class="close">
       <h2>Open your agents' folder.</h2>
@@ -353,9 +349,9 @@
 <script src="art.js"></script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module" src="art3d.js"></script>
-<script type="module" src="art-frames.js"></script>
 <script type="module" src="art-line.js"></script>
 <script type="module" src="art-coins.js"></script>
+<script type="module" src="art-pass.js"></script>
 <script>
   // Theme toggle: flips data-theme, remembers the choice and tells the 3D scenes to repaint.
   (() => {
