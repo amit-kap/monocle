@@ -1,7 +1,7 @@
 // "Edits that stay valid Markdown": a page split into slabs, built live with three.js.
 // Blocks reorder themselves: one rises, flashes brass, slides over its neighbour (which slides under it into the gap), lands and goes grey.
 import * as THREE from "three";
-import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMaterial, barMaterial, addBelt } from "./art-style.js";
+import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMaterial, barMaterial, addBelt, shadowTexture } from "./art-style.js";
 
 (() => {
   const host = document.getElementById("art-blocks");
@@ -24,16 +24,19 @@ import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMateria
   cam.position.set(20, 20, 20); cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
 
   // Colours come from art-style.js, so every card looks the same.
-  const col = { line: new THREE.Color(), lineHot: new THREE.Color(), fill: new THREE.Color(), bar: new THREE.Color() };
+  const col = { line: new THREE.Color(), lineHot: new THREE.Color(), fill: new THREE.Color(), bar: new THREE.Color(), brass: new THREE.Color() };
   const trackMat = new THREE.MeshBasicMaterial();
   function theme() {
     const th = readTheme();
-    col.fill.copy(th.folder); col.line.copy(th.line); col.lineHot.copy(th.hot); col.bar.copy(th.ink);
+    col.fill.copy(th.folder); col.line.copy(th.line); col.lineHot.copy(th.hot); col.bar.copy(th.ink); col.brass.copy(th.brass);
     trackMat.color.copy(th.track); railMat.color.copy(th.line);
   }
 
   const T = 0.9, X = 18, FLAT = 0.02, LIFT = 2.6, BUMP = 0.9, GAP = 0.8;
   const slabs = [];
+  // The same fake shadow as the other cards (light from above): two soft layers on the belt under each block. They stay on the belt
+  // when the block lifts, and fade and spread a little with the height.
+  const shadowTex = shadowTexture(), SHADOW = [[.26, 3.2, 2.4], [.36, .8, .8]];   // opacity, extra width, extra depth (past the block's footprint)
   // Page coordinates: x along the page, y down it, z up. Three.js is y-up, so (x, y, z) -> (x, z, y).
   function slab(depth) {
     const g = new THREE.Group();
@@ -45,31 +48,48 @@ import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMateria
     const top = new THREE.Group(); top.position.y = T / 2 + FLAT;
     g.add(fill, edges, top);
     scene.add(g);
-    const s = { g, top, fill, fillMat, edgeMat, depth, barMat: barMaterial(),
+    const shadow = new THREE.Group(); scene.add(shadow);
+    const shadowMats = SHADOW.map(([op, ew, ed], k) => {
+      const m = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: op, depthWrite: false });
+      const p = new THREE.Mesh(new THREE.PlaneGeometry(X + ew, depth + ed), m);
+      p.rotation.x = -Math.PI / 2; p.position.y = .02 + k * .005; p.renderOrder = -1; shadow.add(p); return m;
+    });
+    const s = { g, top, shadow, shadowMats, fill, fillMat, edgeMat, depth, barMat: Object.assign(barMaterial(), { opacity: .9 }),
       hover: 0, hoverTarget: 0, lift: 0, fl: 0, eb: 0, bb: 0, z: 0 };
     slabs.push(s); return s;
   }
+  // The marks are brass pills: flat bars with fully rounded ends.
+  function pill(w, h) {
+    const r = Math.min(w, h) / 2, x = w / 2, y = h / 2, sh = new THREE.Shape();
+    sh.moveTo(-x + r, -y); sh.lineTo(x - r, -y); sh.absarc(x - r, -y + r, r, -Math.PI / 2, 0, false);
+    sh.lineTo(x, y - r); sh.absarc(x - r, y - r, r, 0, Math.PI / 2, false);
+    sh.lineTo(-x + r, y); sh.absarc(-x + r, y - r, r, Math.PI / 2, Math.PI, false);
+    sh.lineTo(-x, -y + r); sh.absarc(-x + r, -y + r, r, Math.PI, Math.PI * 1.5, false);
+    return new THREE.ShapeGeometry(sh, 10);
+  }
   function bar(s, x0, x1, yy, w) {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, w), s.barMat);
+    const p = new THREE.Mesh(pill(x1 - x0, w), s.barMat);
     p.rotation.x = -Math.PI / 2;
     p.position.set(-X / 2 + (x0 + x1) / 2, 0, -s.depth / 2 + yy);
     s.top.add(p); return p;
   }
   function vbar(s, xx, y0, y1, w) {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, y1 - y0), s.barMat);
+    const p = new THREE.Mesh(pill(w, y1 - y0), s.barMat);
     p.rotation.x = -Math.PI / 2;
     p.position.set(-X / 2 + xx, 0, -s.depth / 2 + (y0 + y1) / 2);
     s.top.add(p); return p;
   }
   function rod(s, p, q) {
     const L = Math.hypot(q[0] - p[0], q[1] - p[1]);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(L, .3), s.barMat);
+    const m = new THREE.Mesh(pill(L, .3), s.barMat);
     m.rotation.set(-Math.PI / 2, 0, 0); m.rotateZ(-Math.atan2(q[1] - p[1], q[0] - p[0]));
     m.position.set(-X / 2 + (p[0] + q[0]) / 2, 0, -s.depth / 2 + (p[1] + q[1]) / 2);
     s.top.add(m);
   }
 
   const heading = slab(3); bar(heading, 1.2, 10.5, 1.5, .9);
+  const list = slab(3.8);                                    // a bulleted list: a dot and a line, three times
+  [.95, 1.9, 2.85].forEach((y, i) => { bar(list, 1.2, 1.7, y, .5); bar(list, 2.5, [9.5, 12, 7.5][i], y, .4); });
   const todo = slab(4);
   [1.1, 2.9].forEach((y) => bar(todo, 1.2, 3.0, y, .14));
   [1.2, 3.0].forEach((x) => vbar(todo, x, 1.1, 2.9, .14));
@@ -79,6 +99,8 @@ import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMateria
   [.8, 3, 5.2].forEach((y) => bar(table, 1, 17, y, .1));
   [1, 6.33, 11.67, 17].forEach((x) => vbar(table, x, .8, 5.2, .1));
   [[1.8, 4.6], [7.1, 10.2], [12.4, 15.5]].forEach(([a, b]) => { bar(table, a, b, 1.9, .3); bar(table, a, b - .6, 4.1, .3); });
+  const quote = slab(3.2);                                   // a block quote: a rule down the left, two lines of text
+  vbar(quote, 1.3, .6, 2.6, .4); bar(quote, 2.6, 13.8, 1.2, .4); bar(quote, 2.6, 9.4, 2.1, .4);
   const code = slab(5.6);
   [[1.6, 9, 1.2], [3.2, 12.4, 2.6], [3.2, 8, 4]].forEach(([a, b, y]) => bar(code, a, b, y, .45));
 
@@ -93,7 +115,7 @@ import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMateria
     order.forEach((s) => { out.set(s, y + s.depth / 2 - TOTAL / 2); y += s.depth + GAP; });
     return out;
   }
-  const home = [heading, todo, table, code];
+  const home = [heading, list, todo, table, quote, code];
 
   // Frame the page centred on its resting pose, with room above for a lifted block.
   function extent(lift) {
@@ -129,7 +151,7 @@ import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMateria
   const clamp = (x) => Math.min(1, Math.max(0, x));
   const ramp = (t, a, b) => clamp((t - a) / (b - a));
   const STEP = 4.4, SPEED = 1.69;
-  const PAIRS = [[1, 2], [0, 1], [2, 3], [1, 2], [2, 3], [0, 1]];
+  const PAIRS = [[2, 3], [0, 1], [4, 5], [1, 2], [3, 4], [2, 3], [0, 1], [4, 5], [3, 4], [1, 2]];
   let cache = { step: 0, order: home.slice() };
   function plan(step) {
     if (step < cache.step) cache = { step: 0, order: home.slice() };
@@ -161,7 +183,10 @@ import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMateria
       s.g.position.set(0, T / 2 + s.lift * LIFT + s.hover * BUMP, s.z);
       s.fillMat.color.copy(col.fill);
       s.edgeMat.color.copy(col.line).lerp(col.lineHot, s.hover);
-      s.barMat.color.copy(col.bar);
+      s.barMat.color.copy(col.brass);
+      const h = clamp(s.lift + s.hover * BUMP / LIFT);   // how far the block is off the belt, 0 to 1
+      s.shadow.position.set(0, 0, s.z); s.shadow.scale.set(1 + .08 * h, 1, 1 + .12 * h);
+      s.shadowMats.forEach((m, k) => { m.color.copy(col.bar); m.opacity = SHADOW[k][0] * (1 - .55 * h); });
     });
     renderer.render(scene, cam);
   }

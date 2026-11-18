@@ -49,10 +49,22 @@ export const edgeLines = (geo, mat, threshold = 1) =>
 export const fillMaterial = () => new THREE.MeshBasicMaterial({ polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
 export const barMaterial = () => new THREE.MeshBasicMaterial({ transparent: true, opacity: STYLE.BAR_OPACITY });
 
-// Two rails along z at x = ±half, with the white track between them.
-export function addBelt(scene, half, length, railMat, trackMat) {
+// Two rails with the white track between them. Along z by default (rails at x = ±half); along: "x" mirrors it (rails at z = ±half).
+export function addBelt(scene, half, length, railMat, trackMat, along = "z") {
   const track = new THREE.Mesh(new THREE.PlaneGeometry(half * 2, length * 2), trackMat);
-  track.rotation.x = -Math.PI / 2; track.position.y = STYLE.TRACK_Y; scene.add(track);
+  track.rotation.x = -Math.PI / 2; track.position.y = STYLE.TRACK_Y;
+  if (along === "x") track.rotation.z = Math.PI / 2;
+  scene.add(track);
   [-1, 1].forEach((s) => scene.add(new LineSegments2(
-    new LineSegmentsGeometry().setPositions([s * half, STYLE.RAIL_Y, -length, s * half, STYLE.RAIL_Y, length]), railMat)));
+    new LineSegmentsGeometry().setPositions(along === "x"
+      ? [-length, STYLE.RAIL_Y, s * half, length, STYLE.RAIL_Y, s * half]
+      : [s * half, STYLE.RAIL_Y, -length, s * half, STYLE.RAIL_Y, length]), railMat)));
+}
+
+// A soft round fade (white, alpha falling to 0) for fake shadows; tint it with the material colour and squash it with the plane size.
+export function shadowTexture() {
+  const cv = Object.assign(document.createElement("canvas"), { width: 128, height: 128 }), c = cv.getContext("2d"), g = c.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(.3, "rgba(255,255,255,.7)"); g.addColorStop(.65, "rgba(255,255,255,.22)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  c.fillStyle = g; c.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(cv);
 }

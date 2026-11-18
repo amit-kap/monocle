@@ -1,7 +1,7 @@
 // "Your agents' files, in one place": folders ride an assembly line. Each one stops in the centre of the frame,
 // three files drop into it from above, and it rides on while the next folder arrives. Built live with three.js.
 import * as THREE from "three";
-import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMaterial, barMaterial, addBelt } from "./art-style.js";
+import { STYLE, PR, readTheme, lineMaterial, resizeLines, edgeLines, fillMaterial, barMaterial, addBelt, shadowTexture } from "./art-style.js";
 import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
 
 const host = document.getElementById("art-files");
@@ -21,13 +21,15 @@ if (host) (() => {
   const lineMats = [];
   const lm = (w) => lineMaterial(lineMats, w);
   const fillMat = fillMaterial(), barMat = barMaterial(), railMat = lm(), trackMat = new THREE.MeshBasicMaterial();
-  const markMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: STYLE.MARK_OPACITY, side: THREE.DoubleSide });
-  const markDim = new THREE.MeshBasicMaterial({ transparent: true, opacity: STYLE.MARK_DIM_OPACITY, side: THREE.DoubleSide });
+  const markMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: .95, side: THREE.DoubleSide });
+  const markDim = new THREE.MeshBasicMaterial({ transparent: true, opacity: .35, side: THREE.DoubleSide });
+  const shadowMat = new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, opacity: .26, depthWrite: false });
+  const contactMat = shadowMat.clone(); contactMat.opacity = .36;   // the darker spot right under the tray, as on the coins   // fake shadow, light from above
   function theme() {
     const th = readTheme();
     col.fill.copy(th.card); col.folder.copy(th.folder); col.line.copy(th.line); col.bar.copy(th.ink);
-    fillMat.color.copy(col.fill); barMat.color.copy(col.bar); markMat.color.copy(col.bar); markDim.color.copy(col.bar);
-    railMat.color.copy(col.line); trackMat.color.copy(th.track);
+    fillMat.color.copy(col.fill); barMat.color.copy(col.bar); markMat.color.copy(th.brass); markDim.color.copy(th.brass);   // the agent icons are brass
+    shadowMat.color.copy(th.ink); contactMat.color.copy(th.ink); railMat.color.copy(col.line); trackMat.color.copy(th.track);
   }
   const edges = (geo, mat) => edgeLines(geo, mat);
   function box(parent, w, h, d, x, y, z, mat, fill = fillMat) {
@@ -61,6 +63,10 @@ if (host) (() => {
   const folders = [], KINDS = ["openai", "claude", "opencode"];   // the order the top file cycles through: ChatGPT, Claude, OpenCode
   for (let i = 0; i < N; i++) {
     const g = new THREE.Group(), em = lm(1), fm = fillMat.clone(); scene.add(g); g.scale.setScalar(SCALE);
+    [[9, 8.2, shadowMat], [7.4, 6.8, contactMat]].forEach(([w, d, m], k) => {   // the same two soft layers as card 2
+      const sh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), m);
+      sh.rotation.x = -Math.PI / 2; sh.position.set(0, .02 + k * .005, 0); sh.renderOrder = -1; g.add(sh);
+    });
     box(g, 7, .3, 6.4, 0, .15, 0, em, fm); box(g, 7, 1.8, .25, 0, 1.2, -3.075, em, fm); box(g, 2.6, .5, .25, -2.2, 2.35, -3.075, em, fm); box(g, .25, 1.2, 6.4, -3.375, .9, 0, em, fm);
     const sheets = [0, 1, 2].map((k) => {
       const mat = lm(1), sf = fillMat.clone(), s = box(g, 5.2, .22, 3.6, 0, 9, 0, mat, sf);   // dropped straight on top of one another

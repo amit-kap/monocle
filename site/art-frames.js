@@ -96,12 +96,4 @@ if (plain) stage(plain, (a) => {
   a.box(4.5, 4.5, 4.5, 11.5, 2.25, 0);                                                                                       // the agent
 });
 
-// 3. Know what it costs the context window: a page, and its sections measured as columns.
-const tokens = document.getElementById("art-tokens");
-if (tokens) stage(tokens, (a) => {
-  a.rail = 17;
-  const page = a.box(9, .4, 12, -8, .2, 0);                                                                  // the page
-  [[1, 7.2, -4.2], [1, 5.4, -2.7], [1, 7.6, -1.2], [1, 4.6, .3], [1, 6.8, 1.8], [1, 3.8, 3.3]].forEach(([p, q, z]) => a.barTop(page, p - 5, q - 5, z, .5));
-  a.box(15, .4, 4, 7, .2, 0);                                                                                // the meter's base
-  [3, 6.5, 4, 9, 5.5].forEach((h, i) => a.box(2, h, 2, 1.5 + i * 3.2, .4 + h / 2, 0));                       // a column per section
-});
+// 3. Know what it costs the context window: animated in art-coins.js.
