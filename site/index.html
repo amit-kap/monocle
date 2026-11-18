@@ -18,6 +18,7 @@
 <style>
   /* Brass & Graphite, the same tokens the app uses. */
   :root {
+    --gap: clamp(5rem, 11vw, 9rem);   /* the one space between sections: hero, screenshot, each feature, closing, footer */
     color-scheme: light dark;
     --bg: #fbfaf7;
     --bg-soft: #f3f1ec;
@@ -127,7 +128,7 @@
   .top > span { font-size: 1.125rem; font-weight: 600; letter-spacing: -0.005em; }
 
   /* Hero */
-  .hero { padding-block: clamp(2.5rem, 7vw, 5.5rem) clamp(1.5rem, 4vw, 2.5rem); text-align: center; }
+  .hero { padding-block: clamp(4rem, 10vw, 7.5rem) var(--gap); text-align: center; }
   h1 {
     margin: 0 auto;
     max-width: 18ch;
@@ -135,9 +136,9 @@
     letter-spacing: -0.028em;
     text-wrap: balance;
   }
-  .lede { margin: 1.75rem auto 0; max-width: 34rem; font-size: 1.1875rem; color: var(--muted); text-wrap: pretty; }
+  .lede { margin: 2.25rem auto 0; max-width: 34rem; font-size: 1.1875rem; color: var(--muted); text-wrap: pretty; }
 
-  .hero .cta { flex-direction: column; justify-content: center; gap: 1.25rem; }
+  .hero .cta { flex-direction: column; justify-content: center; gap: 1.5rem; margin-top: 3.25rem; }
   .meta { white-space: pre-line; }
   .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; margin-top: 2.5rem; }
   /* The app icon as a button: a dark glass lens set in a gold bezel. */
@@ -159,31 +160,38 @@
       inset 0 -6px 12px rgba(0, 0, 0, .35),
       0 1px 2px rgba(35, 33, 28, .3),
       0 10px 20px -8px rgba(35, 33, 28, .45);
-    transition: transform .15s ease, box-shadow .2s ease;
+    transition: transform .35s cubic-bezier(.3, 0, .2, 1), box-shadow .2s ease;
   }
   /* The lens reflection: a pale crescent across the upper half. */
   .btn::before {
     content: ""; position: absolute; z-index: -1; inset: 0 0 50% 0; pointer-events: none;
     background: linear-gradient(180deg, rgba(255, 255, 255, .42), rgba(255, 255, 255, .2));
   }
-  /* A sheen crosses the glass on hover. */
-  .btn::after {
-    content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; z-index: -1;
-    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .28), transparent);
-    transform: skewX(-20deg); transition: left .6s ease;
-  }
-  .btn:hover { transform: translateY(-1px); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .55), inset 0 -6px 12px rgba(0, 0, 0, .35), 0 2px 4px rgba(35, 33, 28, .3), 0 14px 26px -8px rgba(35, 33, 28, .5); }
-  .btn:hover::after { left: 130%; }
-  @media (prefers-reduced-motion: reduce) { .btn::after { transition: none; } }
-  .btn:active { transform: translateY(0); }
+  .btn::before { transition: opacity .2s ease; }
+  /* On hover the glass goes flat, solid brass: no reflection, no gradient, no shadows. */
+  /* The hover target is a wrapper that never shrinks. If the button itself were the target, scaling it down would pull its edge out from
+     under a pointer resting near it, which ends the hover, scales it back up, restarts the hover, and so on: a flicker. */
+  .btn-hit { display: inline-flex; }
+  .btn-hit:hover .btn::before, .btn:focus-visible::before { opacity: 0; }
+  .btn-hit:hover .btn, .btn:focus-visible { transform: scale(.94); color: #1d1b15; background: #d6a64d; box-shadow: none; }
+  .btn-hit:active .btn { transform: scale(.9); }
+  /* The label gives way to a download icon on hover; on leave it swaps back and the button returns to 100%. */
+  .btn .lbl { display: inline-flex; transition: transform .35s cubic-bezier(.65, 0, .35, 1); }
+  .btn .go { position: absolute; inset: 0; display: grid; place-items: center; transform: translateY(-110%); transition: transform .35s cubic-bezier(.65, 0, .35, 1); }
+  .btn .go svg { width: 1.3rem; height: 1.3rem; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  /* A push: the label slides down and out while the icon slides down and in from above, both at once; on leave they push back up. */
+  .btn-hit:hover .lbl, .btn:focus-visible .lbl { transform: translateY(2.4em); }
+  .btn-hit:hover .go, .btn:focus-visible .go { transform: none; }
+  @media (prefers-reduced-motion: reduce) { .btn, .btn::before, .btn .lbl, .btn .go { transition: none; } }
   .btn:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .meta { margin: 0; font-size: .9375rem; color: var(--muted); }
+  .meta .free { color: var(--brass); }
 
   /* Screenshot */
-  .shot { margin: 0 0 clamp(4rem, 9vw, 7rem); }
+  .shot { margin: 0 0 var(--gap); }
 
   /* Features: image and text rows, alternating sides. */
-  .list { margin: 0; padding: 0; list-style: none; display: grid; gap: clamp(3.5rem, 8vw, 6.5rem); }
+  .list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--gap); }
   .list li {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
     gap: 1.5rem clamp(2rem, 6vw, 5rem); align-items: start;
@@ -205,14 +213,14 @@
   code { font: .88em var(--mono); color: var(--text); }
   .lede code, .copy p code { color: var(--brass); }
 
-  .fine { margin: 1.75rem auto 0; max-width: 30rem; font-size: .9375rem; color: var(--muted); text-wrap: balance; }
+  .fine { margin: 2.25rem auto 0; max-width: 30rem; font-size: .9375rem; color: var(--muted); text-wrap: balance; }
 
   /* Closing */
-  .close { padding-block: clamp(4rem, 10vw, 8rem) clamp(3rem, 6vw, 4.5rem); text-align: center; }
-  .close .cta { justify-content: center; }
+  .close { padding-block: var(--gap); text-align: center; }
+  .close .cta { justify-content: center; margin-top: 3.25rem; }
   .close h2 { margin: 0 auto; max-width: 16ch; font: 300 clamp(2.25rem, 5.5vw, 3.75rem)/1.04 var(--serif); letter-spacing: -0.022em; text-wrap: balance; }
 
-  footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; border-top: 1px solid var(--border); padding-block: 1.75rem 2.5rem; font-size: .875rem; color: var(--muted); }
+  footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; border-top: 1px solid var(--border); padding-block: 2.5rem 4.5rem; font-size: .875rem; color: var(--muted); }
   footer a { color: inherit; text-decoration: none; }
   footer a:hover { color: var(--text); }
   footer nav { display: flex; gap: 1.5rem; }
@@ -256,7 +264,7 @@
       <p class="lede">Claude Code, Codex and friends write plans, specs and <code>CLAUDE.md</code> files. Monocle lets you read them like documents and fix them in place, with a token count always in view.</p>
       <div class="cta">
         <a class="btn" id="download" href="https://github.com/amit-kap/monocle/releases/latest">Download Monocle</a>
-        <p class="meta" id="meta">Free · macOS · Apple silicon.</p>
+        <p class="meta"><span id="meta">macOS · Apple silicon</span> · <span class="free">Free</span></p>
       </div>
     </section>
 
@@ -353,6 +361,14 @@
 <script type="module" src="art-coins.js"></script>
 <script type="module" src="art-pass.js"></script>
 <script>
+  // The download buttons: the label sits in a span so it can swap for the download icon on hover.
+  document.querySelectorAll(".btn").forEach((a) => {
+    const text = a.textContent.trim();
+    a.setAttribute("aria-label", text);
+    const hit = document.createElement("span"); hit.className = "btn-hit"; a.replaceWith(hit); hit.append(a);
+    a.innerHTML = `<span class="lbl" aria-hidden="true">${text}</span>` +
+      `<span class="go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></span>`;
+  });
   // Theme toggle: flips data-theme, remembers the choice and tells the 3D scenes to repaint.
   (() => {
     const btn = document.getElementById("theme"), root = document.documentElement;
@@ -387,7 +403,7 @@
       if (!dmg) return;
       document.querySelectorAll("#download, #download-2").forEach((a) => (a.href = dmg.browser_download_url));
       const mb = Math.round(dmg.size / 1048576);
-      document.getElementById("meta").textContent = `Free · Version ${rel.tag_name.replace(/^v/, "")} · ${mb} MB · macOS, Apple silicon.`;
+      document.getElementById("meta").textContent = `macOS · Apple silicon · Version ${rel.tag_name.replace(/^v/, "")} · ${mb} MB`;
     } catch (_) { /* keep the releases-page fallback */ }
   })();
 </script>
