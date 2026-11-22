@@ -6,7 +6,7 @@ platform: macos
 interest: 
 next: Fix bugs
 repo: github.com/amit-kap/monocle
-updated: 2026-10-29
+updated: 2026-11-22
 ---
 
 # Monocle
@@ -22,3 +22,4 @@ Open any folder and edit its markdown files in a block editor, with a file tree,
 - 2026-10-29: Rebuilt the window shell to the frame's layout: the sidebar runs to the top edge (traffic lights over it), each column carries its own top row, and the note's title moved out of a centred titlebar into a left-aligned 40px toolbar above the page. The sidebar's search/refresh/more moved up to the window row, leaving the root folder its own row. Toolbar height is 40px rather than the frame's 36, at Amit's request.
 - 2026-10-30: The appearance panel disables Page tint and Page width while no note is open — they have nothing to act on — and leaves Theme live, since it dresses the window. Its enter/exit was also rebuilt so the open state is the resting style; a missed cue can now cost the motion but never the panel.
 - 2026-11-05: Landing page (site/, monocle.amitkap.com) positioned as "a Markdown editor for your agents' files", the simplest way to keep track of agent files, "just a Markdown editor". AMIT SAYS: "a md editor for simple interaction with your agents ... Just a md editor - thats it". Hosting plan: GitHub Releases for the DMG, Cloudflare Pages for the site; Apple silicon only; signing undecided.
+- 2026-11-22: Editor scope set for `feature/editor`. AMIT SAYS: all markdown features supported, the selection toolbar and block drag/change must work fully, and a demo folder to inspect. Chosen: GitHub markdown plus footnotes (no math, Mermaid or callouts), raw HTML kept but never rendered, and the slash menu offers every block type again (reverses the brief's cut to three).

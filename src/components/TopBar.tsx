@@ -43,6 +43,7 @@ export function TopBar({ trailing }: { trailing?: React.ReactNode }) {
   const setView = useStore((s) => s.setView);
   const openFolder = useStore((s) => s.openFolder);
   const liveText = useStore((s) => s.liveText);
+  const titleDraft = useStore((s) => s.titleDraft);
 
   const target = activePath ?? folderPage;
   const trail = target ? crumbTrail(placeOf(places, target), target) : null;
@@ -150,7 +151,11 @@ export function TopBar({ trailing }: { trailing?: React.ReactNode }) {
           return (
             <span key={`${part.path}:${index}`} className="flex min-w-0 items-center gap-1">
               {last ? (
-                <b className="truncate font-semibold text-[var(--text)]">{part.name}</b>
+                <b className="truncate font-semibold text-[var(--text)]">
+                  {titleDraft && titleDraft.path === activePath
+                    ? titleDraft.name + (/\.(md|markdown)$/i.exec(part.name)?.[0] ?? "")
+                    : part.name}
+                </b>
               ) : trail.inside ? (
                 <button
                   type="button"

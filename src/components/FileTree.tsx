@@ -1,5 +1,6 @@
 import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import type { ChangeNotice, TreeNode } from "../types";
+import { useStore } from "../store/useStore";
 import { isEmptyDir, isHiddenDir, rowLabel } from "../lib/treeView";
 import {
   ChevronDown,
@@ -164,6 +165,11 @@ function Row({
   // can open, name, or make a note in, it just has nothing to read yet.
   const dim = isDir && node.hasNotes === false && !selected;
   const innerName = isDir ? (node.label?.[node.label.length - 1] ?? node.name) : node.name;
+  // The open note's title, as it is being typed in the editor.
+  const draft = useStore((s) =>
+    !isDir && s.titleDraft?.path === node.path ? s.titleDraft.name : null,
+  );
+  const fileName = draft ? draft + (/\.(md|markdown)$/i.exec(node.name)?.[0] ?? ".md") : node.name;
 
   return (
     <div
@@ -238,7 +244,7 @@ function Row({
             isDir || selected ? "font-medium" : ""
           } ${dim ? "text-[var(--text-faint)]" : isDir ? "text-[var(--text)]" : ""}`}
         >
-          {node.label ? rowLabel(node) : node.name}
+          {node.label ? rowLabel(node) : fileName}
         </span>
       )}
       {changed && !renaming && (

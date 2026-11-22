@@ -23,7 +23,7 @@ export const SlashCommand = Extension.create({
                 item.title.toLowerCase().includes(q) ||
                 item.keywords.some((keyword) => keyword.includes(q)),
             )
-            .slice(0, 10);
+            ;
         },
         command: ({ editor, range, props }) => props.run(editor, range),
         render: () => {

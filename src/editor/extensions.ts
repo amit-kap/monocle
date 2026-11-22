@@ -14,6 +14,9 @@ import { SlashCommand } from "./extensions/SlashCommand";
 import { SoftBreakSpace } from "./extensions/SoftBreakSpace";
 import { TaskListTight } from "./extensions/TaskListTight";
 import { ParenNumberedList } from "./extensions/ParenNumberedList";
+import { MarkdownText } from "./extensions/MarkdownText";
+import { RawHtmlBlock, RawHtmlInline } from "./extensions/RawHtml";
+import { FootnoteDef, FootnoteRef } from "./extensions/Footnotes";
 
 // The one extension stack the app ships with, shared by the editor pane and
 // the round-trip fixtures so the tests cannot drift from what runs.
@@ -26,7 +29,14 @@ export const appExtensions = [
     underline: false,
     // Replaced below by the lowlight-backed version.
     codeBlock: false,
+    // Replaced by MarkdownText, which escapes only the `<` that would open a tag.
+    text: false,
   }),
+  MarkdownText,
+  RawHtmlInline,
+  RawHtmlBlock,
+  FootnoteRef,
+  FootnoteDef,
   // Without this, `![alt](img.png)` is dropped from the document on load and
   // the image is gone from the file on the next save. LocalImages resolves
   // relative paths through the asset protocol and swaps failures for a

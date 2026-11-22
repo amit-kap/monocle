@@ -4,7 +4,6 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
-  type ReactNode,
 } from "react";
 import type { Editor } from "@tiptap/react";
 import type { Transaction } from "@tiptap/pm/state";
@@ -24,6 +23,7 @@ import {
   type TurnIntoKind,
 } from "../editor/blockUtils";
 import { MenuCheck } from "./MenuCheck";
+import { BlockTypeIcon, LineIcon } from "./blockIcons";
 import { MENU_GAP_BELOW, menuTop } from "../lib/placement";
 
 type MenuState = {
@@ -32,9 +32,10 @@ type MenuState = {
   top: number;
   left: number;
   label: string;
+  center?: number;
 };
 
-type Anchor = Pick<BlockHover, "from" | "to" | "top" | "left" | "label">;
+type Anchor = Pick<BlockHover, "from" | "to" | "top" | "left" | "label"> & { center?: number };
 
 /** A submenu hangs off its trigger's right edge, flipping when the window ends. */
 type SubmenuState = { top: number; left: number };
@@ -50,80 +51,6 @@ function HandleIcon() {
       <circle cx="10" cy="12" r="1.2" />
     </svg>
   );
-}
-
-/** A fixed 18px slot for every item's icon, so the labels line up. */
-function GlyphIcon({ children }: { children: string }) {
-  return <span className="block-menu-icon block-menu-glyph">{children}</span>;
-}
-
-function LineIcon({ children }: { children: ReactNode }) {
-  return (
-    <span className="block-menu-icon">
-      <svg
-        width="15"
-        height="15"
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        {children}
-      </svg>
-    </span>
-  );
-}
-
-function BlockTypeIcon({ kind }: { kind: TurnIntoKind }) {
-  switch (kind) {
-    case "paragraph":
-      return (
-        <LineIcon>
-          <path d="M3.5 4.5h9M3.5 8h9M3.5 11.5h5.5" />
-        </LineIcon>
-      );
-    case 1:
-      return <GlyphIcon>H1</GlyphIcon>;
-    case 2:
-      return <GlyphIcon>H2</GlyphIcon>;
-    case 3:
-      return <GlyphIcon>H3</GlyphIcon>;
-    case "bulletList":
-      return (
-        <LineIcon>
-          <path d="M6 4h7.5M6 8h7.5M6 12h7.5" />
-          <circle cx="3" cy="4" r="0.9" fill="currentColor" stroke="none" />
-          <circle cx="3" cy="8" r="0.9" fill="currentColor" stroke="none" />
-          <circle cx="3" cy="12" r="0.9" fill="currentColor" stroke="none" />
-        </LineIcon>
-      );
-    case "orderedList":
-      return <GlyphIcon>1.</GlyphIcon>;
-    case "taskList":
-      return (
-        <LineIcon>
-          <rect x="2.6" y="2.6" width="10.8" height="10.8" rx="2.4" />
-          <path d="m5.4 8.2 1.9 1.9 3.6-4" />
-        </LineIcon>
-      );
-    case "blockquote":
-      return (
-        <LineIcon>
-          <path d="M3.6 3v10M7 4.5h6M7 8h6M7 11.5h3.5" />
-        </LineIcon>
-      );
-    case "codeBlock":
-      return <GlyphIcon>{"</>"}</GlyphIcon>;
-    case "divider":
-      return (
-        <LineIcon>
-          <path d="M2.5 8h11" />
-        </LineIcon>
-      );
-  }
 }
 
 function MoreBlocksIcon() {
@@ -379,6 +306,7 @@ export function BlockHandles({
           top: anchor.top,
           left: anchor.left,
           label: anchor.label,
+          center: anchor.center,
         });
       }
     }
@@ -392,9 +320,9 @@ export function BlockHandles({
     window.addEventListener("keydown", onKey);
   }
 
-  const handleTop = hover
-    ? hover.top + Math.max(0, Math.min(hover.height, 28) - 24) / 2
-    : 0;
+  // The 24px handle centres on the block's first line.
+  const anchorCenter = (menu as Anchor | null)?.center ?? hover?.center;
+  const handleTop = anchorCenter !== undefined ? anchorCenter - 12 : hover ? hover.top : 0;
   const currentForm = menu && editor ? blockForm(editor, menu.from) : null;
   const closeSubmenu = () => setSubmenu(null);
 
@@ -522,7 +450,16 @@ export function BlockHandles({
       )}
 
       {dropY !== null && (
-        <div className="drop-line" style={{ top: dropY }} aria-hidden />
+        <div
+          className="drop-line"
+          // Only as wide as the note's column, never across the sidebar or panel.
+          style={{
+            top: dropY - 1,
+            left: editorDom?.getBoundingClientRect().left ?? 0,
+            width: editorDom?.getBoundingClientRect().width ?? 0,
+          }}
+          aria-hidden
+        />
       )}
     </>
   );

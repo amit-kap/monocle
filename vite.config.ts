@@ -8,6 +8,8 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(() => ({
   plugins: [react(), tailwindcss()],
+  // The tests touch localStorage and the DOM.
+  test: { environment: "jsdom" },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -26,8 +28,9 @@ export default defineConfig(() => ({
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      // 3. tell Vite to ignore watching `src-tauri`, and the demo notes: they
+      //    are edited in the app, and a change Vite sees reloads the whole page.
+      ignored: ["**/src-tauri/**", "**/demo/**"],
     },
   },
 }));

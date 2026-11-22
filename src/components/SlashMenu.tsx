@@ -69,8 +69,8 @@ export const SlashMenu = forwardRef<
   if (items.length === 0) return null;
 
   return (
-    <div className="slash-menu" ref={menuRef}>
-      <div className="slash-menu-label">Basic blocks</div>
+    <div className="block-menu slash-menu" ref={menuRef}>
+      <div className="block-menu-label">Add element</div>
       <div className="slash-menu-list">
         {items.map((item, index) => (
           <button
@@ -78,7 +78,7 @@ export const SlashMenu = forwardRef<
             type="button"
             onMouseEnter={() => setSelected(index)}
             onClick={() => selectItem(index)}
-            className={`slash-menu-item${index === selected ? " is-selected" : ""}`}
+            className={`block-menu-item${index === selected ? " is-selected" : ""}`}
           >
             {item.icon}
             <span>{item.title}</span>
