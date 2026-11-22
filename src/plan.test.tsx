@@ -177,7 +177,8 @@ async function boot(setup: Partial<ReturnType<typeof useStore.getState>> = {}) {
   fsMock.tree = TREE;
   useModalPrompt.setState({ pending: null });
   useStore.setState({
-    folder: null,
+    places: [],
+    collapsedPlaces: new Set(),
     tree: [],
     notes: [],
     expanded: new Set(),
@@ -195,8 +196,6 @@ async function boot(setup: Partial<ReturnType<typeof useStore.getState>> = {}) {
     view: "rich",
     settingsOpen: false,
     renamingPath: null,
-    madeDirs: new Set(),
-    recentRoots: [],
     error: null,
     ...setup,
   });
@@ -231,7 +230,7 @@ describe("G0 decisions are honoured", () => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "p", metaKey: true, bubbles: true }));
     });
     await tick();
-    const input = q<HTMLInputElement>("input[placeholder='Search Projects']");
+    const input = q<HTMLInputElement>("input[placeholder='Search']");
     expect(input).not.toBeNull();
   });
 
@@ -278,30 +277,59 @@ describe("G1 shell", () => {
 });
 
 describe("G2 root and tree", () => {
-  it("lays the sidebar out: search box and tree, root button with the More menu beside it at the foot, no Settings button, no FILES label", async () => {
+  it("lays the sidebar out: search box, the place's header over its tree, Add place with the More menu beside it at the foot, no Settings button, no FILES label", async () => {
     await boot();
     const aside = q("aside:not([aria-label])")!;
     expect(aside.textContent).not.toContain("New file");
     expect(q("[data-search-button]")!.textContent).toBe("Search");
     expect(q("input[data-search]")).toBeNull();
     expect(aside.textContent).not.toContain("FILES");
-    const rootButton = q("[data-root-button]")!;
-    expect(rootButton.textContent).toContain("Projects");
-    expect(rootButton.textContent).not.toContain("/Users");
-    expect(rootButton.nextElementSibling?.getAttribute("aria-label")).toBe("More");
+    const header = row(ROOT)!;
+    expect(header.hasAttribute("data-place")).toBe(true);
+    expect(header.textContent).toContain("Projects");
+    expect(header.textContent).not.toContain("/Users");
+    const add = q("[data-add-place-button]")!;
+    expect(add.textContent).toBe("Add place…");
+    expect(add.nextElementSibling?.getAttribute("aria-label")).toBe("More");
     expect(q("button[aria-label='Settings']")).toBeNull();
   });
 
-  it("the root menu lists Go up to, Recent and Choose another folder", async () => {
-    await boot({ recentRoots: ["/Users/me/Other"] });
-    click(q("[data-root-button]"));
+  it("a place's menu offers new file and folder, Reveal, moving, and Remove from sidebar", async () => {
+    await boot();
+    await act(async () => {
+      await useStore.getState().addPlace("/Users/me/Other");
+    });
+    act(() => {
+      row(ROOT)!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    });
+    expect(qa("[role='menuitem']").map((i) => i.textContent)).toEqual([
+      "New file here",
+      "New folder here",
+      "Reveal in Finder",
+      "Move down",
+      "Remove from sidebar",
+    ]);
+    click(qa("[role='menuitem']").find((i) => i.textContent === "Remove from sidebar")!);
     await tick();
-    const menu = q("[data-root-menu]")!;
-    expect(menu.textContent).toContain("Go up to");
-    expect(menu.textContent).toContain("me");
-    expect(menu.textContent).toContain("Recent");
-    expect(menu.textContent).toContain("Other");
-    expect(menu.textContent).toContain("Choose another folder…");
+    expect(useStore.getState().places).toEqual(["/Users/me/Other"]);
+    expect(fsMock.trashed).toEqual([]);
+  });
+
+  it("the place header's plus makes a new file in that place", async () => {
+    await boot();
+    fsMock.tree = [...TREE, file("untitled.md", ROOT, 0)];
+    click(row(ROOT)!.querySelector("[data-place-new]"));
+    await tick(20);
+    expect(useStore.getState().activePath).toBe(`${ROOT}/untitled.md`);
+  });
+
+  it("the place chevron folds the place and keeps it folded", async () => {
+    await boot();
+    expect(row(`${ROOT}/README.md`)).not.toBeNull();
+    click(row(ROOT)!.querySelector("button[aria-label='Collapse place']"));
+    await tick();
+    expect(row(`${ROOT}/README.md`)).toBeNull();
+    expect(useStore.getState().collapsedPlaces.has(ROOT)).toBe(true);
   });
 
   it("shows files before folders, with single-child chains merged and SKILL.md folded", async () => {
@@ -331,15 +359,16 @@ describe("G2 root and tree", () => {
     expect(items).toEqual(["Rename", "Copy path for agent", "Move to Trash"]);
   });
 
-  it("right-clicking a folder offers New file here, Rename, Set as root folder, Move to Trash", async () => {
+  it("right-clicking a folder offers New file here, New folder here, Rename, Add as place, Move to Trash", async () => {
     await boot();
     act(() => {
       row(`${ROOT}/docs`)!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
     });
     expect(qa("[role='menuitem']").map((i) => i.textContent)).toEqual([
       "New file here",
+      "New folder here",
       "Rename",
-      "Set as root folder",
+      "Add as place",
       "Move to Trash",
     ]);
   });
@@ -353,7 +382,7 @@ describe("G2 root and tree", () => {
     expect(page.querySelector("h1")?.textContent).toBe("docs");
     expect(page.textContent).toContain("2 items");
     expect(page.textContent).toContain("tokens in files here");
-    expect(page.textContent).toContain("Set as root folder");
+    expect(page.textContent).toContain("Add as place");
     expect(page.textContent).toContain("New file");
     expect(page.textContent).not.toContain("New folder");
     click(page.querySelector(`[data-folder-row="${ROOT}/docs/architecture.md"]`));
@@ -361,12 +390,12 @@ describe("G2 root and tree", () => {
     expect(useStore.getState().activePath).toBe(`${ROOT}/docs/architecture.md`);
   });
 
-  it("the folder page of the root hides Set as root folder", async () => {
+  it("the folder page of a place hides Add as place", async () => {
     await boot();
     await act(async () => {
       await useStore.getState().openFolder(ROOT);
     });
-    expect(q("[data-folder-page]")!.textContent).not.toContain("Set as root folder");
+    expect(q("[data-folder-page]")!.textContent).not.toContain("Add as place");
   });
 
   it("the breadcrumb runs from the root to the file and its folders open their pages", async () => {
@@ -379,17 +408,21 @@ describe("G2 root and tree", () => {
     click(Array.from(crumb.querySelectorAll("button")).find((b) => b.textContent === "docs")!);
     await tick();
     expect(useStore.getState().folderPage).toBe(`${ROOT}/docs`);
-    expect(useStore.getState().folder).toBe(ROOT);
+    expect(useStore.getState().places).toEqual([ROOT]);
   });
 
-  it("a file outside the root shows its last three parts as plain text", async () => {
+  it("a file outside every place shows its last three parts, and offers to add its folder", async () => {
     await boot();
     await act(async () => {
       await useStore.getState().openNote("/Users/me/.claude/skills/x/SKILL.md");
     });
     const crumb = q("[data-breadcrumb]")!;
-    expect(crumb.textContent).toBe("skills/x/SKILL.md");
-    expect(crumb.querySelectorAll("button")).toHaveLength(0);
+    expect(crumb.textContent).toBe("skills/x/SKILL.mdAdd folder to sidebar");
+    expect(crumb.querySelectorAll("button")).toHaveLength(1);
+    click(q("[data-add-place-crumb]"));
+    await tick();
+    expect(useStore.getState().places).toEqual([ROOT, "/Users/me/.claude/skills/x"]);
+    expect(q("[data-add-place-crumb]")).toBeNull();
   });
 
   it("New file opens the new note with its name ready to type", async () => {
@@ -405,15 +438,16 @@ describe("G2 root and tree", () => {
     expect(q("input[aria-label='Name']")).not.toBeNull();
   });
 
-  it("changing the root keeps the open file open", async () => {
+  it("adding and removing places keeps the open file open", async () => {
     await boot();
     await openClaude();
     await act(async () => {
-      await useStore.getState().setRoot(`${ROOT}/docs`);
+      await useStore.getState().addPlace("/Users/me/Other");
+      useStore.getState().removePlace(ROOT);
     });
     expect(useStore.getState().activePath).toBe(`${ROOT}/CLAUDE.md`);
-    // Now outside the root, so the breadcrumb falls back to the last three parts.
-    expect(q("[data-breadcrumb]")!.textContent).toBe("me/Projects/CLAUDE.md");
+    // Now outside every place, so the breadcrumb falls back to the last three parts.
+    expect(q("[data-breadcrumb]")!.textContent).toBe("me/Projects/CLAUDE.mdAdd folder to sidebar");
   });
 
   it("F2 renames and ⌘⌫ trashes the selected row", async () => {
@@ -616,10 +650,10 @@ describe("G5 tokens and the right panel", () => {
 });
 
 describe("G6 changes", () => {
-  it("watches the root folder", async () => {
+  it("watches every place", async () => {
     const fs = await import("./lib/fs");
     await boot();
-    expect(fs.startWatch).toHaveBeenCalledWith(ROOT);
+    expect(fs.startWatch).toHaveBeenCalledWith([ROOT]);
   });
 
   const edited = CLAUDE.replace("Run tests.", "Run all tests.\nThen lint.");
@@ -682,7 +716,7 @@ describe("G7 trash, copy, settings", () => {
     await tick();
     expect(q("[data-settings]")).not.toBeNull();
     expect(qa("[data-settings-section]").map((b) => b.dataset.settingsSection)).toEqual(["files", "appearance"]);
-    expect(text()).toContain("Start folder");
+    expect(text()).toContain("Places");
   });
 
   it("the hidden-files toggle lives in Settings, off by default", async () => {
@@ -808,19 +842,20 @@ describe("window chrome", () => {
 });
 
 describe("first launch", () => {
-  it("opens the home folder as root and selects the first markdown file", async () => {
+  it("starts with the home folder as the only place and selects the first markdown file", async () => {
     await boot();
     localStorage.removeItem("monocle:lastFolder");
-    useStore.setState({ folder: null, tree: [], notes: [], activePath: null });
+    localStorage.removeItem("monocle:places");
+    useStore.setState({ places: [], tree: [], notes: [], activePath: null });
     await act(async () => {
       await useStore.getState().init();
     });
     const state = useStore.getState();
-    expect(state.folder).toBe(state.home);
+    expect(state.places).toEqual([state.home]);
     expect(state.activePath).toBe(state.notes[0].path);
     expect(state.activePath).not.toBeNull();
     // From then on the app returns to where it was left, without re-picking.
-    expect(localStorage.getItem("monocle:lastFolder")).toBe(state.home);
+    expect(localStorage.getItem("monocle:places")).toBe(JSON.stringify([state.home]));
   });
 });
 

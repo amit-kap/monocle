@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { TreeNode } from "../types";
 
 vi.mock("@tauri-apps/api/path", () => ({
   dirname: vi.fn(),
@@ -37,11 +38,15 @@ function resetStore(): void {
   useModalPrompt.setState({ pending: null });
   setBufferSerializer(null);
   localStorage.removeItem("monocle:lastFolder");
+  localStorage.removeItem("monocle:places");
+  localStorage.removeItem("monocle:collapsedPlaces");
+  localStorage.removeItem("monocle:expanded");
   localStorage.removeItem("monocle:showHidden");
   localStorage.removeItem("monocle:contentWidth");
   localStorage.removeItem("monocle:pageTint");
   useStore.setState({
-    folder: "/notes",
+    places: ["/notes"],
+    collapsedPlaces: new Set<string>(),
     notes: [],
     tree: [],
     expanded: new Set<string>(),
@@ -185,8 +190,8 @@ describe("switching notes with unsaved edits", () => {
     expect(writeNote).not.toHaveBeenCalled();
   });
 
-  it("changing the root keeps the open note, unsaved edits and all", async () => {
-    await useStore.getState().setRoot("/elsewhere");
+  it("adding a place keeps the open note, unsaved edits and all", async () => {
+    await useStore.getState().addPlace("/elsewhere");
     expect(useModalPrompt.getState().pending).toBeNull();
     expect(useStore.getState().activePath).toBe("/notes/A.md");
     expect(useStore.getState().status).toBe("dirty");
@@ -307,7 +312,7 @@ describe("hidden files", () => {
   it("rescans with them when the toggle is turned on", async () => {
     await useStore.getState().setShowHidden(true);
     expect(useStore.getState().showHidden).toBe(true);
-    expect(readTree).toHaveBeenLastCalledWith("/notes", true, expect.anything());
+    expect(readTree).toHaveBeenLastCalledWith("/notes", true);
   });
 
   it("keeps the choice for the next launch", async () => {
@@ -317,12 +322,12 @@ describe("hidden files", () => {
 
     await useStore.getState().init();
     expect(useStore.getState().showHidden).toBe(true);
-    expect(readTree).toHaveBeenLastCalledWith("/notes", true, expect.anything());
+    expect(readTree).toHaveBeenLastCalledWith("/notes", true);
   });
 
   it("scans without them by default", async () => {
     await useStore.getState().refresh();
-    expect(readTree).toHaveBeenLastCalledWith("/notes", false, expect.anything());
+    expect(readTree).toHaveBeenLastCalledWith("/notes", false);
   });
 });
 
@@ -504,36 +509,81 @@ describe("saving", () => {
   });
 });
 
-describe("the root folder", () => {
+describe("places", () => {
   beforeEach(resetStore);
 
-  it("remembers the last four roots, most recent first, without duplicates", async () => {
-    for (const dir of ["/a", "/b", "/c", "/d", "/e"]) await useStore.getState().setRoot(dir);
-    expect(useStore.getState().recentRoots).toEqual(["/d", "/c", "/b", "/a"]);
-    await useStore.getState().setRoot("/c");
-    expect(useStore.getState().recentRoots).toEqual(["/e", "/d", "/b", "/a"]);
-  });
-
-  it("opens on the home folder the first time", async () => {
-    localStorage.removeItem("monocle:lastFolder");
-    useStore.setState({ folder: null });
+  it("starts with the home folder the first time", async () => {
+    useStore.setState({ places: [] });
     await useStore.getState().init();
-    expect(useStore.getState().folder).toBe("/home/me");
+    expect(useStore.getState().places).toEqual(["/home/me"]);
+    expect(localStorage.getItem("monocle:places")).toBe(JSON.stringify(["/home/me"]));
   });
 
-  it("reopens the last root", async () => {
+  it("carries the old root folder over as the first place", async () => {
     localStorage.setItem("monocle:lastFolder", "/work");
+    localStorage.setItem("monocle:expanded:/work", JSON.stringify(["/work/docs"]));
     await useStore.getState().init();
-    expect(useStore.getState().folder).toBe("/work");
+    expect(useStore.getState().places).toEqual(["/work"]);
+    expect(useStore.getState().expanded.has("/work/docs")).toBe(true);
   });
 
-  it("remembers what was expanded, per root", async () => {
-    await useStore.getState().setRoot("/one");
-    useStore.getState().toggleDir("/one/docs");
-    await useStore.getState().setRoot("/two");
-    expect(useStore.getState().expanded.size).toBe(0);
-    await useStore.getState().setRoot("/one");
-    expect(useStore.getState().expanded.has("/one/docs")).toBe(true);
+  it("reopens the saved places, in order", async () => {
+    localStorage.setItem("monocle:places", JSON.stringify(["/b", "/a"]));
+    await useStore.getState().init();
+    expect(useStore.getState().places).toEqual(["/b", "/a"]);
+    expect(useStore.getState().tree.map((n) => [n.path, n.place])).toEqual([
+      ["/b", true],
+      ["/a", true],
+    ]);
+  });
+
+  it("adds a place once, removes it, and moves it", async () => {
+    await useStore.getState().addPlace("/two");
+    await useStore.getState().addPlace("/two");
+    expect(useStore.getState().places).toEqual(["/notes", "/two"]);
+    useStore.getState().movePlace("/two", -1);
+    expect(useStore.getState().places).toEqual(["/two", "/notes"]);
+    useStore.getState().removePlace("/two");
+    expect(useStore.getState().places).toEqual(["/notes"]);
+    expect(JSON.parse(localStorage.getItem("monocle:places")!)).toEqual(["/notes"]);
+  });
+
+  it("marks a place it can't read instead of failing the others", async () => {
+    localStorage.setItem("monocle:places", JSON.stringify(["/gone", "/notes"]));
+    readTree.mockImplementation(async (root) => {
+      if (root === "/gone") throw new Error("No such file or directory");
+      return [];
+    });
+    await useStore.getState().init();
+    readTree.mockImplementation(async () => []);
+    const [gone, notes] = useStore.getState().tree;
+    expect(gone.missing).toBe(true);
+    expect(notes.missing).toBeUndefined();
+  });
+
+  it("folds a place shut and remembers it", () => {
+    useStore.getState().toggleDir("/notes");
+    expect(useStore.getState().collapsedPlaces.has("/notes")).toBe(true);
+    expect(useStore.getState().expanded.has("/notes")).toBe(false);
+    expect(localStorage.getItem("monocle:collapsedPlaces")).toBe(JSON.stringify(["/notes"]));
+  });
+
+  it("opening a note inside a folded place opens the place again", async () => {
+    useStore.getState().toggleDir("/notes");
+    await useStore.getState().openNote("/notes/docs/x.md");
+    expect(useStore.getState().collapsedPlaces.has("/notes")).toBe(false);
+    expect(useStore.getState().expanded.has("/notes/docs")).toBe(true);
+  });
+
+  it("never trashes a place's own folder", async () => {
+    await useStore.getState().trashEntry("/notes");
+    expect(trashPath).not.toHaveBeenCalled();
+  });
+
+  it("opens a note outside every place without changing the places", async () => {
+    await useStore.getState().openExternalNote("/elsewhere/n.md");
+    expect(useStore.getState().places).toEqual(["/notes"]);
+    expect(useStore.getState().activePath).toBe("/elsewhere/n.md");
   });
 
   it("the chevron folds without changing what is open", async () => {
@@ -550,5 +600,39 @@ describe("the root folder", () => {
     expect(state.activePath).toBeNull();
     expect(state.expanded.has("/notes/docs")).toBe(true);
     expect(state.expanded.has("/notes/docs/deep")).toBe(true);
+  });
+});
+
+describe("the tree follows Finder", () => {
+  const sub = (children: TreeNode[]): TreeNode => ({
+    name: "docs",
+    path: "/notes/docs",
+    kind: "dir",
+    hasNotes: children.length > 0,
+    children,
+  });
+  const note: TreeNode = { name: "x.md", path: "/notes/docs/x.md", kind: "file" };
+
+  beforeEach(() => {
+    resetStore();
+    useStore.setState({ tree: [sub([note])], notes: [{ name: "x.md", path: note.path }] });
+  });
+
+  it("drops a note moved to the Trash, rescanning only its folder", async () => {
+    readTree.mockResolvedValueOnce([]);
+    await useStore.getState().handleFsChange(["/notes/docs/x.md"]);
+    expect(readTree).toHaveBeenCalledTimes(1);
+    expect(readTree).toHaveBeenCalledWith("/notes/docs", false);
+    expect(useStore.getState().tree[0].children).toEqual([]);
+    expect(useStore.getState().tree[0].hasNotes).toBe(false);
+    expect(useStore.getState().notes).toEqual([]);
+  });
+
+  it("shows a folder made in Finder by rescanning from the nearest folder it knows", async () => {
+    const made: TreeNode = { name: "new", path: "/notes/docs/new", kind: "dir", children: [], hasNotes: false };
+    readTree.mockResolvedValueOnce([note, made]);
+    await useStore.getState().handleFsChange(["/notes/docs/new"]);
+    expect(readTree).toHaveBeenCalledWith("/notes/docs", false);
+    expect(useStore.getState().tree[0].children?.map((n) => n.name)).toEqual(["x.md", "new"]);
   });
 });

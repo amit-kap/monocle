@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "../store/useStore";
-import { crumbTrail } from "../lib/treeView";
+import { crumbTrail, parentDir, placeOf } from "../lib/treeView";
 import { cursorHeadingIndex } from "../lib/editorBuffer";
 import { bufferMarkdown } from "../lib/editorBuffer";
 import { parseHeadings, sectionText } from "../lib/outline";
@@ -9,7 +9,14 @@ import { formatTokens, estimateTokens } from "../lib/tokens";
 import type { ViewMode } from "../types";
 import { PaneToggle } from "./PaneToggle";
 import { TrafficLightsSlot } from "./TrafficLightsSlot";
-import { ChevronDown, CodeXmlIcon, Columns2Icon, CopyIcon, TypeIcon } from "./icons";
+import {
+  ChevronDown,
+  CodeXmlIcon,
+  Columns2Icon,
+  CopyIcon,
+  FolderPlusIcon,
+  TypeIcon,
+} from "./icons";
 
 const VIEWS: { id: ViewMode; title: string; icon: typeof TypeIcon }[] = [
   { id: "rich", title: "Rich text", icon: TypeIcon },
@@ -23,7 +30,8 @@ const VIEWS: { id: ViewMode; title: string; icon: typeof TypeIcon }[] = [
  * shut its toggle lives here, at the spot it had inside the pane.
  */
 export function TopBar({ trailing }: { trailing?: React.ReactNode }) {
-  const folder = useStore((s) => s.folder);
+  const places = useStore((s) => s.places);
+  const addPlace = useStore((s) => s.addPlace);
   const home = useStore((s) => s.home);
   const activePath = useStore((s) => s.activePath);
   const folderPage = useStore((s) => s.folderPage);
@@ -36,8 +44,10 @@ export function TopBar({ trailing }: { trailing?: React.ReactNode }) {
   const openFolder = useStore((s) => s.openFolder);
   const liveText = useStore((s) => s.liveText);
 
-  const target = activePath ?? folderPage ?? folder;
-  const trail = folder && target ? crumbTrail(folder, target) : null;
+  const target = activePath ?? folderPage;
+  const trail = target ? crumbTrail(placeOf(places, target), target) : null;
+  // A note opened from outside every Place: its folder can be added in one click.
+  const outsideDir = activePath && !trail?.inside ? parentDir(activePath) : null;
 
   const [copyOpen, setCopyOpen] = useState(false);
   const [reference, setReference] = useState("");
@@ -157,6 +167,18 @@ export function TopBar({ trailing }: { trailing?: React.ReactNode }) {
           );
         })}
         {!trail && <b className="font-semibold text-[var(--text)]">Monocle</b>}
+        {outsideDir && (
+          <button
+            type="button"
+            data-add-place-crumb
+            title={`Add ${outsideDir} to the sidebar`}
+            onClick={() => void addPlace(outsideDir)}
+            className="ml-1 flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-[12px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+          >
+            <FolderPlusIcon className="size-3.5" />
+            Add folder to sidebar
+          </button>
+        )}
       </nav>
 
       {copied && (

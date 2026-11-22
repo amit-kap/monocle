@@ -10,6 +10,8 @@ export type TreeRow = {
   depth: number;
   /** Folders only: whether the row is showing its children. */
   open: boolean;
+  /** Folders only: nothing inside, so there is nothing to open. */
+  empty?: boolean;
   /** The row this one sits under, or null at the top level. */
   parent: string | null;
 };
@@ -30,8 +32,9 @@ export function visibleRows(
       rows.push({ path: node.path, kind: "file", depth, open: false, parent });
       continue;
     }
-    const open = Boolean(options.forceExpand) || options.expanded.has(node.path);
-    rows.push({ path: node.path, kind: "dir", depth, open, parent });
+    const empty = (node.children?.length ?? 0) === 0;
+    const open = !empty && (Boolean(options.forceExpand) || options.expanded.has(node.path));
+    rows.push({ path: node.path, kind: "dir", depth, open, parent, ...(empty ? { empty } : {}) });
     if (open && node.children) {
       rows.push(...visibleRows(node.children, options, depth + 1, node.path));
     }
@@ -74,9 +77,9 @@ export function stepRow(
     case "ArrowRight": {
       const row = rows[current];
       // Open a closed folder; an open one steps into it (its first child is
-      // the next row), and a file just moves on.
+      // the next row), and a file or an empty folder just moves on.
       if (!row) return { index: 0 };
-      if (row.kind === "dir" && !row.open) {
+      if (row.kind === "dir" && !row.open && !row.empty) {
         return canToggle ? { index: current, toggle: true } : null;
       }
       return { index: Math.min(current + 1, last) };

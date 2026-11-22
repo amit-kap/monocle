@@ -6,8 +6,15 @@ import {
   countFiles,
   crumbTrail,
   findNode,
+  dirsToRescan,
   foldTree,
+  isEmptyDir,
+  isHiddenDir,
+  isShown,
+  placeNodes,
+  placeOf,
   parentDir,
+  replaceDir,
   rowLabel,
   trailTo,
 } from "./treeView";
@@ -92,5 +99,93 @@ describe("crumbTrail", () => {
     expect(t.inside).toBe(false);
     expect(t.parts.map((p) => p.name)).toEqual(["skills", "x", "SKILL.md"]);
     expect(t.parts.every((p) => p.path === "")).toBe(true);
+  });
+});
+
+describe("replaceDir", () => {
+  const tree = [
+    { ...dir("/r/a", [{ ...dir("/r/a/b", []), hasNotes: false }]), hasNotes: false },
+    file("/r/top.md"),
+  ];
+
+  it("swaps one folder's contents and recomputes hasNotes up the trail", () => {
+    const next = replaceDir(tree, "/r/a/b", [file("/r/a/b/new.md")])!;
+    const a = next[0];
+    expect(a.hasNotes).toBe(true);
+    expect(a.children?.[0].hasNotes).toBe(true);
+    expect(a.children?.[0].children?.[0].name).toBe("new.md");
+    // Untouched siblings keep their identity.
+    expect(next[1]).toBe(tree[1]);
+  });
+
+  it("returns null for a folder the tree doesn't have", () => {
+    expect(replaceDir(tree, "/r/zzz", [])).toBeNull();
+  });
+});
+
+describe("dirsToRescan", () => {
+  it("rescans each changed path's parent, once, outermost only", () => {
+    expect(
+      dirsToRescan(["/r/a/x.md", "/r/a/y.md", "/r/a/b/z.md", "/r/c/new folder"]).sort(),
+    ).toEqual(["/r/a", "/r/c"]);
+  });
+});
+
+describe("isShown", () => {
+  it("hides dot paths unless they are agent folders or hidden files are on", () => {
+    expect(isShown("/h", "/h/notes/a.md", false)).toBe(true);
+    expect(isShown("/h", "/h/.claude/CLAUDE.md", false)).toBe(true);
+    expect(isShown("/h", "/h/.zsh_history", false)).toBe(false);
+    expect(isShown("/h", "/h/.zsh_history", true)).toBe(true);
+    expect(isShown("/h", "/elsewhere/a.md", true)).toBe(false);
+  });
+});
+
+describe("folder kinds", () => {
+  it("knows an empty folder from one with anything inside", () => {
+    expect(isEmptyDir(dir("/r/e", []))).toBe(true);
+    expect(isEmptyDir(dir("/r/f", [dir("/r/f/g", [])]))).toBe(false);
+    expect(isEmptyDir(file("/r/a.md"))).toBe(false);
+  });
+
+  it("marks dot folders, and folded rows with one in the trail", () => {
+    expect(isHiddenDir(dir("/r/.claude", []))).toBe(true);
+    expect(isHiddenDir({ ...dir("/r/.config", []), label: [".config", "opencode"] })).toBe(true);
+    expect(isHiddenDir(dir("/r/notes", []))).toBe(false);
+    expect(isHiddenDir(file("/r/.hidden.md"))).toBe(false);
+  });
+});
+
+describe("places", () => {
+  it("finds the deepest place that holds a path", () => {
+    const places = ["/h", "/h/.claude", "/w"];
+    expect(placeOf(places, "/h/.claude/CLAUDE.md")).toBe("/h/.claude");
+    expect(placeOf(places, "/h/notes/a.md")).toBe("/h");
+    expect(placeOf(places, "/w")).toBe("/w");
+    expect(placeOf(places, "/elsewhere/a.md")).toBeNull();
+    expect(placeOf(places, "/hx/a.md")).toBeNull();
+  });
+
+  it("builds one header row per place, with hints for twins and missing marks", () => {
+    const nodes = placeNodes(["/a/notes", "/b/notes", "/c"], [[file("/a/notes/x.md")], [], null]);
+    expect(nodes.map((n) => [n.name, n.place, n.hint, n.missing, n.hasNotes])).toEqual([
+      ["notes", true, "a", undefined, true],
+      ["notes", true, "b", undefined, false],
+      ["c", true, undefined, true, false],
+    ]);
+  });
+
+  it("never folds a place into its only folder", () => {
+    const [place] = placeNodes(["/p"], [[dir("/p/only", [file("/p/only/x.md")])]]);
+    const [row] = foldTree([place]);
+    expect(row.label).toBeUndefined();
+    expect(row.children?.[0].path).toBe("/p/only");
+  });
+
+  it("replaces a folder in every place that holds it", () => {
+    const tree = placeNodes(["/h", "/h/.claude"], [[dir("/h/.claude", [])], []]);
+    const next = replaceDir(tree, "/h/.claude", [file("/h/.claude/CLAUDE.md")])!;
+    expect(next[0].children?.[0].children?.[0].name).toBe("CLAUDE.md");
+    expect(next[1].children?.[0].name).toBe("CLAUDE.md");
   });
 });

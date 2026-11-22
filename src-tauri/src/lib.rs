@@ -9,9 +9,6 @@ use std::time::{Duration, Instant};
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use tauri::{Emitter, Manager, RunEvent};
 
-/// Folders that never hold notes and are never worth waking the UI for.
-const SKIP_DIRS: [&str; 4] = ["Library", "node_modules", ".git", ".Trash"];
-
 /// How long after our own write a file event is taken to be that write.
 const SELF_WRITE_WINDOW: Duration = Duration::from_millis(1500);
 
@@ -113,35 +110,51 @@ fn store_asset(note: &Path, bytes: &[u8], ext: &str) -> Result<(String, std::pat
     Ok((format!("assets/{name}"), full))
 }
 
+/// Whether a changed path could change the tree: a note, or a folder. Paths
+/// inside skipped folders (dependencies, caches, packages) never are.
 fn worth_reporting(path: &Path) -> bool {
     for part in path.components() {
         if let Some(name) = part.as_os_str().to_str() {
-            if SKIP_DIRS.contains(&name) {
+            // Hidden folders are filtered by the UI, which knows the toggle.
+            if tree::skip_dir(name, true) {
                 return false;
             }
         }
     }
-    match path.extension().and_then(|e| e.to_str()) {
-        Some(ext) => ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown"),
-        // No extension: probably a folder appearing, going or being renamed.
-        None => true,
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    if tree::is_markdown(name) {
+        return true;
+    }
+    // A folder that exists now, whatever its name (`notes.v2` included). A
+    // path that is gone and has no extension was probably a folder.
+    match fs::metadata(path) {
+        Ok(meta) => meta.is_dir(),
+        Err(_) => path.extension().is_none(),
     }
 }
 
-/// Watch `root` and emit `fs-change` with the changed paths once things go
-/// quiet. Replaces any earlier watch.
+/// The tree under `root`, read natively. Async so a large folder never blocks
+/// the window.
+#[tauri::command]
+async fn scan_tree(root: String, show_hidden: bool) -> Result<Vec<tree::Node>, String> {
+    tree::scan(&root, show_hidden)
+}
+
+/// Watch every Place and emit `fs-change` with the changed paths once things
+/// go quiet. Replaces any earlier watch. A Place that can't be watched (moved,
+/// or on a drive that is gone) is skipped; the others still are.
 #[tauri::command]
 fn start_watch(
     app: tauri::AppHandle,
-    root: String,
+    roots: Vec<String>,
     state: tauri::State<WatchState>,
     writes: tauri::State<SelfWrites>,
 ) -> Result<(), String> {
     let (tx, rx) = mpsc::channel::<notify::Result<notify::Event>>();
     let mut watcher = notify::recommended_watcher(tx).map_err(|e| e.to_string())?;
-    watcher
-        .watch(Path::new(&root), RecursiveMode::Recursive)
-        .map_err(|e| e.to_string())?;
+    for root in &roots {
+        let _ = watcher.watch(Path::new(root), RecursiveMode::Recursive);
+    }
     // Dropping the old watcher closes its channel, which ends its thread.
     *state.0.lock().unwrap() = Some(watcher);
 
@@ -222,6 +235,7 @@ fn file_paths(urls: Vec<tauri::Url>) -> Vec<String> {
 }
 
 mod traffic_lights;
+mod tree;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -240,7 +254,8 @@ pub fn run() {
             create_dir,
             save_asset,
             start_watch,
-            stop_watch
+            stop_watch,
+            scan_tree
         ])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
@@ -305,6 +320,7 @@ mod tests {
         assert!(!worth_reporting(Path::new("/p/node_modules/x/readme.md")));
         assert!(!worth_reporting(Path::new("/p/.git/HEAD.md")));
         assert!(!worth_reporting(Path::new("/Users/me/Library/notes.md")));
+        assert!(!worth_reporting(Path::new("/p/Photos Library.photoslibrary/x")));
     }
 
     #[test]
@@ -336,3 +352,4 @@ mod tests {
         fs::remove_dir_all(&dir).unwrap();
     }
 }
+

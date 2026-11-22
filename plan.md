@@ -15,6 +15,30 @@ The app builds to a `.app`/`.dmg` under ~25 MB.
 Phases 0–8 implemented, and the whole open backlog worked through. `Monocle.app`
 and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
 
+- **File tree, step 1 of 3 (branch `feature/file-tree`).** The tree now lists
+  every folder, empty ones included, but only `.md`/`.markdown` files; folders
+  with no note at any depth are dimmed. It is read natively in one pass
+  (`scan_tree`, `src-tauri/src/tree.rs`; the whole home folder in ~0.45 s), and
+  a watcher event rescans only the changed folder's parent and splices it in
+  (`refreshDirs`), instead of re-walking the root. Agent folders (`.claude`,
+  `.codex`, `.cursor`, `.github`, …) show with hidden files off; other
+  dot-folders need the toggle. Dependency, cache, build and macOS package
+  folders are always skipped. `madeDirs` is gone: empty folders simply exist.
+- **File tree, step 2 of 3: Places.** The single root folder is gone. The
+  sidebar is built from a list of Places (`places`, saved as
+  `monocle:places`), each a top-level header row in the one tree, so search,
+  keyboard moves, folder pages and the per-folder rescans work unchanged. The
+  old root carries over as the first Place; the first launch starts with Home.
+  A header has a chevron (folded state saved as `monocle:collapsedPlaces`), a
+  plus for a new note, and a menu: New file here, New folder here, Reveal in
+  Finder, Move up/down, Remove from sidebar (never touches files). The foot
+  button is "Add place…"; folders and folder pages offer "Add as place". A note
+  opened from outside every Place opens without switching anything, and the
+  breadcrumb offers "Add folder to sidebar". Nested Places are allowed (a
+  rescan updates every copy, ⌘P lists each note once); a Place that can't be
+  read shows "Not found". One watcher covers every Place.
+  Next: suggesting Places from Spotlight.
+
 - TipTap **v3** (not v2) — `tiptap-markdown` requires it.
 - Save is **explicit (⌘S)**, with a debounced autosave behind it as a safety net
   (added after v0.4.1; the explicit model stays).

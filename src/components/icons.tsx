@@ -1,6 +1,8 @@
 // The app's icons, all from lucide-react. Names are kept so call sites read
 // the same; the size comes from the className (`size-4` by default).
 import {
+  ArrowDown,
+  ArrowUp,
   Check,
   ChevronDown as LucideChevronDown,
   ChevronRight as LucideChevronRight,
@@ -13,10 +15,12 @@ import {
   Ellipsis,
   FileText,
   Folder,
+  FolderDot,
   FolderOpen,
   FolderPlus,
   FolderRoot,
   FolderSearch,
+  MinusCircle,
   Plus,
   RefreshCw,
   Search,
@@ -39,9 +43,13 @@ export const ChevronDown = icon(LucideChevronDown);
 export const ChevronsUpDown = icon(LucideChevronsUpDown);
 export const FolderIcon = icon(Folder);
 export const FolderOpenIcon = icon(FolderOpen);
+export const FolderDotIcon = icon(FolderDot);
 export const FolderRootIcon = icon(FolderRoot);
 export const FolderSearchIcon = icon(FolderSearch);
 export const FolderPlusIcon = icon(FolderPlus);
+export const ArrowUpIcon = icon(ArrowUp);
+export const ArrowDownIcon = icon(ArrowDown);
+export const MinusCircleIcon = icon(MinusCircle);
 export const FileTextIcon = icon(FileText);
 export const PlusIcon = icon(Plus);
 export const SearchGlyph = icon(Search);

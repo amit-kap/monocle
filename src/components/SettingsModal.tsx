@@ -80,10 +80,10 @@ export function SettingsModal() {
           {section === "files" && (
             <>
               <div>
-                <h3 className="mb-1.5 text-[13px] font-semibold">Start folder</h3>
+                <h3 className="mb-1.5 text-[13px] font-semibold">Places</h3>
                 <p className="text-[12px] leading-[18px] text-[var(--text-muted)]">
-                  Monocle opens on your home folder the first time, then reopens wherever you
-                  left off.
+                  The folders in the sidebar. Monocle starts with your home folder; add more
+                  with Add place… at the foot of the sidebar, or remove one from its menu.
                 </p>
               </div>
               <div className="flex items-center gap-4">
@@ -92,7 +92,7 @@ export function SettingsModal() {
                     Show hidden files and folders
                   </h3>
                   <p className="text-[12px] leading-[18px] text-[var(--text-muted)]">
-                    Names that start with a dot, such as .claude.
+                    Names that start with a dot. Agent folders such as .claude always show.
                   </p>
                 </div>
                 <button
