@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/styles.css"
+        ],
+        "createdAt": "2026-11-22T16:26:38.457Z",
+        "reason": "Claude triage: L344 is the markdown blockquote's left rule in the editor (.tiptap blockquote), the standard quote style, not a card accent; present since the initial commit"
+      }
+    ]
+  }
+}

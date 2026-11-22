@@ -118,3 +118,21 @@ describe("stepRow", () => {
     expect(stepRow([], 0, "ArrowDown")).toBeNull();
   });
 });
+
+describe("empty folders", () => {
+  const withEmpty: TreeNode[] = [
+    { name: "Empty", path: "/n/Empty", kind: "dir", children: [] },
+    { name: "Z.md", path: "/n/Z.md", kind: "file" },
+  ];
+
+  it("never count as open, even when remembered as expanded", () => {
+    const [row] = visibleRows(withEmpty, { expanded: new Set(["/n/Empty"]) });
+    expect(row.open).toBe(false);
+    expect(row.empty).toBe(true);
+  });
+
+  it("ArrowRight moves on instead of opening them", () => {
+    const rows = visibleRows(withEmpty, { expanded: new Set() });
+    expect(stepRow(rows, 0, "ArrowRight")).toEqual({ index: 1 });
+  });
+});

@@ -8,7 +8,7 @@ import {
   FileTextIcon,
   FolderIcon,
   FolderOpenIcon,
-  FolderRootIcon,
+  FolderPlusIcon,
   PlusIcon,
 } from "./icons";
 
@@ -17,22 +17,18 @@ import {
  * to open. Reached by clicking a folder's name in the tree or the breadcrumb.
  */
 export function FolderPage() {
-  const folder = useStore((s) => s.folder);
+  const places = useStore((s) => s.places);
   const folderPage = useStore((s) => s.folderPage);
   const tree = useStore((s) => s.tree);
   const openNote = useStore((s) => s.openNote);
   const openFolder = useStore((s) => s.openFolder);
-  const setRoot = useStore((s) => s.setRoot);
+  const addPlace = useStore((s) => s.addPlace);
   const createNote = useStore((s) => s.createNote);
 
   const children: TreeNode[] = useMemo(() => {
     if (!folderPage) return [];
-    const list =
-      folderPage === folder
-        ? tree
-        : (findNode(tree, folderPage)?.children ?? []);
-    return sortNodes([...list]);
-  }, [folder, folderPage, tree]);
+    return sortNodes([...(findNode(tree, folderPage)?.children ?? [])]);
+  }, [folderPage, tree]);
 
   if (!folderPage) return null;
 
@@ -41,7 +37,7 @@ export function FolderPage() {
     (sum, node) => sum + tokensFromBytes(node.size ?? 0),
     0,
   );
-  const isRoot = folderPage === folder;
+  const isPlace = places.includes(folderPage);
 
   return (
     <div className="editor-scroll flex-1 overflow-y-auto" data-folder-page>
@@ -51,14 +47,15 @@ export function FolderPage() {
           <h1 className="min-w-0 flex-1 truncate text-[32px] font-semibold leading-tight tracking-[-0.02em] text-[var(--text)]">
             {baseName(folderPage)}
           </h1>
-          {!isRoot && (
+          {!isPlace && (
             <button
               type="button"
-              onClick={() => void setRoot(folderPage)}
+              data-add-place
+              onClick={() => void addPlace(folderPage)}
               className="flex h-8 shrink-0 outline-none focus-visible:shadow-[0_0_0_2px_var(--accent)] items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border-strong)] px-3 text-[12px] font-semibold text-[var(--text)] hover:bg-[var(--bg-hover)]"
             >
-              <FolderRootIcon className="size-4" />
-              Set as root folder
+              <FolderPlusIcon className="size-4" />
+              Add as place
             </button>
           )}
           <button

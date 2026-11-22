@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { dirname, homeDir } from "@tauri-apps/api/path";
+import { homeDir } from "@tauri-apps/api/path";
 import {
   RIGHT_TABS,
   type ChangeNotice,
@@ -23,23 +23,38 @@ import {
   storeWidth,
 } from "../lib/layout";
 import { getStoredTint, storeTint, type Tint } from "../lib/tint";
-import { countFiles, findNode, parentDir, trailTo } from "../lib/treeView";
+import {
+  countFiles,
+  dirsToRescan,
+  findNode,
+  isShown,
+  outermost,
+  parentDir,
+  placeNodes,
+  placeOf,
+  replaceDir,
+  trailTo,
+} from "../lib/treeView";
 import { DISMISS, askModal, askUnsavedChanges } from "./useModalPrompt";
 
 const LAST_FOLDER_KEY = "monocle:lastFolder";
 const SHOW_HIDDEN_KEY = "monocle:showHidden";
-const RECENT_ROOTS_KEY = "monocle:recentRoots";
+const PLACES_KEY = "monocle:places";
+const COLLAPSED_KEY = "monocle:collapsedPlaces";
 const VIEW_KEY = "monocle:view";
-const EXPANDED_KEY = "monocle:expanded:";
-export const MAX_RECENT_ROOTS = 4;
+const EXPANDED_KEY = "monocle:expanded";
 
 type HeadingRequest = { line: number; index: number; n: number };
 
 type State = {
-  /** The root folder. The tree shows only what is inside it. */
-  folder: string | null;
+  /**
+   * The Places: the folders the sidebar is built from, in the order shown. The
+   * tree holds one top-level row for each.
+   */
+  places: string[];
+  /** Places folded shut in the sidebar. Places start open. */
+  collapsedPlaces: Set<string>;
   home: string | null;
-  recentRoots: string[];
   tree: TreeNode[];
   notes: NoteFile[];
   expanded: Set<string>;
@@ -71,8 +86,6 @@ type State = {
   settingsOpen: boolean;
   /** The row being renamed in the tree, if any. */
   renamingPath: string | null;
-  /** Folders made in the app: they stay in the tree while empty. */
-  madeDirs: Set<string>;
   /** The open note's text as it is now, for tokens, the outline and checks. */
   liveText: string;
   /** What the open note's file held when we last read or wrote it. */
@@ -87,15 +100,23 @@ type State = {
   openSettings: () => void;
   closeSettings: () => void;
   init: () => Promise<void>;
+  /** Pick a folder with the system picker and add it as a Place. */
   chooseFolder: () => Promise<void>;
-  setRoot: (path: string) => Promise<void>;
+  addPlace: (path: string) => Promise<void>;
+  removePlace: (path: string) => void;
+  movePlace: (path: string, by: -1 | 1) => void;
   refresh: (silent?: boolean) => Promise<void>;
+  refreshDirs: (dirs: string[]) => Promise<void>;
   toggleDir: (path: string) => void;
   expandTo: (path: string) => void;
   collapseAll: () => void;
-  expandAll: () => void;
   openNote: (path: string) => Promise<void>;
-  openFolder: (path: string) => Promise<void>;
+  /**
+   * Show a folder's page. It never expands the folder itself; with `reveal`
+   * (the default) the folders above it open so its row can be seen. The tree
+   * passes false: the row clicked is already in view.
+   */
+  openFolder: (path: string, reveal?: boolean) => Promise<void>;
   openExternalNote: (path: string) => Promise<void>;
   createNote: (dir?: string) => Promise<void>;
   createFolder: (dir?: string) => Promise<void>;
@@ -135,35 +156,42 @@ function readView(store: Storage): ViewMode {
   }
 }
 
-function readRecentRoots(): string[] {
+function readList(key: string): string[] | null {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(RECENT_ROOTS_KEY) ?? "[]");
-    return Array.isArray(parsed)
-      ? parsed.filter((p): p is string => typeof p === "string").slice(0, MAX_RECENT_ROOTS)
-      : [];
+    const raw = localStorage.getItem(key);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((p): p is string => typeof p === "string") : null;
   } catch {
-    return [];
+    return null;
   }
 }
 
-function readExpanded(root: string): Set<string> {
+function storeList(key: string, list: Iterable<string>): void {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(EXPANDED_KEY + root) ?? "[]");
-    return new Set(
-      Array.isArray(parsed) ? parsed.filter((p): p is string => typeof p === "string") : [],
-    );
+    localStorage.setItem(key, JSON.stringify([...list]));
   } catch {
-    return new Set();
+    // Not remembered; the sidebar still works.
   }
 }
 
-function storeExpanded(root: string | null, expanded: Set<string>): void {
-  if (!root) return;
-  try {
-    localStorage.setItem(EXPANDED_KEY + root, JSON.stringify([...expanded]));
-  } catch {
-    // Not remembered; the tree still works.
-  }
+/**
+ * The open folders, for every Place at once (paths are absolute, so one list
+ * serves them all). Before Places the list was kept per root folder.
+ */
+const MAX_EXPANDED = 500;
+
+function readExpanded(legacyRoot: string | null): Set<string> {
+  const list =
+    readList(EXPANDED_KEY) ?? (legacyRoot ? readList(`${EXPANDED_KEY}:${legacyRoot}`) : null);
+  // Nobody opens this many folders by hand: a list this long is left over from
+  // the old "Expand all", and drawing it hangs the window. Start folded instead.
+  if (!list || list.length > MAX_EXPANDED) return new Set();
+  return new Set(list);
+}
+
+function storeExpanded(expanded: Set<string>): void {
+  storeList(EXPANDED_KEY, expanded);
 }
 
 /** `path` moved from `from` to `to`: where it is now. */
@@ -203,19 +231,41 @@ async function confirmDiscard(): Promise<boolean> {
   return useStore.getState().status !== "error";
 }
 
-async function startWatching(root: string): Promise<void> {
+async function startWatching(roots: string[]): Promise<void> {
   try {
-    await fs.startWatch(root);
+    await fs.startWatch(roots);
   } catch {
     // Not running under Tauri, or the folder can't be watched: the tree still
     // works, it just doesn't update by itself.
   }
 }
 
+/**
+ * What opens to show `path`: every folder from its Place down, and the Place
+ * itself if it was folded shut. Remembered for the next launch.
+ */
+function openTrail(
+  state: Pick<State, "places" | "expanded" | "collapsedPlaces">,
+  path: string,
+): { expanded: Set<string>; collapsedPlaces: Set<string> } {
+  const place = placeOf(state.places, path);
+  if (!place) return { expanded: state.expanded, collapsedPlaces: state.collapsedPlaces };
+  const expanded = new Set(state.expanded);
+  for (const dir of trailTo(place, parentDir(path))) expanded.add(dir);
+  storeExpanded(expanded);
+  let collapsedPlaces = state.collapsedPlaces;
+  if (collapsedPlaces.has(place)) {
+    collapsedPlaces = new Set(collapsedPlaces);
+    collapsedPlaces.delete(place);
+    storeList(COLLAPSED_KEY, collapsedPlaces);
+  }
+  return { expanded, collapsedPlaces };
+}
+
 export const useStore = create<State>((set, get) => ({
-  folder: null,
+  places: [],
+  collapsedPlaces: new Set<string>(),
   home: null,
-  recentRoots: readRecentRoots(),
   tree: [],
   notes: [],
   expanded: new Set<string>(),
@@ -239,7 +289,6 @@ export const useStore = create<State>((set, get) => ({
   view: readView(localStorage),
   settingsOpen: false,
   renamingPath: null,
-  madeDirs: new Set<string>(),
   liveText: "",
   diskText: "",
   changes: {},
@@ -287,21 +336,23 @@ export const useStore = create<State>((set, get) => ({
     } catch {
       home = null;
     }
-    // First launch opens the home folder and the first note in it; after that,
-    // wherever it was left.
-    const saved = localStorage.getItem(LAST_FOLDER_KEY);
-    const firstLaunch = saved === null;
-    const folder = saved ?? home;
-    set({ home });
-    if (!folder) return;
-    if (firstLaunch) localStorage.setItem(LAST_FOLDER_KEY, folder);
+    // Places carry over from the single root folder of earlier versions; the
+    // very first launch starts with the home folder and opens its first note.
+    const legacy = localStorage.getItem(LAST_FOLDER_KEY);
+    const saved = readList(PLACES_KEY);
+    const firstLaunch = saved === null && legacy === null;
+    const places = saved ?? (legacy ? [legacy] : home ? [home] : []);
+    storeList(PLACES_KEY, places);
     set({
-      folder,
-      expanded: readExpanded(folder),
+      home,
+      places,
+      collapsedPlaces: new Set(readList(COLLAPSED_KEY) ?? []),
+      expanded: readExpanded(legacy),
       folderPage: null,
     });
+    if (places.length === 0) return;
     await get().refresh();
-    void startWatching(folder);
+    void startWatching(places);
     if (firstLaunch) {
       const first = get().notes[0];
       if (first && !get().activePath) {
@@ -313,52 +364,123 @@ export const useStore = create<State>((set, get) => ({
 
   chooseFolder: async () => {
     try {
-      const folder = await fs.pickFolder();
-      if (folder) await get().setRoot(folder);
+      const path = await fs.pickFolder();
+      if (path) await get().addPlace(path);
     } catch (error) {
       set({ error: String(error) });
     }
   },
 
-  // Changing the root never closes the open note, even when the note is now
-  // outside the tree.
-  setRoot: async (path) => {
-    const { folder, recentRoots, activePath } = get();
-    if (path === folder) return;
-    localStorage.setItem(LAST_FOLDER_KEY, path);
-    const recent = [folder, ...recentRoots]
-      .filter((p): p is string => Boolean(p) && p !== path)
-      .filter((p, i, all) => all.indexOf(p) === i)
-      .slice(0, MAX_RECENT_ROOTS);
-    try {
-      localStorage.setItem(RECENT_ROOTS_KEY, JSON.stringify(recent));
-    } catch {
-      // Not remembered.
+  // Adding a Place that is already there just shows it. Nothing ever closes
+  // the open note.
+  addPlace: async (path) => {
+    const { places, collapsedPlaces } = get();
+    if (!places.includes(path)) {
+      const next = [...places, path];
+      storeList(PLACES_KEY, next);
+      set({ places: next });
+      try {
+        const children = await fs.readTree(path, get().showHidden);
+        set((state) => {
+          const tree = placeNodes(
+            state.places,
+            state.places.map((p) =>
+              p === path ? children : (state.tree.find((n) => n.path === p)?.children ?? []),
+            ),
+          );
+          return { tree, notes: fs.listNotes(tree) };
+        });
+      } catch {
+        await get().refresh(true);
+      }
+      void startWatching(get().places);
+    } else if (collapsedPlaces.has(path)) {
+      get().toggleDir(path);
     }
+    if (!get().activePath) set({ folderPage: path, selectedDir: path });
+  },
+
+  // Only the sidebar forgets it: the folder and its files stay where they are.
+  removePlace: (path) => {
+    const state = get();
+    const places = state.places.filter((p) => p !== path);
+    const collapsedPlaces = new Set(state.collapsedPlaces);
+    collapsedPlaces.delete(path);
+    storeList(PLACES_KEY, places);
+    storeList(COLLAPSED_KEY, collapsedPlaces);
+    const tree = state.tree.filter((n) => n.path !== path);
+    const lost = (p: string | null) => isWithin(p, path) && !placeOf(places, p);
     set({
-      folder: path,
-      recentRoots: recent,
-      tree: [],
-      notes: [],
-      expanded: readExpanded(path),
-      selectedDir: null,
-      madeDirs: new Set<string>(),
-      // With a note open it stays; with nothing open, show the new root.
-      folderPage: activePath ? null : path,
+      places,
+      collapsedPlaces,
+      tree: placeNodes(places, places.map((p) => tree.find((n) => n.path === p)?.children ?? [])),
+      notes: fs.listNotes(tree),
+      folderPage: lost(state.folderPage) ? null : state.folderPage,
+      selectedDir: lost(state.selectedDir) ? null : state.selectedDir,
     });
-    await get().refresh();
-    void startWatching(path);
+    void startWatching(places);
+  },
+
+  movePlace: (path, by) => {
+    const places = [...get().places];
+    const from = places.indexOf(path);
+    const to = from + by;
+    if (from < 0 || to < 0 || to >= places.length) return;
+    [places[from], places[to]] = [places[to], places[from]];
+    storeList(PLACES_KEY, places);
+    const tree = get().tree;
+    set({
+      places,
+      tree: places.map((p) => tree.find((n) => n.path === p)!).filter(Boolean),
+    });
   },
 
   refresh: async (silent = false) => {
-    const { folder, showHidden, madeDirs } = get();
-    if (!folder) return;
+    const { places, showHidden } = get();
+    if (places.length === 0) {
+      set({ tree: [], notes: [], loading: false });
+      return;
+    }
     if (!silent) set({ loading: true });
-    try {
-      const tree = await fs.readTree(folder, showHidden, madeDirs);
-      set({ tree, notes: fs.flattenTree(tree), error: null, loading: false });
-    } catch (error) {
-      set({ error: String(error), loading: false });
+    // Every Place is read at once. One that can't be read stays in the list,
+    // marked missing, rather than failing the others.
+    const contents = await Promise.all(
+      places.map((place) => fs.readTree(place, showHidden).catch(() => null)),
+    );
+    if (get().places !== places) return;
+    const tree = placeNodes(places, contents);
+    set({ tree, notes: fs.listNotes(tree), error: null, loading: false });
+  },
+
+  // Rescan only the folders that changed and splice them into the tree. A
+  // folder the tree doesn't have yet (it was just made, or its parent was)
+  // rescans its nearest known ancestor, up to the Place itself.
+  refreshDirs: async (dirs) => {
+    const { showHidden } = get();
+    for (const dir of outermost(dirs)) {
+      let current = dir;
+      for (;;) {
+        if (!placeOf(get().places, current)) break;
+        const node = findNode(get().tree, current);
+        // A Place with no row yet (it was just added): read everything.
+        if (!node && get().places.includes(current)) {
+          await get().refresh(true);
+          break;
+        }
+        if (node?.kind === "dir") {
+          try {
+            const children = await fs.readTree(current, showHidden);
+            const tree = replaceDir(get().tree, current, children);
+            if (tree) {
+              set({ tree, notes: fs.listNotes(tree) });
+              break;
+            }
+          } catch {
+            // Gone since the event: its parent's listing will say so.
+          }
+        }
+        current = parentDir(current);
+      }
     }
   },
 
@@ -383,52 +505,36 @@ export const useStore = create<State>((set, get) => ({
 
   // The chevron only folds and unfolds: it never changes what is open.
   toggleDir: (path) => {
+    if (get().places.includes(path)) {
+      const collapsedPlaces = new Set(get().collapsedPlaces);
+      if (collapsedPlaces.has(path)) collapsedPlaces.delete(path);
+      else collapsedPlaces.add(path);
+      storeList(COLLAPSED_KEY, collapsedPlaces);
+      set({ collapsedPlaces });
+      return;
+    }
     const expanded = new Set(get().expanded);
     if (expanded.has(path)) expanded.delete(path);
     else expanded.add(path);
-    storeExpanded(get().folder, expanded);
+    storeExpanded(expanded);
     set({ expanded });
   },
 
-  expandTo: (path) => {
-    const { folder } = get();
-    if (!folder) return;
-    const expanded = new Set(get().expanded);
-    for (const dir of trailTo(folder, path)) expanded.add(dir);
-    storeExpanded(folder, expanded);
-    set({ expanded });
-  },
+  expandTo: (path) => set(openTrail(get(), path)),
 
   collapseAll: () => {
-    storeExpanded(get().folder, new Set());
+    storeExpanded(new Set());
     set({ expanded: new Set<string>() });
   },
 
-  expandAll: () => {
-    const dirs = new Set<string>();
-    function walk(nodes: TreeNode[]) {
-      for (const node of nodes) {
-        if (node.kind !== "dir") continue;
-        dirs.add(node.path);
-        if (node.children) walk(node.children);
-      }
-    }
-    walk(get().tree);
-    storeExpanded(get().folder, dirs);
-    set({ expanded: dirs });
-  },
+
 
   openNote: async (path) => {
     if (get().status === "dirty" && !(await confirmDiscard())) return;
     try {
       const content = await fs.readNote(path);
       lastSeen.set(path, content);
-      const { folder, expanded, changes } = get();
-      const next = new Set(expanded);
-      if (folder) {
-        for (const dir of fs.ancestorDirs(folder, path)) next.add(dir);
-        storeExpanded(folder, next);
-      }
+      const { changes } = get();
       // A change we never saw the "before" of has nothing to review.
       const rest = { ...changes };
       if (rest[path] && rest[path].before === null) delete rest[path];
@@ -440,7 +546,7 @@ export const useStore = create<State>((set, get) => ({
         loadId: get().loadId + 1,
         status: "idle",
         error: null,
-        expanded: next,
+        ...openTrail(get(), path),
         folderPage: null,
         selectedDir: null,
         changes: rest,
@@ -450,14 +556,8 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
-  openFolder: async (path) => {
+  openFolder: async (path, reveal = true) => {
     if (get().status === "dirty" && !(await confirmDiscard())) return;
-    const { folder, expanded } = get();
-    const next = new Set(expanded);
-    if (folder && isWithin(path, folder)) {
-      for (const dir of trailTo(folder, path)) next.add(dir);
-      storeExpanded(folder, next);
-    }
     set({
       activePath: null,
       activeContent: "",
@@ -467,20 +567,16 @@ export const useStore = create<State>((set, get) => ({
       status: "idle",
       folderPage: path,
       selectedDir: path,
-      expanded: next,
+      ...(reveal ? openTrail(get(), path) : {}),
     });
   },
 
   openExternalNote: async (path) => {
-    const { folder } = get();
-    if (!folder || !fs.isInside(folder, path)) {
-      if (get().status === "dirty" && !(await confirmDiscard())) return;
-      const dir = await dirname(path);
-      await get().setRoot(dir);
-    } else if (!get().notes.some((note) => note.path === path)) {
-      // A file the last scan didn't see opens fine by path, but rescan first
-      // so it shows up in the sidebar too.
-      await get().refresh();
+    // A note outside every Place opens all the same (the breadcrumb offers to
+    // add its folder). One inside a Place that the last scan didn't see opens
+    // fine by path, but its folder is rescanned so it shows in the sidebar.
+    if (placeOf(get().places, path) && !get().notes.some((note) => note.path === path)) {
+      await get().refreshDirs([parentDir(path)]);
     }
     await get().openNote(path);
     // Opened from outside the app: the user came here to write in it.
@@ -488,23 +584,18 @@ export const useStore = create<State>((set, get) => ({
   },
 
   createNote: async (dir) => {
-    const { folder, selectedDir, folderPage, activePath } = get();
-    if (!folder) return;
+    const { places, selectedDir, folderPage, activePath } = get();
+    if (places.length === 0) return;
     if (get().status === "dirty" && !(await confirmDiscard())) return;
-    // Inside the selected folder, or next to the open file, or in the root.
-    const next =
-      dir ??
-      folderPage ??
-      selectedDir ??
-      (activePath ? parentDir(activePath) : folder);
-    const target = isWithin(next, folder) ? next : folder;
+    // Inside the selected folder, or next to the open file, or in the first
+    // Place.
+    const next = dir ?? folderPage ?? selectedDir ?? (activePath ? parentDir(activePath) : null);
+    const target = next && placeOf(places, next) ? next : places[0];
     try {
       const path = await fs.createNoteFile(target);
       lastSeen.set(path, "");
-      const expanded = new Set(get().expanded);
-      for (const d of trailTo(folder, target)) expanded.add(d);
-      storeExpanded(folder, expanded);
-      await get().refresh();
+      const { expanded, collapsedPlaces } = openTrail(get(), `${target}/_`);
+      await get().refreshDirs([target]);
       set({
         activePath: path,
         activeContent: "",
@@ -515,6 +606,7 @@ export const useStore = create<State>((set, get) => ({
         folderPage: null,
         selectedDir: null,
         expanded,
+        collapsedPlaces,
         // The name is the first thing to set, so the row opens for typing.
         renamingPath: path,
       });
@@ -524,22 +616,15 @@ export const useStore = create<State>((set, get) => ({
   },
 
   createFolder: async (dir) => {
-    const { folder, selectedDir, folderPage, activePath } = get();
-    if (!folder) return;
-    const next =
-      dir ??
-      folderPage ??
-      selectedDir ??
-      (activePath ? parentDir(activePath) : folder);
-    const target = isWithin(next, folder) ? next : folder;
+    const { places, selectedDir, folderPage, activePath } = get();
+    if (places.length === 0) return;
+    const next = dir ?? folderPage ?? selectedDir ?? (activePath ? parentDir(activePath) : null);
+    const target = next && placeOf(places, next) ? next : places[0];
     try {
       const path = await fs.createDirectory(target);
-      const madeDirs = new Set(get().madeDirs).add(path);
-      const expanded = new Set(get().expanded);
-      for (const d of trailTo(folder, target)) expanded.add(d);
-      storeExpanded(folder, expanded);
-      set({ madeDirs, expanded });
-      await get().refresh();
+      const { expanded, collapsedPlaces } = openTrail(get(), `${target}/_`);
+      set({ expanded, collapsedPlaces });
+      await get().refreshDirs([target]);
       set({ renamingPath: path });
     } catch (error) {
       set({ error: String(error) });
@@ -556,7 +641,7 @@ export const useStore = create<State>((set, get) => ({
         lastSeen.delete(path);
         lastSeen.set(newPath, seen);
       }
-      await get().refresh();
+      await get().refreshDirs([parentDir(path)]);
       if (get().activePath === path) set({ activePath: newPath });
       if (get().renamingPath === path) set({ renamingPath: null });
     } catch (error) {
@@ -578,17 +663,22 @@ export const useStore = create<State>((set, get) => ({
       }
       const state = get();
       const expanded = new Set([...state.expanded].map((p) => rebase(p, path, to)!));
-      const madeDirs = new Set([...state.madeDirs].map((p) => rebase(p, path, to)!));
-      storeExpanded(state.folder, expanded);
+      storeExpanded(expanded);
+      // A renamed folder that is itself a Place keeps its row.
+      const places = state.places.map((p) => rebase(p, path, to)!);
+      if (places.some((p, i) => p !== state.places[i])) {
+        storeList(PLACES_KEY, places);
+        void startWatching(places);
+      }
       set({
+        places,
         expanded,
-        madeDirs,
         activePath: rebase(state.activePath, path, to),
         folderPage: rebase(state.folderPage, path, to),
         selectedDir: rebase(state.selectedDir, path, to),
         renamingPath: null,
       });
-      await get().refresh();
+      await get().refreshDirs([parentDir(path)]);
     } catch (error) {
       set({ error: String(error), renamingPath: null });
     }
@@ -596,8 +686,9 @@ export const useStore = create<State>((set, get) => ({
 
   // Everything goes to the system Trash, so nothing is lost for good.
   trashEntry: async (path) => {
-    const { folder, tree } = get();
-    if (!folder || path === folder) return;
+    const { places, tree } = get();
+    // A Place's own folder is removed from the sidebar, never trashed from it.
+    if (places.includes(path) || !placeOf(places, path)) return;
     const node = findNode(tree, path);
     const count = node ? countFiles(node) : 0;
     // A file goes straight away; a folder with files in it asks first.
@@ -615,16 +706,15 @@ export const useStore = create<State>((set, get) => ({
     try {
       await fs.trashPath(path);
       const state = get();
-      const madeDirs = new Set([...state.madeDirs].filter((p) => !isWithin(p, path)));
       const expanded = new Set([...state.expanded].filter((p) => !isWithin(p, path)));
-      storeExpanded(folder, expanded);
+      storeExpanded(expanded);
       const changes = Object.fromEntries(
         Object.entries(state.changes).filter(([p]) => !isWithin(p, path)),
       );
-      set({ madeDirs, expanded, changes });
+      set({ expanded, changes });
       // If what was open went with it, show the parent folder's page.
       const gone = isWithin(state.activePath, path) || isWithin(state.folderPage, path);
-      await get().refresh();
+      await get().refreshDirs([parentDir(path)]);
       if (gone) {
         set({
           activePath: null,
@@ -633,7 +723,7 @@ export const useStore = create<State>((set, get) => ({
           liveText: "",
           loadId: get().loadId + 1,
           status: "idle",
-          folderPage: isWithin(parentDir(path), folder) ? parentDir(path) : folder,
+          folderPage: placeOf(get().places, parentDir(path)) ? parentDir(path) : null,
           selectedDir: null,
         });
       }
@@ -678,17 +768,15 @@ export const useStore = create<State>((set, get) => ({
   // The watcher reports paths that changed under the root. Our own writes are
   // filtered out before they get here.
   handleFsChange: async (paths) => {
-    // Only rescan when the tree could have changed: a markdown file, or a
-    // folder (no extension) that is visible. Dotfile churn in a home folder
-    // must not trigger a scan.
-    const { folder, showHidden } = get();
-    const relevant = paths.some((p) => {
-      const rel = folder && p.startsWith(folder) ? p.slice(folder.length) : p;
-      if (!showHidden && rel.split(/[\\/]/).some((part) => part.startsWith("."))) return false;
-      return true;
+    // Rescan only the folders holding what changed, and only where the tree
+    // shows: dotfile churn in a home folder must not trigger a scan.
+    const { places, showHidden } = get();
+    const shown = paths.filter((p) => {
+      const place = placeOf(places, p);
+      return place !== null && isShown(place, p, showHidden);
     });
-    if (!relevant) return;
-    await get().refresh(true);
+    if (shown.length === 0) return;
+    await get().refreshDirs(dirsToRescan(shown));
     const notices: Record<string, ChangeNotice> = {};
     let reload: { path: string; text: string } | null = null;
 

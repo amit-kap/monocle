@@ -5,6 +5,14 @@ export type TreeNode = {
   children?: TreeNode[];
   /** Files: size on disk in bytes, for the token estimate. */
   size?: number;
+  /** Folders: whether a note sits inside, at any depth. Folders without are dimmed. */
+  hasNotes?: boolean;
+  /** Top-level rows only: a Place, one of the folders the sidebar is built from. */
+  place?: boolean;
+  /** Places: the parent folder, shown when two Places share a name. */
+  hint?: string;
+  /** Places: the folder can't be read (moved, deleted, or a drive that's gone). */
+  missing?: boolean;
   /**
    * Set on a row that stands for several folders folded into one
    * (`Research / _feeds / 2026`), or for a folder folded into its only

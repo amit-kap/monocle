@@ -52,6 +52,20 @@ function App() {
     };
   }, [init]);
 
+  // A safety net under the watcher: coming back to the window rescans quietly,
+  // so anything it missed (a sleep, a network drive) catches up. At most every
+  // 10 seconds, so switching apps back and forth doesn't rescan each time.
+  useEffect(() => {
+    let last = Date.now();
+    const onFocus = () => {
+      if (Date.now() - last < 10_000) return;
+      last = Date.now();
+      void useStore.getState().refresh(true);
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+
   // Outside edits to markdown under the root arrive from the file watcher.
   useEffect(() => {
     let unlisten: (() => void) | undefined;

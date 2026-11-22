@@ -1,54 +1,10 @@
-import {
-  exists,
-  readDir,
-  readTextFile,
-  rename,
-  stat,
-} from "@tauri-apps/plugin-fs";
+import { exists, readTextFile, rename } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { dirname, join } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { NoteFile, TreeNode } from "../types";
 
 const MD_EXT = /\.(md|markdown)$/i;
-// Folders that never hold notes: system data, dependencies, build output.
-export const SKIP_DIRS = new Set([
-  "Library",
-  "node_modules",
-  ".git",
-  ".Trash",
-  "dist",
-  "build",
-  "target",
-  ".next",
-  ".cache",
-]);
-const MAX_CONCURRENT_READS = 32;
-
-let activeReads = 0;
-const readQueue: (() => void)[] = [];
-
-function acquireRead(): Promise<void> {
-  if (activeReads < MAX_CONCURRENT_READS) {
-    activeReads += 1;
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => {
-    readQueue.push(() => {
-      activeReads += 1;
-      resolve();
-    });
-  });
-}
-
-function releaseRead(): void {
-  activeReads -= 1;
-  readQueue.shift()?.();
-}
-
-function pathFor(dir: string, name: string): string {
-  return dir.endsWith("/") ? `${dir}${name}` : `${dir}/${name}`;
-}
 
 export async function pickFolder(): Promise<string | null> {
   const selected = await open({
@@ -67,79 +23,21 @@ export function sortNodes(nodes: TreeNode[]): TreeNode[] {
   });
 }
 
-async function fileSize(path: string): Promise<number | undefined> {
-  await acquireRead();
-  try {
-    return (await stat(path)).size;
-  } catch {
-    return undefined;
-  } finally {
-    releaseRead();
-  }
+/**
+ * Everything under `root`, read natively in one pass (`src-tauri/src/tree.rs`):
+ * every folder, empty ones included, but only markdown files. Each folder says
+ * whether it holds a note at any depth. Dependency, cache and build folders are
+ * skipped, and so are hidden folders other than agents' (`.claude`, …) unless
+ * `showHidden` is on.
+ */
+export function readTree(root: string, showHidden = false): Promise<TreeNode[]> {
+  return invoke<TreeNode[]>("scan_tree", { root, showHidden });
 }
 
-async function walk(
-  dir: string,
-  showHidden: boolean,
-  keepDirs: ReadonlySet<string>,
-  isRoot = false,
-): Promise<TreeNode[]> {
-  let entries: Awaited<ReturnType<typeof readDir>>;
-  await acquireRead();
-  try {
-    entries = await readDir(dir);
-  } catch (error) {
-    // Unreadable subfolders (e.g. the Photos Library) are expected; skip them.
-    if (isRoot) throw error;
-    return [];
-  } finally {
-    releaseRead();
-  }
-
-  const nodes: TreeNode[] = [];
-  const subdirs: Promise<TreeNode | null>[] = [];
-  const sizes: Promise<void>[] = [];
-
-  for (const entry of entries) {
-    // Hidden files and folders are off by default: a notes folder often sits
-    // inside a home directory full of dotfiles the user never wants to see.
-    if (!showHidden && entry.name.startsWith(".")) continue;
-    const path = pathFor(dir, entry.name);
-    if (entry.isDirectory) {
-      if (entry.isSymlink || SKIP_DIRS.has(entry.name)) continue;
-      subdirs.push(
-        walk(path, showHidden, keepDirs).then((children) =>
-          // A folder made in the app stays in the tree while it is empty.
-          children.length > 0 || keepDirs.has(path)
-            ? ({ name: entry.name, path, kind: "dir", children } as TreeNode)
-            : null,
-        ),
-      );
-    } else if (entry.isFile && MD_EXT.test(entry.name)) {
-      const node: TreeNode = { name: entry.name, path, kind: "file" };
-      nodes.push(node);
-      sizes.push(
-        fileSize(path).then((size) => {
-          node.size = size;
-        }),
-      );
-    }
-  }
-
-  await Promise.all(sizes);
-  const resolved = await Promise.all(subdirs);
-  for (const node of resolved) {
-    if (node) nodes.push(node);
-  }
-  return sortNodes(nodes);
-}
-
-export function readTree(
-  root: string,
-  showHidden = false,
-  keepDirs: ReadonlySet<string> = new Set(),
-): Promise<TreeNode[]> {
-  return walk(root, showHidden, keepDirs, true);
+/** Every note in the tree, once each (nested Places hold some notes twice). */
+export function listNotes(nodes: TreeNode[]): NoteFile[] {
+  const seen = new Set<string>();
+  return flattenTree(nodes).filter((note) => !seen.has(note.path) && Boolean(seen.add(note.path)));
 }
 
 export function flattenTree(nodes: TreeNode[]): NoteFile[] {
@@ -154,24 +52,68 @@ export function flattenTree(nodes: TreeNode[]): NoteFile[] {
   return out;
 }
 
-export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
+/** Search starts at this many characters: one letter matches nearly everything. */
+export const SEARCH_MIN = 2;
+
+/** How many matches a search shows; past this it says there are more. */
+export const SEARCH_LIMIT = 200;
+
+export type SearchResult = {
+  /** The tree cut down to the matches and the folders that lead to them. */
+  nodes: TreeNode[];
+  /** Folders to show open: only those on the way to a matching file. */
+  open: Set<string>;
+  /** Whether matches were left out to stay under the limit. */
+  capped: boolean;
+};
+
+/**
+ * Filter the tree by name. A file matches on its name; a folder whose own name
+ * matches stays with everything in it, but shut, so one letter can't open the
+ * whole disk. Only the folders leading to a matching file open, and at most
+ * `limit` matches are kept.
+ */
+export function searchTree(
+  nodes: TreeNode[],
+  query: string,
+  limit = SEARCH_LIMIT,
+): SearchResult {
   const q = query.trim().toLowerCase();
-  if (!q) return nodes;
-  const out: TreeNode[] = [];
-  for (const node of nodes) {
-    if (node.kind === "file") {
-      if (node.name.toLowerCase().includes(q)) out.push(node);
-    } else if (node.children) {
-      // A folder whose own name matches stays with everything in it.
-      if (node.name.toLowerCase().includes(q)) {
+  const open = new Set<string>();
+  if (!q) return { nodes, open, capped: false };
+  let count = 0;
+  let capped = false;
+
+  function walk(list: TreeNode[]): TreeNode[] {
+    const out: TreeNode[] = [];
+    for (const node of list) {
+      const hit = node.name.toLowerCase().includes(q);
+      if (node.kind === "file" || (hit && !node.place)) {
+        if (!hit) continue;
+        if (count >= limit) {
+          capped = true;
+          continue;
+        }
+        count += 1;
         out.push(node);
         continue;
       }
-      const children = filterTree(node.children, q);
-      if (children.length > 0) out.push({ ...node, children });
+      // A Place is a header, not a match; a folder that doesn't match by name
+      // stays while anything in it does, and opens to show it.
+      const children = walk(node.children ?? []);
+      if (children.length > 0) {
+        out.push({ ...node, children });
+        if (children.some((c) => c.kind === "file" || open.has(c.path))) open.add(node.path);
+      }
     }
+    return out;
   }
-  return out;
+
+  return { nodes: walk(nodes), open, capped };
+}
+
+export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
+  return searchTree(nodes, query, Infinity).nodes;
 }
 
 export function ancestorDirs(root: string, filePath: string): string[] {
@@ -269,8 +211,9 @@ export async function saveAsset(
   return invoke<string>("save_asset", { filePath, bytes, ext });
 }
 
-export function startWatch(root: string): Promise<void> {
-  return invoke("start_watch", { root });
+/** Watch every Place at once; one change event covers them all. */
+export function startWatch(roots: string[]): Promise<void> {
+  return invoke("start_watch", { roots });
 }
 
 export function stopWatch(): Promise<void> {

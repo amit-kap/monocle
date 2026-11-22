@@ -1,31 +1,31 @@
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
   useEffect,
+  useDeferredValue,
   useMemo,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { useStore } from "../store/useStore";
-import { filterTree } from "../lib/fs";
+import { SEARCH_LIMIT, SEARCH_MIN, searchTree } from "../lib/fs";
 import { SIDEBAR, clampWidth, readWidth, storeWidth } from "../lib/layout";
 import { scrollDelta } from "../lib/scroll";
 import { stepRow, visibleRows, type TreeRow } from "../lib/treeNav";
-import { ancestorsUpToHome, baseName, foldTree } from "../lib/treeView";
+import { baseName, foldTree } from "../lib/treeView";
 import { copyPathReference } from "../lib/agentActions";
 import type { TreeNode } from "../types";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { FileTree, renameTarget } from "./FileTree";
 import {
-  ChevronsUpDown,
-  ClockIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ChevronsDownUp,
   CopyIcon,
-  EllipsisIcon,
-  FolderIcon,
-  FolderRootIcon,
-  FolderSearchIcon,
+  FolderPlusIcon,
+  MinusCircleIcon,
   PlusIcon,
-  RefreshGlyph,
+  SquarePenIcon,
   RevealGlyph,
   SearchGlyph,
   TrashGlyph,
@@ -54,247 +54,50 @@ function revealRow(nav: HTMLElement | null, path: string): void {
   );
 }
 
-function where(path: string, home: string | null): string {
-  if (home && path === home) return "Home folder";
-  if (home && path.startsWith(`${home}/`))
-    return `~/${path.slice(home.length + 1)}`;
-  return path;
-}
-
 /**
- * The root folder: a button at the foot of the sidebar that shows only the
- * folder's name, and a menu that opens upward with every folder above it up to
- * home, the last four roots, and the system folder picker.
+ * The foot of the sidebar: "Add place…" opens the system folder picker, and
+ * the button beside it folds every open folder shut. There is no "expand all":
+ * with every folder listed, it would draw thousands of rows at once.
  */
-function RootBar() {
-  const folder = useStore((s) => s.folder);
-  const home = useStore((s) => s.home);
-  const recentRoots = useStore((s) => s.recentRoots);
-  const setRoot = useStore((s) => s.setRoot);
+function PlacesBar() {
   const chooseFolder = useStore((s) => s.chooseFolder);
-  const loading = useStore((s) => s.loading);
   const expanded = useStore((s) => s.expanded);
-  const refresh = useStore((s) => s.refresh);
   const collapseAll = useStore((s) => s.collapseAll);
-  const expandAll = useStore((s) => s.expandAll);
-  const [open, setOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const anyExpanded = expanded.size > 0;
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open && !moreOpen) return;
-    function onDown(event: MouseEvent) {
-      if (!ref.current?.contains(event.target as Node)) {
-        setOpen(false);
-        setMoreOpen(false);
-      }
-    }
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-        setMoreOpen(false);
-      }
-    }
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open, moreOpen]);
-
-  const ups = folder && home ? ancestorsUpToHome(folder, home) : [];
-  const recents = recentRoots.filter((p) => p !== folder && !ups.includes(p));
 
   return (
     <div
-      ref={ref}
-      className="relative flex shrink-0 items-center gap-1 border-t border-[var(--border)] p-2"
+      data-places-bar
+      className="foot-enter relative flex shrink-0 items-center gap-1 border-t border-[var(--border)] p-2"
     >
       <button
         type="button"
-        title="Change root folder"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        data-root-button
-        onClick={() => {
-          setMoreOpen(false);
-          setOpen((v) => !v);
-        }}
-        className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]"
+        title="Add a folder to the sidebar"
+        data-add-place-button
+        onClick={() => void chooseFolder()}
+        className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
       >
-        <FolderRootIcon />
-        <span className="min-w-0 flex-1 truncate font-semibold text-[var(--text)]">
-          {folder ? baseName(folder) : "Choose a folder"}
-        </span>
-        <ChevronsUpDown className="size-3.5" />
+        <FolderPlusIcon />
+        <span className="min-w-0 flex-1 truncate font-medium">Add place…</span>
       </button>
       <button
         type="button"
-        title="More"
-        aria-label="More"
-        aria-haspopup="menu"
-        aria-expanded={moreOpen}
-        data-more-button
-        onClick={() => {
-          setOpen(false);
-          setMoreOpen((v) => !v);
-        }}
-        className={`grid size-8 shrink-0 place-items-center rounded-[var(--radius)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] ${
-          moreOpen
-            ? "bg-[var(--bg-active)] text-[var(--text)]"
-            : "text-[var(--text-muted)]"
-        }`}
+        title="Collapse all folders"
+        aria-label="Collapse all folders"
+        data-fold-all
+        disabled={!anyExpanded}
+        onClick={collapseAll}
+        className="grid size-8 shrink-0 place-items-center rounded-[var(--radius)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:pointer-events-none disabled:opacity-40"
       >
-        <EllipsisIcon />
+        <ChevronsDownUp />
       </button>
-
-      {moreOpen && (
-        <div
-          role="menu"
-          data-more-menu
-          className="block-menu"
-          style={{ position: "absolute", right: 8, bottom: 48, zIndex: 40 }}
-        >
-          <button
-            type="button"
-            role="menuitem"
-            className="block-menu-item"
-            disabled={!folder || loading}
-            onClick={() => {
-              setMoreOpen(false);
-              void refresh();
-            }}
-          >
-            <span className="grid w-[18px] place-items-center">
-              <RefreshGlyph className="size-4" />
-            </span>
-            Refresh
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="block-menu-item"
-            onClick={() => {
-              setMoreOpen(false);
-              if (anyExpanded) collapseAll();
-              else expandAll();
-            }}
-          >
-            <span className="grid w-[18px] place-items-center">
-              <ChevronsUpDown className="size-4" />
-            </span>
-            {anyExpanded ? "Collapse all" : "Expand all"}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="block-menu-item"
-            disabled={!folder}
-            onClick={() => {
-              setMoreOpen(false);
-              if (folder) void revealItemInDir(folder);
-            }}
-          >
-            <span className="grid w-[18px] place-items-center">
-              <RevealGlyph className="size-4" />
-            </span>
-            Reveal in Finder
-          </button>
-        </div>
-      )}
-      {open && (
-        <div
-          role="menu"
-          data-root-menu
-          className="block-menu"
-          style={{
-            position: "absolute",
-            left: 8,
-            right: 8,
-            bottom: 48,
-            zIndex: 40,
-          }}
-        >
-          {ups.length > 0 && (
-            <>
-              <div className="block-menu-label">Go up to</div>
-              {ups.map((dir) => (
-                <button
-                  key={dir}
-                  type="button"
-                  role="menuitem"
-                  className="block-menu-item"
-                  onClick={() => {
-                    setOpen(false);
-                    void setRoot(dir);
-                  }}
-                >
-                  <span className="grid w-[18px] place-items-center">
-                    <FolderIcon className="size-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate">{baseName(dir)}</span>
-                    <span className="block truncate text-[11px] text-[var(--text-faint)]">
-                      {where(dir, home)}
-                    </span>
-                  </span>
-                </button>
-              ))}
-              <div className="block-menu-sep" />
-            </>
-          )}
-          {recents.length > 0 && (
-            <>
-              <div className="block-menu-label">Recent</div>
-              {recents.map((dir) => (
-                <button
-                  key={dir}
-                  type="button"
-                  role="menuitem"
-                  className="block-menu-item"
-                  onClick={() => {
-                    setOpen(false);
-                    void setRoot(dir);
-                  }}
-                >
-                  <span className="grid w-[18px] place-items-center">
-                    <ClockIcon className="size-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate">{baseName(dir)}</span>
-                    <span className="block truncate text-[11px] text-[var(--text-faint)]">
-                      {where(dir, home)}
-                    </span>
-                  </span>
-                </button>
-              ))}
-              <div className="block-menu-sep" />
-            </>
-          )}
-          <button
-            type="button"
-            role="menuitem"
-            className="block-menu-item"
-            onClick={() => {
-              setOpen(false);
-              void chooseFolder();
-            }}
-          >
-            <span className="grid w-[18px] place-items-center">
-              <FolderSearchIcon className="size-4" />
-            </span>
-            Choose another folder…
-          </button>
-        </div>
-      )}
     </div>
   );
 }
 
 export function Sidebar() {
-  const folder = useStore((s) => s.folder);
+  const places = useStore((s) => s.places);
+  const collapsedPlaces = useStore((s) => s.collapsedPlaces);
   const home = useStore((s) => s.home);
   const tree = useStore((s) => s.tree);
   const loading = useStore((s) => s.loading);
@@ -310,7 +113,10 @@ export function Sidebar() {
   const renameEntry = useStore((s) => s.renameEntry);
   const startRename = useStore((s) => s.startRename);
   const trashEntry = useStore((s) => s.trashEntry);
-  const setRoot = useStore((s) => s.setRoot);
+  const addPlace = useStore((s) => s.addPlace);
+  const removePlace = useStore((s) => s.removePlace);
+  const movePlace = useStore((s) => s.movePlace);
+  const createFolder = useStore((s) => s.createFolder);
   const toggleDir = useStore((s) => s.toggleDir);
   const requestEditorFocus = useStore((s) => s.requestEditorFocus);
   const leftOpen = useStore((s) => s.leftOpen);
@@ -395,37 +201,38 @@ export function Sidebar() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const filtered = useMemo(() => filterTree(tree, query), [tree, query]);
+  // Typing updates the box at once; the filter follows a beat behind, so a
+  // large tree never holds up the keys.
+  // Below SEARCH_MIN characters the tree stays as it is.
+  const deferred = useDeferredValue(query);
+  const deferredQuery = deferred.trim().length >= SEARCH_MIN ? deferred : "";
+  const tooShort = query.trim().length > 0 && query.trim().length < SEARCH_MIN;
+  const search = useMemo(() => searchTree(tree, deferredQuery), [tree, deferredQuery]);
+  const filtered = search.nodes;
   // The sidebar draws the folded tree: single-child folders merge into one row.
   const shown = useMemo(() => foldTree(filtered), [filtered]);
-  const searching = query.trim().length > 0;
-  // While searching every matching folder opens, and the user can still shut
-  // one: the folders they closed are remembered until the query changes.
-  const [searchCollapsed, setSearchCollapsed] = useState<Set<string>>(
-    new Set(),
-  );
+  const searching = deferredQuery.trim().length > 0;
+  // While searching, the folders leading to a matching file open; the user can
+  // still open or shut any folder, remembered until the query changes.
+  const [searchToggled, setSearchToggled] = useState<Set<string>>(new Set());
   useEffect(() => {
-    setSearchCollapsed(new Set());
-  }, [query]);
+    setSearchToggled(new Set());
+  }, [deferredQuery]);
   const effectiveExpanded = useMemo(() => {
-    if (!searching) return expanded;
-    const open = new Set<string>();
-    const walk = (nodes: TreeNode[]) => {
-      for (const node of nodes) {
-        if (node.kind !== "dir") continue;
-        if (!searchCollapsed.has(node.path)) open.add(node.path);
-        if (node.children) walk(node.children);
-      }
-    };
-    walk(shown);
+    // Places start open: they are open unless folded shut.
+    if (!searching) {
+      return new Set([...expanded, ...places.filter((p) => !collapsedPlaces.has(p))]);
+    }
+    const open = new Set([...search.open].filter((p) => !searchToggled.has(p)));
+    for (const p of searchToggled) if (!search.open.has(p)) open.add(p);
     return open;
-  }, [searching, expanded, shown, searchCollapsed]);
+  }, [searching, expanded, search, searchToggled, places, collapsedPlaces]);
   const toggleRow = (path: string) => {
     if (!searching) {
       toggleDir(path);
       return;
     }
-    setSearchCollapsed((prev) => {
+    setSearchToggled((prev) => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
@@ -481,10 +288,9 @@ export function Sidebar() {
   }
 
   async function openFolderRow(node: TreeNode) {
-    // The name unfolds the folder and opens its page.
-    const state = useStore.getState();
-    if (!state.expanded.has(node.path)) toggleDir(node.path);
-    await openFolder(node.openPath ?? node.path);
+    // The name shows the folder's page and leaves the tree as it is; the
+    // chevron (or a double-click) is what expands.
+    await openFolder(node.openPath ?? node.path, false);
   }
 
   function moveTo(row: TreeRow) {
@@ -495,6 +301,38 @@ export function Sidebar() {
 
   function menuItems(node: TreeNode): MenuItem[] {
     const target = renameTarget(node);
+    if (node.place) {
+      const index = places.indexOf(node.path);
+      return [
+        {
+          label: "New file here",
+          icon: <PlusIcon className="size-4" />,
+          onSelect: () => void createNote(node.path),
+        },
+        {
+          label: "New folder here",
+          icon: <FolderPlusIcon className="size-4" />,
+          onSelect: () => void createFolder(node.path),
+        },
+        {
+          label: "Reveal in Finder",
+          icon: <RevealGlyph className="size-4" />,
+          onSelect: () => void revealItemInDir(node.path),
+        },
+        { separator: true },
+        ...(index > 0
+          ? [{ label: "Move up", icon: <ArrowUpIcon className="size-4" />, onSelect: () => movePlace(node.path, -1) }]
+          : []),
+        ...(index < places.length - 1
+          ? [{ label: "Move down", icon: <ArrowDownIcon className="size-4" />, onSelect: () => movePlace(node.path, 1) }]
+          : []),
+        {
+          label: "Remove from sidebar",
+          icon: <MinusCircleIcon className="size-4" />,
+          onSelect: () => removePlace(node.path),
+        },
+      ];
+    }
     if (node.kind === "dir") {
       const dir = node.openPath ?? node.path;
       return [
@@ -503,6 +341,11 @@ export function Sidebar() {
           icon: <PlusIcon className="size-4" />,
           onSelect: () => void createNote(dir),
         },
+        {
+          label: "New folder here",
+          icon: <FolderPlusIcon className="size-4" />,
+          onSelect: () => void createFolder(dir),
+        },
         { separator: true },
         {
           label: "Rename",
@@ -510,9 +353,9 @@ export function Sidebar() {
           onSelect: () => startRename(target),
         },
         {
-          label: "Set as root folder",
-          icon: <FolderRootIcon className="size-4" />,
-          onSelect: () => void setRoot(dir),
+          label: "Add as place",
+          icon: <FolderPlusIcon className="size-4" />,
+          onSelect: () => void addPlace(dir),
         },
         { separator: true },
         {
@@ -560,7 +403,9 @@ export function Sidebar() {
     const focused = rows.find((row) => row.path === from);
     const node = from ? nodeAt(from) : null;
 
-    // F2 renames the selected row; ⌘⌫ moves it to the Trash.
+    // F2 renames the selected row; ⌘⌫ moves it to the Trash. A Place header
+    // is neither renamed nor trashed from here.
+    if ((event.key === "F2" || event.key === "Backspace") && node?.place) return;
     if (event.key === "F2" && node) {
       event.preventDefault();
       startRename(renameTarget(node));
@@ -651,8 +496,22 @@ export function Sidebar() {
             </div>
           </div>
 
-          {folder && tree.length > 0 && (
+          {places.length > 0 && (
             <div className="px-2 pb-2 pt-2">
+              {/* Searching shows only the search and its results. */}
+              {!searching && (
+                <button
+                  type="button"
+                  data-new-note
+                  title="New note (⌘N)"
+                  onClick={() => void createNote()}
+                  className="mb-0.5 flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                >
+                  <SquarePenIcon className="size-4 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">New note</span>
+                  <kbd className="font-sans text-[11px] text-[var(--text-faint)]">⌘N</kbd>
+                </button>
+              )}
               {!searchOpen ? (
                 <button
                   type="button"
@@ -678,8 +537,8 @@ export function Sidebar() {
                       value={query}
                       onChange={(event) => setQuery(event.currentTarget.value)}
                       onKeyDown={onSearchKeyDown}
-                      placeholder={`Search ${baseName(folder)}`}
-                      aria-label={`Search ${baseName(folder)}`}
+                      placeholder="Search"
+                      aria-label="Search"
                       className="h-8 w-full rounded-[var(--radius)] border border-transparent bg-[var(--bg-active)] pl-8 pr-8 text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-[var(--accent)]"
                     />
                     {query && (
@@ -711,35 +570,63 @@ export function Sidebar() {
             </div>
           )}
 
+          {/* The label heads the full list and stays put while it scrolls;
+              while searching, the results stand alone. */}
+          {places.length > 0 && !loading && !searching && (
+            <div
+              data-places-label
+              className="shrink-0 px-4 pb-1 pt-1 text-[11px] font-medium leading-[14px] text-[var(--text-faint)]"
+            >
+              Places
+            </div>
+          )}
+
           <nav
             ref={navRef}
             onKeyDown={onTreeKeyDown}
             className="flex-1 overflow-y-auto px-2 pb-3"
           >
-            {folder && error && (
+            {places.length > 0 && error && (
               <p className="mx-1 mb-2 rounded-[var(--radius)] bg-[var(--bg-active)] px-2 py-1.5 text-[12px] leading-snug text-[var(--danger)] [overflow-wrap:anywhere]">
                 {error}
               </p>
             )}
-            {!folder && (
-              <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
-                No folder open
-              </p>
+            {places.length === 0 && (
+              <div data-no-places className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
+                <p>No places yet</p>
+                <p className="mt-1">Add a folder that holds your notes.</p>
+              </div>
             )}
-            {folder && loading && (
+            {places.length > 0 && loading && (
               <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
                 Scanning…
               </p>
             )}
-            {folder && !loading && tree.length === 0 && (
-              <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
-                No markdown files here
+            {tooShort && (
+              <p data-search-short className="px-2 pb-2 text-[12px] text-[var(--text-faint)]">
+                Type one more letter to search.
               </p>
             )}
-            {folder && !loading && tree.length > 0 && filtered.length === 0 && (
-              <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
-                No matches
-              </p>
+            {places.length > 0 && !loading && searching && filtered.length === 0 && (
+              <div data-no-matches className="px-3 pt-6 text-center">
+                <p className="text-[13px] font-medium text-[var(--text-muted)] [overflow-wrap:anywhere]">
+                  No file or folder named “{deferredQuery.trim()}”
+                </p>
+                <p className="mt-1 text-[12px] leading-[18px] text-[var(--text-faint)]">
+                  Check the spelling, or try fewer letters.
+                </p>
+                <button
+                  type="button"
+                  data-no-matches-clear
+                  onClick={() => {
+                    setQuery("");
+                    searchRef.current?.focus();
+                  }}
+                  className="mt-3 h-7 rounded-[var(--radius)] px-2.5 text-[12px] font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                >
+                  Clear search
+                </button>
+              </div>
             )}
 
             <FileTree
@@ -769,10 +656,17 @@ export function Sidebar() {
               }}
               onCancelRename={() => startRename(null)}
               onFocusRow={setFocusedPath}
+              onNewNote={(dir) => void createNote(dir)}
             />
+            {searching && search.capped && (
+              <p data-search-capped className="px-2 py-3 text-center text-[12px] text-[var(--text-faint)]">
+                Showing the first {SEARCH_LIMIT} matches. Type more to narrow it down.
+              </p>
+            )}
           </nav>
 
-          <RootBar />
+          {/* Searching is about finding what is here: the foot bar steps aside. */}
+          {!searching && <PlacesBar />}
 
           {rowMenu && (
             <ContextMenu
