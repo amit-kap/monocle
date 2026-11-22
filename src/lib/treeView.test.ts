@@ -15,6 +15,7 @@ import {
   placeOf,
   parentDir,
   replaceDir,
+  renameFileNode,
   rowLabel,
   trailTo,
 } from "./treeView";
@@ -187,5 +188,15 @@ describe("places", () => {
     const next = replaceDir(tree, "/h/.claude", [file("/h/.claude/CLAUDE.md")])!;
     expect(next[0].children?.[0].children?.[0].name).toBe("CLAUDE.md");
     expect(next[1].children?.[0].name).toBe("CLAUDE.md");
+  });
+});
+
+describe("renameFileNode", () => {
+  it("moves the file and keeps its siblings", () => {
+    const tree = [dir("/r", [file("/r/a.md"), dir("/r/sub", [file("/r/sub/old.md")])])];
+    const next = renameFileNode(tree, "/r/sub/old.md", "/r/sub/new.md");
+    const sub = next[0].children![1];
+    expect(sub.children![0]).toMatchObject({ path: "/r/sub/new.md", name: "new.md" });
+    expect(next[0].children![0]).toBe(tree[0].children![0]);
   });
 });

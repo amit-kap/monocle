@@ -14,8 +14,8 @@ function run(title: string, editor: ReturnType<typeof makeTestEditor>) {
 }
 
 describe("the block menu", () => {
-  it("offers Table, Task list and Code block, and nothing else", () => {
-    expect(slashItems.map((i) => i.title)).toEqual(["Table", "Task list", "Code block"]);
+  it("offers Table, Task list and Code block among every block type", () => {
+    expect(slashItems.map((i) => i.title)).toEqual(expect.arrayContaining(["Table", "Task list", "Code block"]));
   });
 
   it("makes a table that survives a save and reopen", () => {

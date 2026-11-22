@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="160" viewBox="0 0 480 160">
+  <rect width="480" height="160" rx="12" fill="#f4f2ee"/>
+  <rect x="30" y="50" width="110" height="60" rx="8" fill="#fff" stroke="#a87526"/>
+  <rect x="185" y="50" width="110" height="60" rx="8" fill="#fff" stroke="#a87526"/>
+  <rect x="340" y="50" width="110" height="60" rx="8" fill="#fff" stroke="#a87526"/>
+  <path d="M140 80h45M295 80h45" stroke="#8a8177" stroke-width="2"/>
+  <g font-family="-apple-system, sans-serif" font-size="15" fill="#3b372f" text-anchor="middle">
+    <text x="85" y="85">Write</text><text x="240" y="85">Save</text><text x="395" y="85">Agent reads</text>
+  </g>
+</svg>

@@ -581,7 +581,7 @@ describe("G4 editing", () => {
     expect(q(".tiptap")!.innerHTML).toContain("assets/image-1.png");
   });
 
-  it("the selection toolbar offers bold, italic, strikethrough, code and link", async () => {
+  it("the selection toolbar offers turn into, bold, italic, strikethrough, code, link and clear", async () => {
     const { SelectionToolbar } = await import("./components/SelectionToolbar");
     const calls: string[] = [];
     const handlers = new Map<string, () => void>();
@@ -613,15 +613,15 @@ describe("G4 editing", () => {
       handlers.get("selectionUpdate")?.();
     });
     const buttons = Array.from(host.querySelectorAll<HTMLElement>("[data-format]"));
-    expect(buttons.map((b) => b.dataset.format)).toEqual(["bold", "italic", "strike", "code", "link"]);
-    click(buttons[0]);
+    expect(buttons.map((b) => b.dataset.format)).toEqual(["turn-into", "bold", "italic", "strike", "code", "link", "clear"]);
+    click(buttons[1]);
     expect(calls).toContain("toggleBold");
     act(() => r.unmount());
   });
 
-  it("the slash menu offers Table, Task list and Code block", async () => {
+  it("the slash menu offers every block type", async () => {
     const { slashItems } = await import("./editor/slashItems");
-    expect(slashItems.map((i) => i.title)).toEqual(["Table", "Task list", "Code block"]);
+    expect(slashItems.map((i) => i.title)).toEqual(expect.arrayContaining(["Table", "Task list", "Code block", "Heading 1", "Image", "Footnote"]));
   });
 });
 

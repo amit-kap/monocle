@@ -32,9 +32,10 @@ type MenuState = {
   top: number;
   left: number;
   label: string;
+  center?: number;
 };
 
-type Anchor = Pick<BlockHover, "from" | "to" | "top" | "left" | "label">;
+type Anchor = Pick<BlockHover, "from" | "to" | "top" | "left" | "label"> & { center?: number };
 
 /** A submenu hangs off its trigger's right edge, flipping when the window ends. */
 type SubmenuState = { top: number; left: number };
@@ -91,6 +92,10 @@ function BlockTypeIcon({ kind }: { kind: TurnIntoKind }) {
       return <GlyphIcon>H2</GlyphIcon>;
     case 3:
       return <GlyphIcon>H3</GlyphIcon>;
+    case 4:
+    case 5:
+    case 6:
+      return <GlyphIcon>{`H${kind}`}</GlyphIcon>;
     case "bulletList":
       return (
         <LineIcon>
@@ -379,6 +384,7 @@ export function BlockHandles({
           top: anchor.top,
           left: anchor.left,
           label: anchor.label,
+          center: anchor.center,
         });
       }
     }
@@ -392,9 +398,9 @@ export function BlockHandles({
     window.addEventListener("keydown", onKey);
   }
 
-  const handleTop = hover
-    ? hover.top + Math.max(0, Math.min(hover.height, 28) - 24) / 2
-    : 0;
+  // The 24px handle centres on the block's first line.
+  const anchorCenter = (menu as Anchor | null)?.center ?? hover?.center;
+  const handleTop = anchorCenter !== undefined ? anchorCenter - 12 : hover ? hover.top : 0;
   const currentForm = menu && editor ? blockForm(editor, menu.from) : null;
   const closeSubmenu = () => setSubmenu(null);
 
@@ -522,7 +528,16 @@ export function BlockHandles({
       )}
 
       {dropY !== null && (
-        <div className="drop-line" style={{ top: dropY }} aria-hidden />
+        <div
+          className="drop-line"
+          // Only as wide as the note's column, never across the sidebar or panel.
+          style={{
+            top: dropY - 1,
+            left: editorDom?.getBoundingClientRect().left ?? 0,
+            width: editorDom?.getBoundingClientRect().width ?? 0,
+          }}
+          aria-hidden
+        />
       )}
     </>
   );

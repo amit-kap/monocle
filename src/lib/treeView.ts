@@ -159,6 +159,18 @@ export function replaceDir(
   return found ? next : null;
 }
 
+/** The tree with the file at `from` moved to `to` in the same folder (every copy, for nested Places). */
+export function renameFileNode(nodes: TreeNode[], from: string, to: string): TreeNode[] {
+  const name = to.slice(to.lastIndexOf("/") + 1);
+  return nodes.map((node) => {
+    if (node.kind === "file") return node.path === from ? { ...node, path: to, name } : node;
+    if (node.children && from.startsWith(`${node.path}/`)) {
+      return { ...node, children: renameFileNode(node.children, from, to) };
+    }
+    return node;
+  });
+}
+
 /** Hidden folders that show with hidden files off. Mirrors `AGENT_DIRS` in `src-tauri/src/tree.rs`. */
 export const AGENT_DIRS = new Set([
   ".claude",

@@ -421,16 +421,16 @@ describe("markdown round-trip keeps every word", () => {
 // accidental. These are the loose ends the markdown-component audit has to
 // resolve; each is lossy or noisy, none is silently destructive.
 describe("known round-trip gaps", () => {
-  it("escapes raw HTML instead of parsing it, including <u>", () => {
+  it("keeps raw HTML as written, never rendering it, including <u>", () => {
     const editor = makeTestEditor("<div>block</div>\n");
-    expect(toMarkdown(editor)).toBe(onDisk("&lt;div&gt;block&lt;/div&gt;"));
+    expect(toMarkdown(editor)).toBe(onDisk("<div>block</div>"));
+    expect(editor.state.doc.firstChild?.type.name).toBe("rawHtmlBlock");
     editor.destroy();
 
-    // The underline mark is switched off in appExtensions precisely because
-    // it cannot survive a save; if this ever starts passing, the mark has been
-    // re-enabled and needs a serializer.
-    const underlined = makeTestEditor("<u>under</u>\n");
-    expect(toMarkdown(underlined)).toBe(onDisk("&lt;u&gt;under&lt;/u&gt;"));
+    // The underline mark is switched off in appExtensions because it cannot
+    // survive a save; an underline written as HTML is kept as raw tags.
+    const underlined = makeTestEditor("p<u>under</u>lain\n");
+    expect(toMarkdown(underlined)).toBe(onDisk("p<u>under</u>lain"));
     underlined.destroy();
   });
 

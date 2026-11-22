@@ -18,11 +18,13 @@ import { splitFrontmatter } from "../lib/frontmatter";
 import { composeNote } from "../lib/compose";
 import { headingAtLine, parseHeadings } from "../lib/outline";
 import { altFromName, imageExtension, isImageFile } from "../lib/imagePaste";
+import { setImagePicker } from "../editor/slashItems";
 import { BlockHandles } from "./BlockHandles";
 import { CodeBlockLanguage } from "./CodeBlockLanguage";
 import { PropertiesBlock } from "./PropertiesBlock";
 import { ResizeHandle } from "./ResizeHandle";
 import { SelectionToolbar } from "./SelectionToolbar";
+import { TableControls } from "./TableControls";
 import { SourcePane, type SourceHandle } from "./SourcePane";
 
 // How long the editor waits after the last keystroke before saving: about a
@@ -104,6 +106,14 @@ export function EditorPane() {
   const activeNote = notes.find((note) => note.path === activePath);
   const baseName = activeNote ? stripExt(activeNote.name) : "";
   const [title, setTitle] = useState(baseName);
+  const setTitleDraft = useStore((s) => s.setTitleDraft);
+
+  // The tree row and the breadcrumb follow the title as it is typed.
+  useEffect(() => {
+    if (!activePath) return;
+    const next = title.trim();
+    setTitleDraft(next && next !== baseName ? { path: activePath, name: next } : null);
+  }, [title, baseName, activePath, setTitleDraft]);
 
   useEffect(() => {
     setTitle(baseName);
@@ -224,6 +234,22 @@ export function EditorPane() {
       useStore.getState().setError(`Couldn't save the image: ${String(error)}`);
     }
   }
+
+  // The slash menu's Image item opens a file picker; the file is saved beside
+  // the note like a pasted one.
+  useEffect(() => {
+    setImagePicker(() => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (file) void insertImage(file);
+      };
+      input.click();
+    });
+    return () => setImagePicker(null);
+  });
 
   const editor = useEditor({
     extensions: appExtensions,
@@ -496,6 +522,7 @@ export function EditorPane() {
       )}
 
       <SelectionToolbar editor={editor} />
+      <TableControls editor={editor} />
       <BlockHandles editor={editor} editorDom={editorDom} />
       <CodeBlockLanguage editor={editor} editorDom={editorDom} />
     </main>

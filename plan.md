@@ -12,6 +12,16 @@ The app builds to a `.app`/`.dmg` under ~25 MB.
 
 ## Status
 
+- **Editor complete (branch `feature/editor`).** Every GitHub markdown element
+  plus footnotes loads, edits and saves. Footnotes (`extensions/Footnotes.ts`)
+  keep each definition where it was written, used or not. The slash menu offers
+  every block type, the selection toolbar adds Turn into and Clear formatting,
+  a table toolbar adds and removes rows and columns and aligns columns, and the
+  block menu reaches H4–H6. `demo/` holds a note per element and a checklist
+  (`00 Start here.md`); `demoFolder.test.ts` opens each one and checks it comes
+  back byte-identical. Renaming a note from its title updates its tree row and
+  breadcrumb as you type.
+
 Phases 0–8 implemented, and the whole open backlog worked through. `Monocle.app`
 and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
 
@@ -186,20 +196,21 @@ and `Monocle_*.dmg` build and launch. Notable deltas from the plan:
   auto-detects a tag no grammar matches rather than throwing. The names and tags
   now live in `lib/languages.ts` as the picker's data, with its drift test moved to
   the file that owns the lowlight instance.
-### Why raw HTML is escaped
+### Why raw HTML is kept but never rendered
 
-`Markdown` runs with `html: false`, so `<div>x</div>` in a note is saved as
-`&lt;div&gt;x&lt;/div&gt;` and `<u>x</u>` likewise. This is deliberate.
+Raw HTML (`<kbd>`, `<details>`, comments) is parsed into its own nodes
+(`extensions/RawHtml.ts`): an inline tag or an HTML block shows as its own
+source in a faint mono style and is written back exactly as it was. It used to
+be escaped, which turned `<details>` into `&lt;details&gt;` on the first edit
+of that line.
 
-Markdown has no underline syntax, and tiptap-markdown has no underline mark spec,
-so an underline cannot round-trip. Worse, while StarterKit's underline mark was
-registered, ⌘U applied it and the serializer dropped the mark *and the spaces
-around it* — `p<u>under</u>lain` saved as `punderlain`, silently deleting the
-word "under". The mark is now switched off, and ⌘U does nothing.
+It is never rendered: that would let any note inject markup and CSS into the
+app. Revisit rendering only alongside a sanitiser and a CSP. Markdown has no
+underline syntax, so StarterKit's underline mark stays off and ⌘U does nothing;
+an underline written as `<u>` is kept as raw tags.
 
-For general HTML, accepting it would let any note inject arbitrary markup and CSS
-into the app's own document. Revisit only alongside a sanitiser and a CSP — do
-not just flip `html: true`.
+Text is escaped only where it must be: a `<` that would open a tag becomes
+`&lt;`; `->`, `x < y` and `>` are written as typed (`extensions/MarkdownText.ts`).
 
 ### Known limits
 

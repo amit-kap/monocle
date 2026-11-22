@@ -33,6 +33,7 @@ import {
   placeNodes,
   placeOf,
   replaceDir,
+  renameFileNode,
   trailTo,
 } from "../lib/treeView";
 import { DISMISS, askModal, askUnsavedChanges } from "./useModalPrompt";
@@ -86,6 +87,8 @@ type State = {
   settingsOpen: boolean;
   /** The row being renamed in the tree, if any. */
   renamingPath: string | null;
+  /** The open note's title while it is being typed, so its tree row and breadcrumb follow along. */
+  titleDraft: { path: string; name: string } | null;
   /** The open note's text as it is now, for tokens, the outline and checks. */
   liveText: string;
   /** What the open note's file held when we last read or wrote it. */
@@ -122,6 +125,7 @@ type State = {
   createFolder: (dir?: string) => Promise<void>;
   startRename: (path: string | null) => void;
   renameNote: (path: string, name: string) => Promise<void>;
+  setTitleDraft: (draft: { path: string; name: string } | null) => void;
   renameEntry: (path: string, name: string) => Promise<void>;
   trashEntry: (path: string) => Promise<void>;
   markDirty: () => void;
@@ -289,6 +293,7 @@ export const useStore = create<State>((set, get) => ({
   view: readView(localStorage),
   settingsOpen: false,
   renamingPath: null,
+  titleDraft: null,
   liveText: "",
   diskText: "",
   changes: {},
@@ -633,6 +638,8 @@ export const useStore = create<State>((set, get) => ({
 
   startRename: (path) => set({ renamingPath: path }),
 
+  setTitleDraft: (titleDraft) => set({ titleDraft }),
+
   renameNote: async (path, name) => {
     try {
       const newPath = await fs.renameNoteFile(path, name);
@@ -641,11 +648,21 @@ export const useStore = create<State>((set, get) => ({
         lastSeen.delete(path);
         lastSeen.set(newPath, seen);
       }
+      // Move the row, the open note and the draft in one step, so nothing
+      // ever sees the old path gone and the new one not yet there.
+      const state = get();
+      const tree = renameFileNode(state.tree, path, newPath);
+      set({
+        tree,
+        notes: fs.listNotes(tree),
+        activePath: state.activePath === path ? newPath : state.activePath,
+        renamingPath: state.renamingPath === path ? null : state.renamingPath,
+        titleDraft: null,
+      });
+      // Then re-read the folder for its order and anything else that moved.
       await get().refreshDirs([parentDir(path)]);
-      if (get().activePath === path) set({ activePath: newPath });
-      if (get().renamingPath === path) set({ renamingPath: null });
     } catch (error) {
-      set({ error: String(error), renamingPath: null });
+      set({ error: String(error), renamingPath: null, titleDraft: null });
     }
   },
 

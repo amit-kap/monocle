@@ -8,6 +8,8 @@ export type BlockHover = {
   top: number;
   left: number;
   height: number;
+  /** The vertical middle of the block's first line, where the handle centres. */
+  center: number;
   label: string;
   depth: number;
 };
@@ -56,6 +58,10 @@ export function blockLabel(node: PMNode): string {
       return "Cell";
     case "image":
       return "Image";
+    case "footnoteDef":
+      return "Footnote";
+    case "rawHtmlBlock":
+      return "HTML";
     default:
       return node.type.name;
   }
@@ -66,6 +72,9 @@ export type TurnIntoKind =
   | 1
   | 2
   | 3
+  | 4
+  | 5
+  | 6
   | "bulletList"
   | "orderedList"
   | "taskList"
@@ -90,6 +99,9 @@ export const TURN_INTO: TurnIntoOption[] = [
 
 /** The rest, behind the menu's submenu. */
 export const TURN_INTO_MORE: TurnIntoOption[] = [
+  { kind: 4, label: "Heading 4", form: "heading-4" },
+  { kind: 5, label: "Heading 5", form: "heading-5" },
+  { kind: 6, label: "Heading 6", form: "heading-6" },
   { kind: "bulletList", label: "Bullet List", form: "bulletList" },
   { kind: "orderedList", label: "Numbered List", form: "orderedList" },
   { kind: "taskList", label: "To-do List", form: "taskList" },
@@ -133,7 +145,7 @@ export function turnIntoBlock(
     chain.setNodeSelection(from).setParagraph().run();
     return;
   }
-  if (kind === 1 || kind === 2 || kind === 3) {
+  if (typeof kind === "number") {
     chain.setNodeSelection(from).setNode("heading", { level: kind }).run();
     return;
   }
@@ -246,6 +258,32 @@ function gutterLeft(editor: Editor, block: BlockRef, rect: DOMRect): number {
   return list ? list.getBoundingClientRect().left - MARKER_SLACK : rect.left;
 }
 
+/**
+ * The middle of a block's first line. A heading, paragraph or list item centres
+ * on its first line of text, so the handle lines up with the words beside it
+ * however tall the block grows; a block with no line of its own (a rule, an
+ * image, raw HTML) centres on its whole box, and a table on its header row.
+ */
+export function firstLineCenter(dom: HTMLElement | null, rect: DOMRect): number {
+  if (!dom) return rect.top + rect.height / 2;
+  if (dom.matches("hr, img, .raw-html-block") || dom.querySelector(":scope > img:only-child")) {
+    return rect.top + rect.height / 2;
+  }
+  const row = dom.matches("table, .tableWrapper") ? dom.querySelector("tr") : null;
+  if (row) {
+    const r = row.getBoundingClientRect();
+    return r.top + r.height / 2;
+  }
+  const line = dom.matches("p, h1, h2, h3, h4, h5, h6, pre")
+    ? dom
+    : (dom.querySelector("p, h1, h2, h3, h4, h5, h6, pre") as HTMLElement | null) ?? dom;
+  const style = getComputedStyle(line);
+  const fontSize = parseFloat(style.fontSize) || 16;
+  const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.5;
+  const top = line.getBoundingClientRect().top + (parseFloat(style.paddingTop) || 0);
+  return top + lineHeight / 2;
+}
+
 function toHover(editor: Editor, block: BlockRef, rect: DOMRect): BlockHover {
   return {
     from: block.from,
@@ -253,6 +291,7 @@ function toHover(editor: Editor, block: BlockRef, rect: DOMRect): BlockHover {
     top: rect.top,
     left: gutterLeft(editor, block, rect),
     height: rect.height,
+    center: firstLineCenter(editor.view.nodeDOM(block.from) as HTMLElement | null, rect),
     label: blockLabel(block.node),
     depth: block.depth,
   };

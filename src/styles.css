@@ -319,6 +319,23 @@ body {
   line-height: 26px;
   margin: 22px 0 0;
 }
+/* H4–H6 step down in the sans face, so they still read as headings. */
+.tiptap h4,
+.tiptap h5,
+.tiptap h6 {
+  font-weight: 600;
+  padding: 3px 0;
+  margin: 18px 0 0;
+}
+.tiptap h4 { font-size: 17px; line-height: 24px; }
+.tiptap h5 { font-size: 15px; line-height: 22px; }
+.tiptap h6 {
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
 
 .tiptap ul,
 .tiptap ol {
@@ -340,8 +357,8 @@ body {
 
 .tiptap blockquote {
   margin: 0.4em 0;
-  padding: 6px 0 6px 16px;
-  border-left: 3px solid var(--text);
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid var(--border-strong);
 }
 
 .tiptap code {
@@ -871,10 +888,9 @@ body {
 
 .drop-line {
   position: fixed;
-  left: 0;
-  right: 0;
   z-index: 45;
   height: 2px;
+  border-radius: 1px;
   background: var(--accent);
   pointer-events: none;
 }
@@ -1371,3 +1387,98 @@ button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+
+/* Raw HTML is shown as its own source, never rendered. */
+.tiptap .raw-html {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: var(--text-faint);
+  background: var(--code-bg);
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+}
+.tiptap pre.raw-html-block {
+  color: var(--text-faint);
+  white-space: pre-wrap;
+}
+.tiptap .raw-html.ProseMirror-selectednode,
+.tiptap pre.raw-html-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Footnotes: a small superscript marker, and a definition with its label. */
+.tiptap .footnote-ref {
+  font-size: 0.7em;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0 0.1em;
+}
+.tiptap .footnote-ref::before { content: "["; }
+.tiptap .footnote-ref::after { content: "]"; }
+.tiptap .footnote-def {
+  position: relative;
+  padding-left: 2.4em;
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+.tiptap .footnote-def::before {
+  content: attr(data-footnote-def) ".";
+  position: absolute;
+  left: 0;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.tiptap .footnote-def > p { margin: 0; }
+.tiptap .footnote-def.is-target { background: var(--bg-hover); border-radius: 4px; }
+
+/* Selection toolbar buttons: tints come from the toolbar's own ink, so they
+   read on the dark toolbar (light theme) and the light one (dark theme). */
+.fmt-btn:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+.fmt-btn[aria-pressed="true"],
+.fmt-btn[aria-expanded="true"] {
+  background: var(--btn-primary-fg);
+  color: var(--btn-primary-bg);
+}
+
+/* Table grips: a pill above the caret's column and beside its row. */
+.table-grip {
+  position: fixed;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-menu);
+  color: var(--text-faint);
+  cursor: pointer;
+  box-shadow: var(--shadow-menu);
+}
+.table-grip.is-column { width: 28px; height: 16px; }
+.table-grip.is-row { width: 16px; height: 28px; flex-direction: column; }
+.table-grip span { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+.table-grip:hover,
+.table-grip[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* Strips on the table's right and bottom edges that add a column or a row. */
+.table-add {
+  position: fixed;
+  z-index: 34;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  color: var(--text-faint);
+  opacity: 0.7;
+  cursor: pointer;
+}
+.table-add.is-column { width: 16px; }
+.table-add.is-row { height: 16px; }
+.table-add:hover { opacity: 1; background: var(--bg-hover-strong); color: var(--text); }

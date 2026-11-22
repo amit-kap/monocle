@@ -145,11 +145,11 @@ export function writeNote(path: string, content: string): Promise<void> {
   return invoke("write_file_atomic", { path, contents: content });
 }
 
-async function uniqueNotePath(folder: string, base: string): Promise<string> {
-  let candidate = await join(folder, `${base}.md`);
+async function uniqueNotePath(folder: string, base: string, ext = ".md"): Promise<string> {
+  let candidate = await join(folder, `${base}${ext}`);
   let index = 2;
   while (await exists(candidate)) {
-    candidate = await join(folder, `${base} ${index}.md`);
+    candidate = await join(folder, `${base} ${index}${ext}`);
     index += 1;
   }
   return candidate;
@@ -191,9 +191,11 @@ export async function renameNoteFile(
 ): Promise<string> {
   const folder = await dirname(path);
   const base = stripExt(newName.trim());
-  const target = await join(folder, `${base}.md`);
+  // Keep the file's own extension: a `.markdown` note stays one.
+  const ext = MD_EXT.exec(path)?.[0] ?? ".md";
+  const target = await join(folder, `${base}${ext}`);
   if (target === path) return path;
-  const uniqueTarget = await uniqueNotePath(folder, base);
+  const uniqueTarget = await uniqueNotePath(folder, base, ext);
   await rename(path, uniqueTarget);
   return uniqueTarget;
 }
