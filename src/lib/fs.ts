@@ -52,28 +52,68 @@ export function flattenTree(nodes: TreeNode[]): NoteFile[] {
   return out;
 }
 
-export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
+/** Search starts at this many characters: one letter matches nearly everything. */
+export const SEARCH_MIN = 2;
+
+/** How many matches a search shows; past this it says there are more. */
+export const SEARCH_LIMIT = 200;
+
+export type SearchResult = {
+  /** The tree cut down to the matches and the folders that lead to them. */
+  nodes: TreeNode[];
+  /** Folders to show open: only those on the way to a matching file. */
+  open: Set<string>;
+  /** Whether matches were left out to stay under the limit. */
+  capped: boolean;
+};
+
+/**
+ * Filter the tree by name. A file matches on its name; a folder whose own name
+ * matches stays with everything in it, but shut, so one letter can't open the
+ * whole disk. Only the folders leading to a matching file open, and at most
+ * `limit` matches are kept.
+ */
+export function searchTree(
+  nodes: TreeNode[],
+  query: string,
+  limit = SEARCH_LIMIT,
+): SearchResult {
   const q = query.trim().toLowerCase();
-  if (!q) return nodes;
-  const out: TreeNode[] = [];
-  for (const node of nodes) {
-    if (node.kind === "file") {
-      if (node.name.toLowerCase().includes(q)) out.push(node);
-    } else if (node.place) {
-      // A Place is a header, not a match: it stays while anything in it does.
-      const children = filterTree(node.children ?? [], q);
-      if (children.length > 0) out.push({ ...node, children });
-    } else if (node.children) {
-      // A folder whose own name matches stays with everything in it.
-      if (node.name.toLowerCase().includes(q)) {
+  const open = new Set<string>();
+  if (!q) return { nodes, open, capped: false };
+  let count = 0;
+  let capped = false;
+
+  function walk(list: TreeNode[]): TreeNode[] {
+    const out: TreeNode[] = [];
+    for (const node of list) {
+      const hit = node.name.toLowerCase().includes(q);
+      if (node.kind === "file" || (hit && !node.place)) {
+        if (!hit) continue;
+        if (count >= limit) {
+          capped = true;
+          continue;
+        }
+        count += 1;
         out.push(node);
         continue;
       }
-      const children = filterTree(node.children, q);
-      if (children.length > 0) out.push({ ...node, children });
+      // A Place is a header, not a match; a folder that doesn't match by name
+      // stays while anything in it does, and opens to show it.
+      const children = walk(node.children ?? []);
+      if (children.length > 0) {
+        out.push({ ...node, children });
+        if (children.some((c) => c.kind === "file" || open.has(c.path))) open.add(node.path);
+      }
     }
+    return out;
   }
-  return out;
+
+  return { nodes: walk(nodes), open, capped };
+}
+
+export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
+  return searchTree(nodes, query, Infinity).nodes;
 }
 
 export function ancestorDirs(root: string, filePath: string): string[] {

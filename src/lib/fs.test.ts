@@ -141,3 +141,35 @@ describe("filterTree with places", () => {
     expect(filterTree(tree, "plan")[0].children?.map((n) => n.name)).toEqual(["plan.md"]);
   });
 });
+
+describe("searchTree", () => {
+  const f = (path: string) => ({ name: path.split("/").pop()!, path, kind: "file" as const });
+  const d = (path: string, children: ReturnType<typeof f>[] | object[]) => ({
+    name: path.split("/").pop()!,
+    path,
+    kind: "dir" as const,
+    children: children as never[],
+  });
+  const tree = [
+    d("/p/alpha", [f("/p/alpha/zzz.md"), d("/p/alpha/deep", [f("/p/alpha/deep/x.md")])]),
+    d("/p/notes", [f("/p/notes/alpha-plan.md"), f("/p/notes/other.md")]),
+  ];
+
+  it("opens only the folders on the way to a matching file", async () => {
+    const { searchTree } = await import("./fs");
+    const result = searchTree(tree, "alpha");
+    expect(result.nodes.map((n) => n.path)).toEqual(["/p/alpha", "/p/notes"]);
+    // The folder that matches by name stays, but shut.
+    expect(result.open.has("/p/alpha")).toBe(false);
+    expect(result.open.has("/p/notes")).toBe(true);
+    expect(result.capped).toBe(false);
+  });
+
+  it("stops at the limit and says so", async () => {
+    const { searchTree } = await import("./fs");
+    const many = Array.from({ length: 5 }, (_, i) => f(`/p/note${i}.md`));
+    const result = searchTree(many, "note", 3);
+    expect(result.nodes).toHaveLength(3);
+    expect(result.capped).toBe(true);
+  });
+});

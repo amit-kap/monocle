@@ -1,13 +1,14 @@
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
   useEffect,
+  useDeferredValue,
   useMemo,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { useStore } from "../store/useStore";
-import { filterTree } from "../lib/fs";
+import { SEARCH_LIMIT, SEARCH_MIN, searchTree } from "../lib/fs";
 import { SIDEBAR, clampWidth, readWidth, storeWidth } from "../lib/layout";
 import { scrollDelta } from "../lib/scroll";
 import { stepRow, visibleRows, type TreeRow } from "../lib/treeNav";
@@ -270,40 +271,38 @@ export function Sidebar() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const filtered = useMemo(() => filterTree(tree, query), [tree, query]);
+  // Typing updates the box at once; the filter follows a beat behind, so a
+  // large tree never holds up the keys.
+  // Below SEARCH_MIN characters the tree stays as it is.
+  const deferred = useDeferredValue(query);
+  const deferredQuery = deferred.trim().length >= SEARCH_MIN ? deferred : "";
+  const tooShort = query.trim().length > 0 && query.trim().length < SEARCH_MIN;
+  const search = useMemo(() => searchTree(tree, deferredQuery), [tree, deferredQuery]);
+  const filtered = search.nodes;
   // The sidebar draws the folded tree: single-child folders merge into one row.
   const shown = useMemo(() => foldTree(filtered), [filtered]);
-  const searching = query.trim().length > 0;
-  // While searching every matching folder opens, and the user can still shut
-  // one: the folders they closed are remembered until the query changes.
-  const [searchCollapsed, setSearchCollapsed] = useState<Set<string>>(
-    new Set(),
-  );
+  const searching = deferredQuery.trim().length > 0;
+  // While searching, the folders leading to a matching file open; the user can
+  // still open or shut any folder, remembered until the query changes.
+  const [searchToggled, setSearchToggled] = useState<Set<string>>(new Set());
   useEffect(() => {
-    setSearchCollapsed(new Set());
-  }, [query]);
+    setSearchToggled(new Set());
+  }, [deferredQuery]);
   const effectiveExpanded = useMemo(() => {
     // Places start open: they are open unless folded shut.
     if (!searching) {
       return new Set([...expanded, ...places.filter((p) => !collapsedPlaces.has(p))]);
     }
-    const open = new Set<string>();
-    const walk = (nodes: TreeNode[]) => {
-      for (const node of nodes) {
-        if (node.kind !== "dir") continue;
-        if (!searchCollapsed.has(node.path)) open.add(node.path);
-        if (node.children) walk(node.children);
-      }
-    };
-    walk(shown);
+    const open = new Set([...search.open].filter((p) => !searchToggled.has(p)));
+    for (const p of searchToggled) if (!search.open.has(p)) open.add(p);
     return open;
-  }, [searching, expanded, shown, searchCollapsed, places, collapsedPlaces]);
+  }, [searching, expanded, search, searchToggled, places, collapsedPlaces]);
   const toggleRow = (path: string) => {
     if (!searching) {
       toggleDir(path);
       return;
     }
-    setSearchCollapsed((prev) => {
+    setSearchToggled((prev) => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
@@ -652,10 +651,24 @@ export function Sidebar() {
                 Scanning…
               </p>
             )}
+            {tooShort && (
+              <p data-search-short className="px-2 pb-2 text-[12px] text-[var(--text-faint)]">
+                Type one more letter to search.
+              </p>
+            )}
             {places.length > 0 && !loading && searching && filtered.length === 0 && (
               <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
                 No matches
               </p>
+            )}
+
+            {places.length > 0 && !loading && (
+              <div
+                data-places-label
+                className="px-2 pb-1 pt-1 text-[11px] font-medium leading-[14px] text-[var(--text-faint)]"
+              >
+                Places
+              </div>
             )}
 
             <FileTree
@@ -687,6 +700,11 @@ export function Sidebar() {
               onFocusRow={setFocusedPath}
               onNewNote={(dir) => void createNote(dir)}
             />
+            {searching && search.capped && (
+              <p data-search-capped className="px-2 py-3 text-center text-[12px] text-[var(--text-faint)]">
+                Showing the first {SEARCH_LIMIT} matches. Type more to narrow it down.
+              </p>
+            )}
           </nav>
 
           <PlacesBar />

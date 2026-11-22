@@ -284,6 +284,7 @@ describe("G2 root and tree", () => {
     expect(q("[data-search-button]")!.textContent).toBe("Search");
     expect(q("input[data-search]")).toBeNull();
     expect(aside.textContent).not.toContain("FILES");
+    expect(q("[data-places-label]")!.textContent).toBe("Places");
     const header = row(ROOT)!;
     expect(header.hasAttribute("data-place")).toBe(true);
     expect(header.textContent).toContain("Projects");
