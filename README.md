@@ -15,6 +15,10 @@ npm install
 npm run tauri dev
 ```
 
+For UI work in a plain browser, `npm run dev` and open `localhost:1420`. Outside
+Tauri the app answers its native calls from an in-memory copy of `demo/`
+(`src/dev/browserMock.ts`, dev only; edits vanish on reload).
+
 ## Build
 
 ```sh
