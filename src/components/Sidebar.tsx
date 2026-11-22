@@ -570,6 +570,17 @@ export function Sidebar() {
             </div>
           )}
 
+          {/* The label heads the full list and stays put while it scrolls;
+              while searching, the results stand alone. */}
+          {places.length > 0 && !loading && !searching && (
+            <div
+              data-places-label
+              className="shrink-0 px-4 pb-1 pt-1 text-[11px] font-medium leading-[14px] text-[var(--text-faint)]"
+            >
+              Places
+            </div>
+          )}
+
           <nav
             ref={navRef}
             onKeyDown={onTreeKeyDown}
@@ -615,16 +626,6 @@ export function Sidebar() {
                 >
                   Clear search
                 </button>
-              </div>
-            )}
-
-            {/* The label heads the full list; while searching, the results stand alone. */}
-            {places.length > 0 && !loading && !searching && (
-              <div
-                data-places-label
-                className="px-2 pb-1 pt-1 text-[11px] font-medium leading-[14px] text-[var(--text-faint)]"
-              >
-                Places
               </div>
             )}
 
