@@ -1593,3 +1593,20 @@ kbd {
 ::selection {
   background: var(--selection);
 }
+
+/* Tree hover and selection speak the right pane's language: the row's name
+   and icon turn brass, as an outline entry does. */
+:is([data-tree-row]:hover, [data-tree-row][data-active="true"]),
+:is([data-tree-row]:hover, [data-tree-row][data-active="true"]) > svg,
+:is([data-tree-row]:hover, [data-tree-row][data-active="true"]) > span:not([data-changed-dot]),
+:is([data-tree-row]:hover, [data-tree-row][data-active="true"]) > span > span:first-child {
+  color: var(--accent);
+}
+
+/* The folder page's rows follow the tree: the name and icon turn brass on
+   hover and on keyboard focus (its "selected" row). The kind and token count
+   stay muted, as an outline entry's count does. */
+:is([data-folder-row]:hover, [data-folder-row]:focus-visible) > svg,
+:is([data-folder-row]:hover, [data-folder-row]:focus-visible) > span > span:first-child {
+  color: var(--accent);
+}
