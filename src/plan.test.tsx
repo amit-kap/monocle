@@ -277,7 +277,7 @@ describe("G1 shell", () => {
 });
 
 describe("G2 root and tree", () => {
-  it("lays the sidebar out: search box, the place's header over its tree, Add place with the More menu beside it at the foot, no Settings button, no FILES label", async () => {
+  it("lays the sidebar out: search box, the place's header over its tree, Add place with the collapse-all button beside it at the foot, no Settings button, no FILES label", async () => {
     await boot();
     const aside = q("aside:not([aria-label])")!;
     expect(aside.textContent).not.toContain("New file");
@@ -291,7 +291,9 @@ describe("G2 root and tree", () => {
     expect(header.textContent).not.toContain("/Users");
     const add = q("[data-add-place-button]")!;
     expect(add.textContent).toBe("Add place…");
-    expect(add.nextElementSibling?.getAttribute("aria-label")).toBe("More");
+    expect(add.nextElementSibling?.hasAttribute("data-fold-all")).toBe(true);
+    expect(q("[data-more-button]")).toBeNull();
+    expect(text()).not.toContain("Refresh");
     expect(q("button[aria-label='Settings']")).toBeNull();
   });
 
@@ -314,6 +316,27 @@ describe("G2 root and tree", () => {
     await tick();
     expect(useStore.getState().places).toEqual(["/Users/me/Other"]);
     expect(fsMock.trashed).toEqual([]);
+  });
+
+  it("New note above the search makes a note, with its name ready to type", async () => {
+    await boot();
+    fsMock.tree = [...TREE, file("untitled.md", ROOT, 0)];
+    expect(q("[data-new-note]")!.textContent).toBe("New note⌘N");
+    click(q("[data-new-note]"));
+    await tick(20);
+    expect(useStore.getState().activePath).toBe(`${ROOT}/untitled.md`);
+    expect(useStore.getState().renamingPath).toBe(`${ROOT}/untitled.md`);
+  });
+
+  it("the collapse-all button folds every folder, and rests disabled with none open", async () => {
+    await boot();
+    act(() => useStore.getState().collapseAll());
+    expect(q<HTMLButtonElement>("[data-fold-all]")!.disabled).toBe(true);
+    act(() => useStore.getState().toggleDir(`${ROOT}/docs`));
+    expect(q<HTMLButtonElement>("[data-fold-all]")!.disabled).toBe(false);
+    click(q("[data-fold-all]"));
+    expect(useStore.getState().expanded.size).toBe(0);
+    expect(q<HTMLButtonElement>("[data-fold-all]")!.disabled).toBe(true);
   });
 
   it("the place header's plus makes a new file in that place", async () => {
@@ -351,6 +374,21 @@ describe("G2 root and tree", () => {
     await tick();
     expect(useStore.getState().folderPage).toBe(`${ROOT}/docs`);
     expect(q("[data-folder-page]")).not.toBeNull();
+  });
+
+  it("clicking a folder's name shows its page without expanding it; a double-click expands", async () => {
+    await boot();
+    act(() => useStore.getState().collapseAll());
+    click(row(`${ROOT}/docs`)!.querySelector("span.truncate"));
+    await tick();
+    expect(useStore.getState().folderPage).toBe(`${ROOT}/docs`);
+    expect(useStore.getState().expanded.has(`${ROOT}/docs`)).toBe(false);
+    act(() => {
+      row(`${ROOT}/docs`)!
+        .querySelector("span.truncate")!
+        .dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    });
+    expect(useStore.getState().expanded.has(`${ROOT}/docs`)).toBe(true);
   });
 
   it("the dots button opens Rename, Copy path for agent, Move to Trash on a file", async () => {
@@ -876,6 +914,30 @@ describe("search box", () => {
     await tick();
     expect(q<HTMLInputElement>("input[data-search]")!.value).toBe("");
     expect(q("[data-search-clear]")).toBeNull();
+  });
+
+  it("a search with no results says what was searched and offers Clear; the foot bar and the Places label hide while searching", async () => {
+    await boot();
+    await openSearch();
+    const input = q<HTMLInputElement>("input[data-search]")!;
+    await act(async () => {
+      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      set.call(input, "abvf");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await tick();
+    expect(q("[data-no-matches]")!.textContent).toContain("No file or folder named “abvf”");
+    expect(q("[data-no-matches-add]")).toBeNull();
+    expect(q("[data-add-place-button]")).toBeNull();
+    expect(q("[data-places-bar]")).toBeNull();
+    expect(q("[data-new-note]")).toBeNull();
+    expect(q("[data-places-label]")).toBeNull();
+    click(q("[data-no-matches-clear]"));
+    await tick();
+    expect(q<HTMLInputElement>("input[data-search]")!.value).toBe("");
+    expect(q("[data-no-matches]")).toBeNull();
+    expect(q("[data-places-label]")).not.toBeNull();
+    expect(q("[data-add-place-button]")).not.toBeNull();
   });
 
   it("folders open while searching and can still be collapsed by the chevron", async () => {

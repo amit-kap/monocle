@@ -31,7 +31,7 @@ type Handlers = {
   changes: Record<string, ChangeNotice>;
   /** The chevron: fold or unfold, nothing else. */
   onToggle: (path: string) => void;
-  /** The folder's name: unfold it and open its page. */
+  /** The folder's name: show its page, leaving the tree as it is. */
   onOpenFolder: (node: TreeNode) => void;
   onOpen: (path: string) => void;
   onMenu: (node: TreeNode, x: number, y: number) => void;
@@ -179,6 +179,12 @@ function Row({
         if (isDir) handlers.onOpenFolder(node);
         else handlers.onOpen(node.path);
       }}
+      // A click shows a folder's page; a double-click also expands it.
+      onDoubleClick={(event) => {
+        if (renaming || !isDir || isEmptyDir(node)) return;
+        if ((event.target as HTMLElement).closest("button, input")) return;
+        handlers.onToggle(node.path);
+      }}
       onContextMenu={(event) => {
         event.preventDefault();
         handlers.onMenu(node, event.clientX, event.clientY);
@@ -282,6 +288,10 @@ function PlaceRow({
       onMouseDown={focusUnlessControl}
       onFocus={() => handlers.onFocusRow(node.path)}
       onClick={() => handlers.onOpenFolder(node)}
+      onDoubleClick={(event) => {
+        if (empty || (event.target as HTMLElement).closest("button")) return;
+        handlers.onToggle(node.path);
+      }}
       onContextMenu={(event) => {
         event.preventDefault();
         handlers.onMenu(node, event.clientX, event.clientY);

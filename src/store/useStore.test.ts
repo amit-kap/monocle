@@ -277,33 +277,7 @@ describe("the tree", () => {
     expect(useStore.getState().expanded.size).toBe(0);
   });
 
-  it("expands every folder at once", () => {
-    useStore.setState({
-      tree: [
-        {
-          name: "projects",
-          path: "/notes/projects",
-          kind: "dir",
-          children: [
-            { name: "draft.md", path: "/notes/projects/draft.md", kind: "file" },
-            {
-              name: "archive",
-              path: "/notes/projects/archive",
-              kind: "dir",
-              children: [],
-            },
-          ],
-        },
-        { name: "inbox.md", path: "/notes/inbox.md", kind: "file" },
-      ],
-      expanded: new Set<string>(),
-    });
-    useStore.getState().expandAll();
-    expect([...useStore.getState().expanded].sort()).toEqual([
-      "/notes/projects",
-      "/notes/projects/archive",
-    ]);
-  });
+
 });
 
 describe("hidden files", () => {
@@ -593,13 +567,19 @@ describe("places", () => {
     expect(useStore.getState().folderPage).toBeNull();
   });
 
-  it("opening a folder shows its page and unfolds the trail to it", async () => {
+  it("opening a folder shows its page and unfolds the folders above it, not the folder", async () => {
     await useStore.getState().openFolder("/notes/docs/deep");
     const state = useStore.getState();
     expect(state.folderPage).toBe("/notes/docs/deep");
     expect(state.activePath).toBeNull();
     expect(state.expanded.has("/notes/docs")).toBe(true);
-    expect(state.expanded.has("/notes/docs/deep")).toBe(true);
+    expect(state.expanded.has("/notes/docs/deep")).toBe(false);
+  });
+
+  it("opening a folder from the tree leaves the tree as it is", async () => {
+    await useStore.getState().openFolder("/notes/docs/deep", false);
+    expect(useStore.getState().folderPage).toBe("/notes/docs/deep");
+    expect(useStore.getState().expanded.size).toBe(0);
   });
 });
 

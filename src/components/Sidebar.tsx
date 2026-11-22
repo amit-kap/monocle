@@ -20,13 +20,12 @@ import { FileTree, renameTarget } from "./FileTree";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
-  ChevronsUpDown,
+  ChevronsDownUp,
   CopyIcon,
-  EllipsisIcon,
   FolderPlusIcon,
   MinusCircleIcon,
   PlusIcon,
-  RefreshGlyph,
+  SquarePenIcon,
   RevealGlyph,
   SearchGlyph,
   TrashGlyph,
@@ -57,49 +56,25 @@ function revealRow(nav: HTMLElement | null, path: string): void {
 
 /**
  * The foot of the sidebar: "Add place…" opens the system folder picker, and
- * More holds refresh and fold-all.
+ * the button beside it folds every open folder shut. There is no "expand all":
+ * with every folder listed, it would draw thousands of rows at once.
  */
 function PlacesBar() {
   const chooseFolder = useStore((s) => s.chooseFolder);
-  const places = useStore((s) => s.places);
-  const loading = useStore((s) => s.loading);
   const expanded = useStore((s) => s.expanded);
-  const refresh = useStore((s) => s.refresh);
   const collapseAll = useStore((s) => s.collapseAll);
-  const expandAll = useStore((s) => s.expandAll);
-  const [moreOpen, setMoreOpen] = useState(false);
   const anyExpanded = expanded.size > 0;
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!moreOpen) return;
-    function onDown(event: MouseEvent) {
-      if (!ref.current?.contains(event.target as Node)) setMoreOpen(false);
-    }
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setMoreOpen(false);
-    }
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [moreOpen]);
 
   return (
     <div
-      ref={ref}
-      className="relative flex shrink-0 items-center gap-1 border-t border-[var(--border)] p-2"
+      data-places-bar
+      className="foot-enter relative flex shrink-0 items-center gap-1 border-t border-[var(--border)] p-2"
     >
       <button
         type="button"
         title="Add a folder to the sidebar"
         data-add-place-button
-        onClick={() => {
-          setMoreOpen(false);
-          void chooseFolder();
-        }}
+        onClick={() => void chooseFolder()}
         className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
       >
         <FolderPlusIcon />
@@ -107,60 +82,15 @@ function PlacesBar() {
       </button>
       <button
         type="button"
-        title="More"
-        aria-label="More"
-        aria-haspopup="menu"
-        aria-expanded={moreOpen}
-        data-more-button
-        onClick={() => setMoreOpen((v) => !v)}
-        className={`grid size-8 shrink-0 place-items-center rounded-[var(--radius)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] ${
-          moreOpen
-            ? "bg-[var(--bg-active)] text-[var(--text)]"
-            : "text-[var(--text-muted)]"
-        }`}
+        title="Collapse all folders"
+        aria-label="Collapse all folders"
+        data-fold-all
+        disabled={!anyExpanded}
+        onClick={collapseAll}
+        className="grid size-8 shrink-0 place-items-center rounded-[var(--radius)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:pointer-events-none disabled:opacity-40"
       >
-        <EllipsisIcon />
+        <ChevronsDownUp />
       </button>
-
-      {moreOpen && (
-        <div
-          role="menu"
-          data-more-menu
-          className="block-menu"
-          style={{ position: "absolute", right: 8, bottom: 48, zIndex: 40 }}
-        >
-          <button
-            type="button"
-            role="menuitem"
-            className="block-menu-item"
-            disabled={places.length === 0 || loading}
-            onClick={() => {
-              setMoreOpen(false);
-              void refresh();
-            }}
-          >
-            <span className="grid w-[18px] place-items-center">
-              <RefreshGlyph className="size-4" />
-            </span>
-            Refresh
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="block-menu-item"
-            onClick={() => {
-              setMoreOpen(false);
-              if (anyExpanded) collapseAll();
-              else expandAll();
-            }}
-          >
-            <span className="grid w-[18px] place-items-center">
-              <ChevronsUpDown className="size-4" />
-            </span>
-            {anyExpanded ? "Collapse all" : "Expand all"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -358,13 +288,9 @@ export function Sidebar() {
   }
 
   async function openFolderRow(node: TreeNode) {
-    // The name unfolds the folder and opens its page.
-    const state = useStore.getState();
-    const open = node.place
-      ? !state.collapsedPlaces.has(node.path)
-      : state.expanded.has(node.path);
-    if (!open) toggleDir(node.path);
-    await openFolder(node.openPath ?? node.path);
+    // The name shows the folder's page and leaves the tree as it is; the
+    // chevron (or a double-click) is what expands.
+    await openFolder(node.openPath ?? node.path, false);
   }
 
   function moveTo(row: TreeRow) {
@@ -572,6 +498,20 @@ export function Sidebar() {
 
           {places.length > 0 && (
             <div className="px-2 pb-2 pt-2">
+              {/* Searching shows only the search and its results. */}
+              {!searching && (
+                <button
+                  type="button"
+                  data-new-note
+                  title="New note (⌘N)"
+                  onClick={() => void createNote()}
+                  className="mb-0.5 flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                >
+                  <SquarePenIcon className="size-4 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">New note</span>
+                  <kbd className="font-sans text-[11px] text-[var(--text-faint)]">⌘N</kbd>
+                </button>
+              )}
               {!searchOpen ? (
                 <button
                   type="button"
@@ -657,12 +597,29 @@ export function Sidebar() {
               </p>
             )}
             {places.length > 0 && !loading && searching && filtered.length === 0 && (
-              <p className="px-2 py-6 text-center text-[13px] text-[var(--text-faint)]">
-                No matches
-              </p>
+              <div data-no-matches className="px-3 pt-6 text-center">
+                <p className="text-[13px] font-medium text-[var(--text-muted)] [overflow-wrap:anywhere]">
+                  No file or folder named “{deferredQuery.trim()}”
+                </p>
+                <p className="mt-1 text-[12px] leading-[18px] text-[var(--text-faint)]">
+                  Check the spelling, or try fewer letters.
+                </p>
+                <button
+                  type="button"
+                  data-no-matches-clear
+                  onClick={() => {
+                    setQuery("");
+                    searchRef.current?.focus();
+                  }}
+                  className="mt-3 h-7 rounded-[var(--radius)] px-2.5 text-[12px] font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                >
+                  Clear search
+                </button>
+              </div>
             )}
 
-            {places.length > 0 && !loading && (
+            {/* The label heads the full list; while searching, the results stand alone. */}
+            {places.length > 0 && !loading && !searching && (
               <div
                 data-places-label
                 className="px-2 pb-1 pt-1 text-[11px] font-medium leading-[14px] text-[var(--text-faint)]"
@@ -707,7 +664,8 @@ export function Sidebar() {
             )}
           </nav>
 
-          <PlacesBar />
+          {/* Searching is about finding what is here: the foot bar steps aside. */}
+          {!searching && <PlacesBar />}
 
           {rowMenu && (
             <ContextMenu

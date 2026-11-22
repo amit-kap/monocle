@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown as LucideChevronDown,
   ChevronRight as LucideChevronRight,
+  ChevronsDownUp as LucideChevronsDownUp,
   ChevronsUpDown as LucideChevronsUpDown,
   Clock,
   CodeXml,
@@ -25,6 +26,7 @@ import {
   RefreshCw,
   Search,
   SlidersHorizontal,
+  SquarePen,
   SquareArrowOutUpRight,
   Trash2,
   Type,
@@ -41,6 +43,8 @@ function icon(Glyph: ComponentType<{ className?: string; "aria-hidden"?: boolean
 export const ChevronRight = icon(LucideChevronRight);
 export const ChevronDown = icon(LucideChevronDown);
 export const ChevronsUpDown = icon(LucideChevronsUpDown);
+export const ChevronsDownUp = icon(LucideChevronsDownUp);
+export const SquarePenIcon = icon(SquarePen);
 export const FolderIcon = icon(Folder);
 export const FolderOpenIcon = icon(FolderOpen);
 export const FolderDotIcon = icon(FolderDot);

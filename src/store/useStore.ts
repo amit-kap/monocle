@@ -110,9 +110,13 @@ type State = {
   toggleDir: (path: string) => void;
   expandTo: (path: string) => void;
   collapseAll: () => void;
-  expandAll: () => void;
   openNote: (path: string) => Promise<void>;
-  openFolder: (path: string) => Promise<void>;
+  /**
+   * Show a folder's page. It never expands the folder itself; with `reveal`
+   * (the default) the folders above it open so its row can be seen. The tree
+   * passes false: the row clicked is already in view.
+   */
+  openFolder: (path: string, reveal?: boolean) => Promise<void>;
   openExternalNote: (path: string) => Promise<void>;
   createNote: (dir?: string) => Promise<void>;
   createFolder: (dir?: string) => Promise<void>;
@@ -175,10 +179,15 @@ function storeList(key: string, list: Iterable<string>): void {
  * The open folders, for every Place at once (paths are absolute, so one list
  * serves them all). Before Places the list was kept per root folder.
  */
+const MAX_EXPANDED = 500;
+
 function readExpanded(legacyRoot: string | null): Set<string> {
   const list =
     readList(EXPANDED_KEY) ?? (legacyRoot ? readList(`${EXPANDED_KEY}:${legacyRoot}`) : null);
-  return new Set(list ?? []);
+  // Nobody opens this many folders by hand: a list this long is left over from
+  // the old "Expand all", and drawing it hangs the window. Start folded instead.
+  if (!list || list.length > MAX_EXPANDED) return new Set();
+  return new Set(list);
 }
 
 function storeExpanded(expanded: Set<string>): void {
@@ -518,19 +527,7 @@ export const useStore = create<State>((set, get) => ({
     set({ expanded: new Set<string>() });
   },
 
-  expandAll: () => {
-    const dirs = new Set<string>();
-    function walk(nodes: TreeNode[]) {
-      for (const node of nodes) {
-        if (node.kind !== "dir") continue;
-        dirs.add(node.path);
-        if (node.children) walk(node.children);
-      }
-    }
-    walk(get().tree);
-    storeExpanded(dirs);
-    set({ expanded: dirs });
-  },
+
 
   openNote: async (path) => {
     if (get().status === "dirty" && !(await confirmDiscard())) return;
@@ -559,7 +556,7 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
-  openFolder: async (path) => {
+  openFolder: async (path, reveal = true) => {
     if (get().status === "dirty" && !(await confirmDiscard())) return;
     set({
       activePath: null,
@@ -570,7 +567,7 @@ export const useStore = create<State>((set, get) => ({
       status: "idle",
       folderPage: path,
       selectedDir: path,
-      ...openTrail(get(), `${path}/_`),
+      ...(reveal ? openTrail(get(), path) : {}),
     });
   },
 
