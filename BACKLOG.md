@@ -7,7 +7,7 @@ the reasoning behind the decisions.
 
 ## Open issues
 
-- [ ] **Spell-check underlines never appear** — `spellcheck="true"` sits on the
+- [x] **Spell-check underlines never appear** — `spellcheck="true"` sits on the
   editor element, but WKWebView does not run the macOS checker inside a
   contenteditable, so a misspelling gets no underline. The shortcut is closed:
   setting `continuousSpellCheckingEnabled` on the web view through KVC raises an

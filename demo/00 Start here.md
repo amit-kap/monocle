@@ -29,7 +29,7 @@ Select some text to see it.
 
 - [ ] Bold, italic, strikethrough and inline code toggle on and off, and the pressed ones show filled.
 - [ ] Link: add one, edit it, and clear it (empty the field and press Enter).
-- [ ] Turn into: Text, Heading 1–6, bullet, numbered and task list, quote, code block.
+- [ ] Turn into: Text, Heading 1–6, bullet, `numbered and task` list, quote, code block.
 - [ ] Clear formatting removes every mark from the selection.
 
 ## Block handle
@@ -38,7 +38,7 @@ Hover a block and use the ⋮⋮ handle to its left.
 
 - [ ] The handle sits level with the block's first line.
 - [ ] Drag a block up and down, including into and out of a list; the drop line stays inside the note.
-- [ ] Menu: turn into each type, duplicate, move up and down, delete.
+- [ ] Menu: turn into [each type, duplicate, move up a](Https://amitkap.com)nd down, delete.
 
 ## Slash menu
 

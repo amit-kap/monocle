@@ -44,6 +44,8 @@ const PLACES_KEY = "monocle:places";
 const COLLAPSED_KEY = "monocle:collapsedPlaces";
 const VIEW_KEY = "monocle:view";
 const EXPANDED_KEY = "monocle:expanded";
+/** The note open when the app last closed, reopened on launch. */
+const LAST_NOTE_KEY = "monocle:lastNote";
 
 type HeadingRequest = { line: number; index: number; n: number };
 
@@ -342,10 +344,9 @@ export const useStore = create<State>((set, get) => ({
       home = null;
     }
     // Places carry over from the single root folder of earlier versions; the
-    // very first launch starts with the home folder and opens its first note.
+    // very first launch starts with the home folder.
     const legacy = localStorage.getItem(LAST_FOLDER_KEY);
     const saved = readList(PLACES_KEY);
-    const firstLaunch = saved === null && legacy === null;
     const places = saved ?? (legacy ? [legacy] : home ? [home] : []);
     storeList(PLACES_KEY, places);
     set({
@@ -358,12 +359,19 @@ export const useStore = create<State>((set, get) => ({
     if (places.length === 0) return;
     await get().refresh();
     void startWatching(places);
-    if (firstLaunch) {
-      const first = get().notes[0];
-      if (first && !get().activePath) {
-        get().expandTo(first.path);
-        await get().openNote(first.path);
-      }
+    // A note is always open on launch: the one open last time if it is still
+    // there, otherwise the first note in the tree. A note opened from Finder
+    // while starting up wins over both.
+    if (get().activePath) return;
+    const last = localStorage.getItem(LAST_NOTE_KEY);
+    const remembered =
+      last && (get().notes.some((note) => note.path === last) || (await fs.pathExists(last)))
+        ? last
+        : null;
+    const target = remembered ?? get().notes[0]?.path;
+    if (target && !get().activePath) {
+      get().expandTo(target);
+      await get().openNote(target);
     }
   },
 
@@ -895,3 +903,11 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 }));
+
+// Remember the open note across launches. Opening a folder page or trashing the
+// note keeps the last one; launch checks it still exists before reopening it.
+useStore.subscribe((state, prev) => {
+  if (state.activePath && state.activePath !== prev.activePath) {
+    localStorage.setItem(LAST_NOTE_KEY, state.activePath);
+  }
+});

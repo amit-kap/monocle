@@ -75,7 +75,7 @@ function PlacesBar() {
         title="Add a folder to the sidebar"
         data-add-place-button
         onClick={() => void chooseFolder()}
-        className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+        className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--accent)]"
       >
         <FolderPlusIcon />
         <span className="min-w-0 flex-1 truncate font-medium">Add place…</span>
@@ -87,7 +87,7 @@ function PlacesBar() {
         data-fold-all
         disabled={!anyExpanded}
         onClick={collapseAll}
-        className="grid size-8 shrink-0 place-items-center rounded-[var(--radius)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] disabled:pointer-events-none disabled:opacity-40"
+        className="grid size-8 shrink-0 place-items-center rounded-[var(--radius)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--accent)] disabled:pointer-events-none disabled:opacity-40"
       >
         <ChevronsDownUp />
       </button>
@@ -505,7 +505,7 @@ export function Sidebar() {
                   data-new-note
                   title="New note (⌘N)"
                   onClick={() => void createNote()}
-                  className="mb-0.5 flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                  className="mb-0.5 flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--accent)]"
                 >
                   <SquarePenIcon className="size-4 shrink-0" />
                   <span className="min-w-0 flex-1 truncate">New note</span>
@@ -518,7 +518,7 @@ export function Sidebar() {
                   data-search-button
                   title="Search (⌘P)"
                   onClick={() => setSearchOpen(true)}
-                  className="flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                  className="flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--accent)]"
                 >
                   <SearchGlyph className="size-4 shrink-0" />
                   <span className="min-w-0 flex-1 truncate">Search</span>
@@ -575,7 +575,7 @@ export function Sidebar() {
           {places.length > 0 && !loading && !searching && (
             <div
               data-places-label
-              className="shrink-0 px-4 pb-1 pt-1 text-[11px] font-medium leading-[14px] text-[var(--text-faint)]"
+              className="shrink-0 px-4 pb-1 pt-1 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]"
             >
               Places
             </div>

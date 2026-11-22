@@ -20,7 +20,9 @@
   --border-strong: #d6d0c3;
   --accent: #a87526;
   --danger: #b3402f;
-  --selection: rgba(35, 33, 28, 0.12);
+  --selection: rgba(168, 117, 38, 0.14);
+  /* Deeper than --accent so selected text stays above 4.5:1 on the wash. */
+  --selection-ink: #8a5a1e;
   --btn-primary-bg: #23211c;
   --btn-primary-fg: #fbfaf7;
   --scroll-thumb: rgba(35, 33, 28, 0.18);
@@ -79,7 +81,8 @@
     --border-strong: #3a3c43;
     --accent: #e2b65c;
     --danger: #f0907e;
-    --selection: rgba(236, 232, 223, 0.14);
+    --selection: rgba(226, 182, 92, 0.18);
+    --selection-ink: #e2b65c;
     --btn-primary-bg: #ece8df;
     --btn-primary-fg: #16171b;
     --scroll-thumb: rgba(236, 232, 223, 0.14);
@@ -126,7 +129,8 @@
   --border-strong: #3a3c43;
   --accent: #e2b65c;
   --danger: #f0907e;
-  --selection: rgba(236, 232, 223, 0.14);
+  --selection: rgba(226, 182, 92, 0.18);
+  --selection-ink: #e2b65c;
   --btn-primary-bg: #ece8df;
   --btn-primary-fg: #16171b;
   --scroll-thumb: rgba(236, 232, 223, 0.14);
@@ -622,6 +626,7 @@ body {
 
 .tiptap ::selection {
   background: var(--selection);
+  color: var(--selection-ink);
 }
 
 /* The slash menu is a block menu that scrolls: same surface, rows and icons. */
@@ -1437,3 +1442,177 @@ button:focus-visible {
 .table-add.is-column { width: 16px; }
 .table-add.is-row { height: 16px; }
 .table-add:hover { opacity: 1; background: var(--bg-hover-strong); color: var(--text); }
+
+/* ── Polish pass ─────────────────────────────────────────────────────────
+   One motion language for everything that floats: menus, the format bar and
+   dialogs grow in from 98% with a short fade. Entry only — closing is instant,
+   the way macOS menus behave — and nothing moves under reduced motion. */
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.block-menu,
+[data-selection-toolbar] {
+  transform-origin: top left;
+  animation: float-in 120ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+/* The slash menu sits in a positioned wrapper; it animates as a menu too. */
+.block-menu.slash-menu {
+  animation-duration: 100ms;
+}
+
+.modal-backdrop {
+  background: rgba(35, 33, 28, 0.24);
+  backdrop-filter: blur(2px) saturate(1.1);
+  -webkit-backdrop-filter: blur(2px) saturate(1.1);
+  animation: backdrop-in 140ms ease-out;
+}
+:root[data-theme="dark"] .modal-backdrop {
+  background: rgba(0, 0, 0, 0.42);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .modal-backdrop {
+    background: rgba(0, 0, 0, 0.42);
+  }
+}
+.modal-backdrop > [role="dialog"] {
+  animation: dialog-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-menu,
+  [data-selection-toolbar],
+  .modal-backdrop,
+  .modal-backdrop > [role="dialog"] {
+    animation: none;
+  }
+}
+
+/* Hover fades out rather than snapping off; it still lands instantly, so the
+   pointer never waits on a row. */
+.block-menu-item,
+.modal-btn,
+.modal-close,
+.appearance-btn,
+.block-handle,
+.code-lang,
+.table-add,
+.fmt-btn {
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.block-menu-item:hover,
+.modal-btn:hover,
+.modal-close:hover,
+.appearance-btn:hover,
+.block-handle:hover,
+.code-lang:hover,
+.table-add:hover,
+.fmt-btn:hover {
+  transition-duration: 0ms;
+}
+
+/* Quiet chrome: scrollbars stay out of sight until the pointer is over the
+   area that scrolls, like macOS overlay scrollers. */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+:where(*)::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+:where(*):hover::-webkit-scrollbar-thumb {
+  background-color: var(--scroll-thumb);
+}
+:where(*)::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scroll-thumb-hover);
+}
+
+/* Type: real kerning and ligatures everywhere, old-style refinements for the
+   serif headings, and figures that line up wherever numbers sit in a column. */
+body {
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+  -moz-osx-font-smoothing: grayscale;
+}
+.doc-title,
+.tiptap h1,
+.tiptap h2,
+.tiptap h3 {
+  font-feature-settings: "kern", "liga", "calt";
+  text-wrap: balance;
+}
+.tiptap p,
+.tiptap li {
+  text-wrap: pretty;
+}
+footer,
+.block-menu,
+.table-grip {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A shortcut written in copy reads as a key. */
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--bg-menu);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* Selected text in the app chrome (search box, settings fields) uses the same
+   ink tint as the page, not the browser's blue. */
+::selection {
+  background: var(--selection);
+  color: var(--selection-ink);
+}
+
+/* Tree hover and selection speak the right pane's language: the row's name
+   and icon turn brass, as an outline entry does. */
+:is([data-tree-row]:hover, [data-tree-row][data-active="true"]),
+:is([data-tree-row]:hover, [data-tree-row][data-active="true"]) > svg,
+:is([data-tree-row]:hover, [data-tree-row][data-active="true"]) > span:not([data-changed-dot]),
+:is([data-tree-row]:hover, [data-tree-row][data-active="true"]) > span > span:first-child {
+  color: var(--accent);
+}
+
+/* The folder page's rows follow the tree: the name and icon turn brass on
+   hover and on keyboard focus (its "selected" row). The kind and token count
+   stay muted, as an outline entry's count does. */
+:is([data-folder-row]:hover, [data-folder-row]:focus-visible) > svg,
+:is([data-folder-row]:hover, [data-folder-row]:focus-visible) > span > span:first-child {
+  color: var(--accent);
+}

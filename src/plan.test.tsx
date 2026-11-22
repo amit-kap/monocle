@@ -510,13 +510,14 @@ describe("G2 root and tree", () => {
 
   it("arrow keys move between rows and never open anything", async () => {
     await boot();
+    const opened = useStore.getState().activePath;
     const first = row(`${ROOT}/CLAUDE.md`)!;
     act(() => {
       first.focus();
       first.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
     });
     await tick();
-    expect(useStore.getState().activePath).toBeNull();
+    expect(useStore.getState().activePath).toBe(opened);
     expect(document.activeElement?.getAttribute("data-tree-row")).toBe(`${ROOT}/README.md`);
   });
 });
@@ -895,6 +896,33 @@ describe("first launch", () => {
     expect(state.activePath).not.toBeNull();
     // From then on the app returns to where it was left, without re-picking.
     expect(localStorage.getItem("monocle:places")).toBe(JSON.stringify([state.home]));
+  });
+});
+
+describe("launch", () => {
+  async function relaunch() {
+    useStore.setState({ activePath: null, tree: [], notes: [] });
+    await act(async () => {
+      await useStore.getState().init();
+    });
+  }
+
+  it("reopens the note that was open last time", async () => {
+    await boot();
+    await act(async () => {
+      await useStore.getState().openNote(`${ROOT}/README.md`);
+    });
+    expect(localStorage.getItem("monocle:lastNote")).toBe(`${ROOT}/README.md`);
+    await relaunch();
+    expect(useStore.getState().activePath).toBe(`${ROOT}/README.md`);
+  });
+
+  it("opens the first note when the last one is gone", async () => {
+    await boot();
+    localStorage.setItem("monocle:lastNote", `${ROOT}/deleted.md`);
+    await relaunch();
+    const state = useStore.getState();
+    expect(state.activePath).toBe(state.notes[0].path);
   });
 });
 

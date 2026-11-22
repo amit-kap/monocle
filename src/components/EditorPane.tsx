@@ -514,8 +514,8 @@ export function EditorPane() {
             <p className="text-[15px] text-[var(--text-muted)]">
               Select a note to start writing
             </p>
-            <p className="mt-1 text-[13px] text-[var(--text-faint)]">
-              or press ⌘N for a new note
+            <p className="mt-2 text-[13px] text-[var(--text-faint)]">
+              or press <kbd>⌘N</kbd> for a new one
             </p>
           </div>
         </div>
