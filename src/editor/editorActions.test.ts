@@ -3,6 +3,7 @@ import { toMarkdown } from "../lib/markdown";
 import { makeTestEditor } from "./testEditor";
 import { alignColumn, appendToTable } from "./tableUtils";
 import { insertFootnote, slashItems } from "./slashItems";
+import { turnIntoBlock } from "./blockUtils";
 
 const caretInText = (editor: ReturnType<typeof makeTestEditor>, text: string) => {
   let at = -1;
@@ -75,6 +76,18 @@ describe("slash menu", () => {
     const e = makeTestEditor("x/");
     const item = slashItems.find((i) => i.title === title)!;
     item.run(e, { from: 2, to: 3 });
+    expect(toMarkdown(e).trimEnd()).toBe(expected);
+  });
+});
+
+describe("turn into code block", () => {
+  it.each([
+    ["a paragraph with marks", "A **bold** word.", "```\nA bold word.\n```"],
+    ["a heading", "## Head", "```\nHead\n```"],
+    ["a quote, unwrapping it", "> quoted", "```\nquoted\n```"],
+  ])("%s", (_name, md, expected) => {
+    const e = makeTestEditor(md);
+    turnIntoBlock(e, 0, "codeBlock");
     expect(toMarkdown(e).trimEnd()).toBe(expected);
   });
 });

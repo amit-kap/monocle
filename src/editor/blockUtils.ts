@@ -158,6 +158,12 @@ export function turnIntoBlock(
     return;
   }
   if (kind === "codeBlock") {
+    // A quote is unwrapped first, so its text becomes the code, not a code
+    // block inside the quote.
+    if (node.type.name === "blockquote") {
+      chain.setTextSelection(from + 2).clearNodes().setCodeBlock().run();
+      return;
+    }
     chain.setNodeSelection(from).setNode("codeBlock").run();
     return;
   }

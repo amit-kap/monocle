@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/core";
+import { LINK_PREFIX, linkHref } from "../lib/linkInput";
 
 type Box = { left: number; top: number };
 
@@ -15,11 +16,16 @@ export function SelectionToolbar({ editor }: { editor: Editor | null }) {
   const [url, setUrl] = useState("");
   const [, bump] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  // While the link field is open the toolbar stays, whatever the editor's
+  // focus says: the field takes the focus, and the editor reports a blur (and
+  // a transaction) before the field has it.
+  const linkingRef = useRef(false);
+  linkingRef.current = linking;
 
   useEffect(() => {
     if (!editor) return;
     function update() {
-      if (!editor) return;
+      if (!editor || linkingRef.current) return;
       const { from, to, empty } = editor.state.selection;
       const inCode = editor.isActive("codeBlock");
       if (empty || inCode || !editor.isFocused && !ref.current?.contains(document.activeElement)) {
@@ -41,12 +47,20 @@ export function SelectionToolbar({ editor }: { editor: Editor | null }) {
     editor.on("selectionUpdate", update);
     // ⌘B and friends change marks without moving the selection.
     editor.on("transaction", update);
-    editor.on("blur", update);
+    // Focus moving into the toolbar (the link field) is not the selection
+    // going away: at blur time the field is not focused yet, so look at where
+    // the focus is headed instead.
+    function onBlur({ event }: { event: FocusEvent }) {
+      const next = event.relatedTarget as Node | null;
+      if (next && ref.current?.contains(next)) return;
+      update();
+    }
+    editor.on("blur", onBlur);
     editor.on("focus", update);
     return () => {
       editor.off("selectionUpdate", update);
       editor.off("transaction", update);
-      editor.off("blur", update);
+      editor.off("blur", onBlur);
       editor.off("focus", update);
     };
   }, [editor]);
@@ -129,12 +143,31 @@ export function SelectionToolbar({ editor }: { editor: Editor | null }) {
           autoFocus
           value={url}
           placeholder="Paste a link"
+          // The caret starts after the prefix; a pasted address replaces it.
+          onFocus={(event) => {
+            const end = event.currentTarget.value.length;
+            event.currentTarget.setSelectionRange(end, end);
+          }}
+          onPaste={(event) => {
+            const pasted = event.clipboardData.getData("text").trim();
+            if (url === LINK_PREFIX && /^[a-z][a-z0-9+.-]*:/i.test(pasted)) {
+              event.preventDefault();
+              setUrl(pasted);
+            }
+          }}
           aria-label="Link address"
           onChange={(event) => setUrl(event.currentTarget.value)}
+          // Clicking anywhere else drops the unfinished link.
+          onBlur={(event) => {
+            if (ref.current?.contains(event.relatedTarget as Node | null)) return;
+            setLinking(false);
+            setUrl("");
+            if (!editor.isFocused) setBox(null);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              const href = url.trim();
+              const href = linkHref(url);
               if (href) editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
               else editor.chain().focus().unsetLink().run();
               setLinking(false);
@@ -212,7 +245,7 @@ export function SelectionToolbar({ editor }: { editor: Editor | null }) {
             aria-pressed={editor.isActive("link")}
             data-format="link"
             onClick={() => {
-              setUrl((editor.getAttributes("link").href as string | undefined) ?? "");
+              setUrl((editor.getAttributes("link").href as string | undefined) || LINK_PREFIX);
               setLinking(true);
             }}
             className="h-[26px] rounded-[6px] px-2 text-[12px] fmt-btn"

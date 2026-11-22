@@ -1,6 +1,7 @@
 import type { Editor, Range } from "@tiptap/core";
 import type { ReactNode } from "react";
 import { nextFootnoteLabel } from "./extensions/Footnotes";
+import { BlockTypeIcon, FootnoteIcon, ImageIcon, TableIcon } from "../components/blockIcons";
 
 export type SlashItem = {
   title: string;
@@ -9,9 +10,6 @@ export type SlashItem = {
   run: (editor: Editor, range: Range) => void;
 };
 
-function Glyph({ children }: { children: ReactNode }) {
-  return <span className="slash-glyph">{children}</span>;
-}
 
 function chain(editor: Editor, range: Range) {
   return editor.chain().focus().deleteRange(range);
@@ -48,7 +46,7 @@ export function insertFootnote(editor: Editor): void {
 const heading = (level: 1 | 2 | 3 | 4 | 5 | 6): SlashItem => ({
   title: `Heading ${level}`,
   keywords: [`h${level}`, "heading", "title"],
-  icon: <Glyph>{`H${level}`}</Glyph>,
+  icon: <BlockTypeIcon kind={level} />,
   run: (editor, range) => chain(editor, range).setNode("heading", { level }).run(),
 });
 
@@ -56,7 +54,7 @@ export const slashItems: SlashItem[] = [
   {
     title: "Text",
     keywords: ["text", "paragraph", "plain", "p"],
-    icon: <Glyph>T</Glyph>,
+    icon: <BlockTypeIcon kind="paragraph" />,
     run: (editor, range) => chain(editor, range).setParagraph().run(),
   },
   heading(1),
@@ -68,44 +66,44 @@ export const slashItems: SlashItem[] = [
   {
     title: "Bullet list",
     keywords: ["bullet", "list", "ul", "unordered"],
-    icon: <Glyph>•</Glyph>,
+    icon: <BlockTypeIcon kind="bulletList" />,
     run: (editor, range) => chain(editor, range).toggleBulletList().run(),
   },
   {
     title: "Numbered list",
     keywords: ["numbered", "ordered", "list", "ol", "1."],
-    icon: <Glyph>1.</Glyph>,
+    icon: <BlockTypeIcon kind="orderedList" />,
     run: (editor, range) => chain(editor, range).toggleOrderedList().run(),
   },
   {
     title: "Task list",
     keywords: ["todo", "task", "checkbox", "check", "list"],
-    icon: <Glyph>☐</Glyph>,
+    icon: <BlockTypeIcon kind="taskList" />,
     run: (editor, range) => chain(editor, range).toggleTaskList().run(),
   },
   {
     title: "Quote",
     keywords: ["quote", "blockquote", "citation"],
-    icon: <Glyph>❝</Glyph>,
+    icon: <BlockTypeIcon kind="blockquote" />,
     run: (editor, range) => chain(editor, range).toggleBlockquote().run(),
   },
   {
     title: "Code block",
     keywords: ["code", "pre", "snippet", "mono", "fence"],
-    icon: <Glyph>{"</>"}</Glyph>,
+    icon: <BlockTypeIcon kind="codeBlock" />,
     run: (editor, range) => chain(editor, range).toggleCodeBlock().run(),
   },
   {
     title: "Table",
     keywords: ["table", "grid", "rows", "columns"],
-    icon: <Glyph>▦</Glyph>,
+    icon: <TableIcon />,
     run: (editor, range) =>
       chain(editor, range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
   },
   {
     title: "Image",
     keywords: ["image", "picture", "photo", "img"],
-    icon: <Glyph>▣</Glyph>,
+    icon: <ImageIcon />,
     run: (editor, range) => {
       chain(editor, range).run();
       pickImage?.(editor);
@@ -114,13 +112,13 @@ export const slashItems: SlashItem[] = [
   {
     title: "Divider",
     keywords: ["divider", "rule", "hr", "line", "separator"],
-    icon: <Glyph>—</Glyph>,
+    icon: <BlockTypeIcon kind="divider" />,
     run: (editor, range) => chain(editor, range).setHorizontalRule().run(),
   },
   {
     title: "Footnote",
     keywords: ["footnote", "note", "reference", "cite"],
-    icon: <Glyph>¹</Glyph>,
+    icon: <FootnoteIcon />,
     run: (editor, range) => {
       chain(editor, range).run();
       insertFootnote(editor);
