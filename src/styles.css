@@ -20,7 +20,9 @@
   --border-strong: #d6d0c3;
   --accent: #a87526;
   --danger: #b3402f;
-  --selection: rgba(35, 33, 28, 0.12);
+  --selection: rgba(168, 117, 38, 0.14);
+  /* Deeper than --accent so selected text stays above 4.5:1 on the wash. */
+  --selection-ink: #8a5a1e;
   --btn-primary-bg: #23211c;
   --btn-primary-fg: #fbfaf7;
   --scroll-thumb: rgba(35, 33, 28, 0.18);
@@ -79,7 +81,8 @@
     --border-strong: #3a3c43;
     --accent: #e2b65c;
     --danger: #f0907e;
-    --selection: rgba(236, 232, 223, 0.14);
+    --selection: rgba(226, 182, 92, 0.18);
+    --selection-ink: #e2b65c;
     --btn-primary-bg: #ece8df;
     --btn-primary-fg: #16171b;
     --scroll-thumb: rgba(236, 232, 223, 0.14);
@@ -126,7 +129,8 @@
   --border-strong: #3a3c43;
   --accent: #e2b65c;
   --danger: #f0907e;
-  --selection: rgba(236, 232, 223, 0.14);
+  --selection: rgba(226, 182, 92, 0.18);
+  --selection-ink: #e2b65c;
   --btn-primary-bg: #ece8df;
   --btn-primary-fg: #16171b;
   --scroll-thumb: rgba(236, 232, 223, 0.14);
@@ -622,6 +626,7 @@ body {
 
 .tiptap ::selection {
   background: var(--selection);
+  color: var(--selection-ink);
 }
 
 /* The slash menu is a block menu that scrolls: same surface, rows and icons. */
@@ -1592,6 +1597,7 @@ kbd {
    ink tint as the page, not the browser's blue. */
 ::selection {
   background: var(--selection);
+  color: var(--selection-ink);
 }
 
 /* Tree hover and selection speak the right pane's language: the row's name
