@@ -11,6 +11,24 @@
         ],
         "createdAt": "2026-11-22T16:26:38.457Z",
         "reason": "Claude triage: L344 is the markdown blockquote's left rule in the editor (.tiptap blockquote), the standard quote style, not a card accent; present since the initial commit"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-11-23T20:20:13.512Z",
+        "reason": "Amit (user confirmed): .frame is the app mock-up window; panes fill it like a real window, text inside has ~16px inset"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-11-23T20:20:13.537Z",
+        "reason": "Amit (user confirmed): false positive; real sizes h1 62.6px, h2 24-30px, lede 20px, body 15px"
       }
     ]
   }

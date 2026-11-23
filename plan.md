@@ -364,6 +364,21 @@ monocle/
 - [ ] (Optional) custom icon, signing/notarization notes
 - **Done when:** installable app runs standalone.
 
+### Delivery
+- **App:** `.github/workflows/release.yml` builds on a macOS Apple-silicon runner
+  when a `v*` tag is pushed, runs the tests, and publishes
+  `Monocle_<version>_aarch64.dmg` as a GitHub release.
+- **Release:** bump `version` in `package.json` (the app reads it from there),
+  commit, then `git tag v0.7.0 && git push origin v0.7.0`. `Cargo.toml`'s version
+  is not used for the bundle.
+- **Signing:** ad-hoc only (`signingIdentity: "-"`). macOS blocks the first
+  launch until the user clicks Open Anyway; the site and release notes say so.
+  Developer ID signing and notarization come later ($99/yr Apple account).
+- **Site:** `site/` is static. Cloudflare Pages deploys it from `main` (output
+  directory `site`, no build command) to `monocle.amitkap.com`; other branches
+  get preview URLs. The download buttons read the latest release from the
+  GitHub API and fall back to the releases page.
+
 ## 6. Data model
 
 ```ts

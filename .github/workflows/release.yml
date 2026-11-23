@@ -1,0 +1,47 @@
+# Builds the macOS app and publishes it as a GitHub release when a version tag is pushed.
+# Release: bump "version" in package.json, commit, then `git tag v0.7.0 && git push origin v0.7.0`.
+# The site's download buttons pick up the newest release's .dmg on their own.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest # Apple silicon
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - run: npm ci
+
+      - run: npm test
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: Monocle __VERSION__
+          releaseDraft: false
+          prerelease: false
+          releaseBody: |
+            macOS, Apple silicon. Download the .dmg below.
+
+            Monocle isn't signed by Apple yet, so macOS blocks the first launch.
+            Open it once, then go to System Settings → Privacy & Security and click **Open Anyway**.
