@@ -20,7 +20,7 @@ export const PR = Math.min(Math.max(devicePixelRatio || 1, 2), 3);
 
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
-// The current theme as three.js colours. `line` is the outline colour; `brass` is only for the accent that is left.
+// The current theme as three.js colours. `line` is the outline colour; `brass` is the card accent (--art-accent), for the one thing that moves.
 export function readTheme() {
   const card = new THREE.Color(css("--art-bg")), ink = new THREE.Color(css("--art-ink"));
   return {
@@ -28,7 +28,7 @@ export function readTheme() {
     folder: new THREE.Color(css("--art-folder")),   // the grey fill of objects
     track: new THREE.Color(css("--art-track")),     // the belt between the rails
     hot: new THREE.Color(css("--art-hot")),         // hover highlight
-    brass: new THREE.Color(css("--brass")),
+    brass: new THREE.Color(css("--art-accent")),   // the card accent: a clearer gold than the text brass, which is darkened for contrast
     line: card.clone().lerp(ink, STYLE.OUTLINE_MIX),
   };
 }

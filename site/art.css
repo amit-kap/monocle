@@ -1,7 +1,7 @@
 /* Neutral grey card palette (cool, no warm tint): card fill = block fill, hairlines sit just off it. JS reads these too. */
-:root { --art-bg: #fafafa; --art-folder: #f6f6f6; --art-track: #ffffff; --art-ink: #000; --art-hot: #3a3a3a; --art-border: #d9d9d9; --art-shadow: none; }
-:root[data-theme="dark"] { --art-bg: #1d1d1d; --art-folder: #191919; --art-track: #222222; --art-ink: #7d7d7d; --art-hot: #bdbdbd; --art-border: #2a2a2a; --art-shadow: none; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme]) { --art-bg: #1d1d1d; --art-folder: #191919; --art-track: #222222; --art-ink: #7d7d7d; --art-hot: #bdbdbd; --art-border: #2a2a2a; --art-shadow: none; } }
+:root { --art-bg: #fafafa; --art-folder: #f6f6f6; --art-track: #ffffff; --art-ink: #000; --art-hot: #3a3a3a; --art-border: #d9d9d9; --art-shadow: none; --art-accent: #d6a630; }
+:root[data-theme="dark"] { --art-bg: #1d1d1d; --art-folder: #191919; --art-track: #222222; --art-ink: #7d7d7d; --art-hot: #bdbdbd; --art-border: #2a2a2a; --art-shadow: none; --art-accent: #e2b65c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) { --art-bg: #1d1d1d; --art-folder: #191919; --art-track: #222222; --art-ink: #7d7d7d; --art-hot: #bdbdbd; --art-border: #2a2a2a; --art-shadow: none; --art-accent: #e2b65c; } }
 
 /* Isometric outline art. One camera, 1.5px lines in the text colour, brass for the one thing that moves. */
 .art {
@@ -13,7 +13,7 @@
 .art .o { fill: var(--art-bg); stroke-width: 1; }
 .art .g { stroke-width: 1; opacity: .6; }
 .art .t { vector-effect: none; }
-.art .tick { stroke: var(--brass); stroke-width: 2.5; stroke-dasharray: 1; stroke-dashoffset: 0; vector-effect: none; }
+.art .tick { stroke: var(--art-accent); stroke-width: 2.5; stroke-dasharray: 1; stroke-dashoffset: 0; vector-effect: none; }
 
 /* One block lifts at a time, is edited, and seats back exactly. A 14s loop: the to-do, then the table. */
 .art.play .lift-a { animation: lift 14s cubic-bezier(.4, 0, .2, 1) infinite; }
@@ -30,7 +30,7 @@
 }
 @keyframes brass {
   0%, 11% { stroke: currentColor; }
-  2.5%, 8% { stroke: var(--brass); }
+  2.5%, 8% { stroke: var(--art-accent); }
   100% { stroke: currentColor; }
 }
 @keyframes draw {
