@@ -17,6 +17,7 @@ vi.mock("../lib/fs", async (importOriginal) => {
     createDirectory: vi.fn(async () => "/notes/untitled folder"),
     startWatch: vi.fn(async () => {}),
     renameNoteFile: vi.fn(async () => "/notes/Renamed.md"),
+    renameDirectory: vi.fn(async () => "/notes/papers"),
   };
 });
 
@@ -44,8 +45,10 @@ function resetStore(): void {
   localStorage.removeItem("monocle:showHidden");
   localStorage.removeItem("monocle:contentWidth");
   localStorage.removeItem("monocle:pageTint");
+  localStorage.removeItem("monocle:favorites");
   useStore.setState({
     places: ["/notes"],
+    favorites: [],
     collapsedPlaces: new Set<string>(),
     notes: [],
     tree: [],
@@ -254,6 +257,61 @@ describe("moving to the Trash", () => {
     useStore.setState({ tree });
     await useStore.getState().trashEntry("/notes");
     expect(trashPath).not.toHaveBeenCalled();
+  });
+});
+
+describe("favorites", () => {
+  beforeEach(resetStore);
+
+  const stored = () => JSON.parse(localStorage.getItem("monocle:favorites") ?? "null");
+  const note = (path: string) => ({ path, kind: "note" as const });
+  const folder = (path: string) => ({ path, kind: "folder" as const });
+
+  it("stars and unstars notes and folders, remembering the list", () => {
+    useStore.getState().toggleFavorite("/notes/A.md", "note");
+    useStore.getState().toggleFavorite("/notes/docs", "folder");
+    expect(useStore.getState().favorites).toEqual([note("/notes/A.md"), folder("/notes/docs")]);
+    expect(stored()).toEqual([note("/notes/A.md"), folder("/notes/docs")]);
+    useStore.getState().toggleFavorite("/notes/A.md", "note");
+    expect(useStore.getState().favorites).toEqual([folder("/notes/docs")]);
+    expect(stored()).toEqual([folder("/notes/docs")]);
+  });
+
+  it("follows a renamed note", async () => {
+    useStore.setState({ favorites: [note("/notes/A.md"), note("/notes/B.md")] });
+    await useStore.getState().renameNote("/notes/A.md", "Renamed");
+    expect(useStore.getState().favorites).toEqual([note("/notes/Renamed.md"), note("/notes/B.md")]);
+    expect(stored()).toEqual([note("/notes/Renamed.md"), note("/notes/B.md")]);
+  });
+
+  it("follows a renamed folder and the notes inside it", async () => {
+    useStore.setState({
+      tree: [{ name: "docs", path: "/notes/docs", kind: "dir", children: [] }],
+      favorites: [folder("/notes/docs"), note("/notes/docs/x.md"), note("/notes/A.md")],
+    });
+    await useStore.getState().renameEntry("/notes/docs", "papers");
+    const moved = [folder("/notes/papers"), note("/notes/papers/x.md"), note("/notes/A.md")];
+    expect(useStore.getState().favorites).toEqual(moved);
+    expect(stored()).toEqual(moved);
+  });
+
+  it("drops what went to the Trash, and anything inside it", async () => {
+    useStore.setState({
+      tree: [
+        { name: "A.md", path: "/notes/A.md", kind: "file" },
+        { name: "docs", path: "/notes/docs", kind: "dir", children: [] },
+      ],
+      favorites: [
+        note("/notes/A.md"),
+        folder("/notes/docs"),
+        note("/notes/docs/x.md"),
+        note("/notes/B.md"),
+      ],
+    });
+    await useStore.getState().trashEntry("/notes/A.md");
+    await useStore.getState().trashEntry("/notes/docs");
+    expect(useStore.getState().favorites).toEqual([note("/notes/B.md")]);
+    expect(stored()).toEqual([note("/notes/B.md")]);
   });
 });
 

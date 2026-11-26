@@ -178,6 +178,7 @@ async function boot(setup: Partial<ReturnType<typeof useStore.getState>> = {}) {
   useModalPrompt.setState({ pending: null });
   useStore.setState({
     places: [],
+    favorites: [],
     collapsedPlaces: new Set(),
     tree: [],
     notes: [],
@@ -391,11 +392,46 @@ describe("G2 root and tree", () => {
     expect(useStore.getState().expanded.has(`${ROOT}/docs`)).toBe(true);
   });
 
-  it("the dots button opens Rename, Copy path for agent, Move to Trash on a file", async () => {
+  it("the dots button opens Add to favorites, Rename, Copy path for agent, Move to Trash on a file", async () => {
     await boot();
     click(row(`${ROOT}/README.md`)!.querySelector("button[aria-label='More actions']"));
     const items = qa("[role='menuitem']").map((i) => i.textContent);
-    expect(items).toEqual(["Rename", "Copy path for agent", "Move to Trash"]);
+    expect(items).toEqual(["Add to favorites", "Rename", "Copy path for agent", "Move to Trash"]);
+  });
+
+  it("starring a note and a folder lists them under Favorites, above Places", async () => {
+    await boot();
+    expect(document.querySelector("[data-favorites]")).toBeNull();
+    act(() => {
+      row(`${ROOT}/README.md`)!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    });
+    click(qa("[role='menuitem']").find((i) => i.textContent === "Add to favorites")!);
+    act(() => {
+      row(`${ROOT}/docs`)!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    });
+    click(qa("[role='menuitem']").find((i) => i.textContent === "Add to favorites")!);
+
+    const section = document.querySelector("[data-favorites]")!;
+    expect(section).not.toBeNull();
+    const places = document.querySelector("[data-places-label]")!;
+    expect(section.compareDocumentPosition(places) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const rows = Array.from(section.querySelectorAll<HTMLElement>("[data-favorite]"));
+    expect(rows.map((r) => r.textContent)).toEqual(["README.md", "docs"]);
+
+    await act(async () => {
+      rows[0].click();
+    });
+    expect(useStore.getState().activePath).toBe(`${ROOT}/README.md`);
+    await act(async () => {
+      rows[1].click();
+    });
+    expect(useStore.getState().folderPage).toBe(`${ROOT}/docs`);
+
+    act(() => {
+      row(`${ROOT}/README.md`)!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    });
+    click(qa("[role='menuitem']").find((i) => i.textContent === "Remove from favorites")!);
+    expect(section.querySelectorAll("[data-favorite]").length).toBe(1);
   });
 
   it("right-clicking a folder offers New file here, New folder here, Rename, Add as place, Move to Trash", async () => {
@@ -404,6 +440,7 @@ describe("G2 root and tree", () => {
       row(`${ROOT}/docs`)!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
     });
     expect(qa("[role='menuitem']").map((i) => i.textContent)).toEqual([
+      "Add to favorites",
       "New file here",
       "New folder here",
       "Rename",
