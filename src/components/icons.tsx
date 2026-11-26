@@ -28,6 +28,8 @@ import {
   SlidersHorizontal,
   SquarePen,
   SquareArrowOutUpRight,
+  Star,
+  StarOff,
   Trash2,
   Type,
   X,
@@ -70,3 +72,5 @@ export const RefreshGlyph = icon(RefreshCw);
 export const RevealGlyph = icon(SquareArrowOutUpRight);
 export const CheckIcon = icon(Check);
 export const CoinsIcon = icon(Coins);
+export const StarIcon = icon(Star);
+export const StarOffIcon = icon(StarOff);

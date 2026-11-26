@@ -7,12 +7,12 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
-import { useStore } from "../store/useStore";
+import { useStore, type Favorite } from "../store/useStore";
 import { SEARCH_LIMIT, SEARCH_MIN, searchTree } from "../lib/fs";
 import { SIDEBAR, clampWidth, readWidth, storeWidth } from "../lib/layout";
 import { scrollDelta } from "../lib/scroll";
 import { stepRow, visibleRows, type TreeRow } from "../lib/treeNav";
-import { baseName, foldTree } from "../lib/treeView";
+import { baseName, findNode, foldTree, placeOf } from "../lib/treeView";
 import { copyPathReference } from "../lib/agentActions";
 import type { TreeNode } from "../types";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
@@ -22,12 +22,16 @@ import {
   ArrowUpIcon,
   ChevronsDownUp,
   CopyIcon,
+  FileTextIcon,
+  FolderIcon,
   FolderPlusIcon,
   MinusCircleIcon,
   PlusIcon,
   SquarePenIcon,
   RevealGlyph,
   SearchGlyph,
+  StarIcon,
+  StarOffIcon,
   TrashGlyph,
   TypeIcon,
   XIcon,
@@ -116,6 +120,8 @@ export function Sidebar() {
   const addPlace = useStore((s) => s.addPlace);
   const removePlace = useStore((s) => s.removePlace);
   const movePlace = useStore((s) => s.movePlace);
+  const favorites = useStore((s) => s.favorites);
+  const toggleFavorite = useStore((s) => s.toggleFavorite);
   const createFolder = useStore((s) => s.createFolder);
   const toggleDir = useStore((s) => s.toggleDir);
   const requestEditorFocus = useStore((s) => s.requestEditorFocus);
@@ -299,6 +305,15 @@ export function Sidebar() {
     revealRow(navRef.current, row.path);
   }
 
+  function favoriteItem(path: string, kind: Favorite["kind"]): MenuItem {
+    const starred = favorites.some((f) => f.path === path);
+    return {
+      label: starred ? "Remove from favorites" : "Add to favorites",
+      icon: starred ? <StarOffIcon className="size-4" /> : <StarIcon className="size-4" />,
+      onSelect: () => toggleFavorite(path, kind),
+    };
+  }
+
   function menuItems(node: TreeNode): MenuItem[] {
     const target = renameTarget(node);
     if (node.place) {
@@ -334,8 +349,11 @@ export function Sidebar() {
       ];
     }
     if (node.kind === "dir") {
+      // A folded `a / b / c` row stars the folder it opens, not the outer one.
       const dir = node.openPath ?? node.path;
       return [
+        favoriteItem(dir, "folder"),
+        { separator: true },
         {
           label: "New file here",
           icon: <PlusIcon className="size-4" />,
@@ -367,6 +385,8 @@ export function Sidebar() {
       ];
     }
     return [
+      favoriteItem(node.path, "note"),
+      { separator: true },
       {
         label: "Rename",
         icon: <TypeIcon className="size-4" />,
@@ -567,6 +587,60 @@ export function Sidebar() {
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Starred notes, above Places; only shown once something is starred. */}
+          {favorites.length > 0 && !loading && !searching && (
+            <div data-favorites className="shrink-0 px-2 pb-2">
+              <div className="px-2 pb-1 pt-1 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]">
+                Favorites
+              </div>
+              <div className="flex max-h-[30vh] flex-col gap-0.5 overflow-y-auto">
+                {favorites.map(({ path, kind }) => {
+                  const isFolder = kind === "folder";
+                  const active = isFolder ? path === folderPage && !activePath : path === activePath;
+                  // A folder's page lists what the tree holds, so a folder
+                  // outside every Place (its Place was removed) has nothing to
+                  // show. A note still opens by path.
+                  const missing = isFolder && !placeOf(places, path);
+                  const node: TreeNode = isFolder
+                    ? (findNode(tree, path) ?? { name: baseName(path), path, kind: "dir", children: [] })
+                    : { name: baseName(path), path, kind: "file" };
+                  return (
+                    <button
+                      key={path}
+                      type="button"
+                      data-favorite={path}
+                      data-favorite-kind={kind}
+                      title={missing ? `${path} (not in any place)` : path}
+                      disabled={missing}
+                      onClick={() => void (isFolder ? openFolder(path, false) : openNote(path))}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        if (missing) {
+                          // Only unstarring makes sense for a folder that is gone.
+                          toggleFavorite(path, kind);
+                          return;
+                        }
+                        setRowMenu({ node, x: event.clientX, y: event.clientY });
+                      }}
+                      className={`flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] disabled:text-[var(--text-faint)] ${
+                        active
+                          ? "bg-[var(--bg-active)] font-medium text-[var(--text)]"
+                          : "text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
+                      }`}
+                    >
+                      {isFolder ? (
+                        <FolderIcon className="size-3.5 shrink-0 text-[var(--text-faint)]" />
+                      ) : (
+                        <FileTextIcon className="size-4 shrink-0 text-[var(--text-faint)]" />
+                      )}
+                      <span className="min-w-0 flex-1 truncate">{baseName(path)}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 

@@ -44,6 +44,43 @@ const PLACES_KEY = "monocle:places";
 const COLLAPSED_KEY = "monocle:collapsedPlaces";
 const VIEW_KEY = "monocle:view";
 const EXPANDED_KEY = "monocle:expanded";
+/** The starred notes and folders, in the order they were starred. */
+const FAVORITES_KEY = "monocle:favorites";
+
+/** A starred note or folder. Folders open their folder page. */
+export type Favorite = { path: string; kind: "note" | "folder" };
+
+function readFavorites(): Favorite[] {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    if (raw === null) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item): Favorite[] => {
+      // A bare path is a note.
+      if (typeof item === "string") return [{ path: item, kind: "note" }];
+      if (
+        item &&
+        typeof item === "object" &&
+        typeof (item as Favorite).path === "string" &&
+        ((item as Favorite).kind === "note" || (item as Favorite).kind === "folder")
+      ) {
+        return [{ path: (item as Favorite).path, kind: (item as Favorite).kind }];
+      }
+      return [];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function storeFavorites(favorites: Favorite[]): void {
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  } catch {
+    // Not remembered; the sidebar still works.
+  }
+}
 /** The note open when the app last closed, reopened on launch. */
 const LAST_NOTE_KEY = "monocle:lastNote";
 
@@ -55,6 +92,8 @@ type State = {
    * tree holds one top-level row for each.
    */
   places: string[];
+  /** The starred notes and folders (absolute paths), shown above Places. */
+  favorites: Favorite[];
   /** Places folded shut in the sidebar. Places start open. */
   collapsedPlaces: Set<string>;
   home: string | null;
@@ -110,6 +149,11 @@ type State = {
   addPlace: (path: string) => Promise<void>;
   removePlace: (path: string) => void;
   movePlace: (path: string, by: -1 | 1) => void;
+  /**
+   * Star a note or folder, or unstar it if it is starred. For a folded
+   * `a / b / c` row, pass the folder it opens (`openPath`).
+   */
+  toggleFavorite: (path: string, kind: Favorite["kind"]) => void;
   refresh: (silent?: boolean) => Promise<void>;
   refreshDirs: (dirs: string[]) => Promise<void>;
   toggleDir: (path: string) => void;
@@ -207,6 +251,19 @@ function rebase(path: string | null, from: string, to: string): string | null {
   return path.startsWith(`${from}/`) ? to + path.slice(from.length) : path;
 }
 
+/** The starred notes after `from` moved to `to`, saved if any of them moved. */
+function rebaseFavorites(favorites: Favorite[], from: string, to: string): Favorite[] {
+  let moved = false;
+  const next = favorites.map((f) => {
+    const path = rebase(f.path, from, to)!;
+    if (path === f.path) return f;
+    moved = true;
+    return { ...f, path };
+  });
+  if (moved) storeFavorites(next);
+  return moved ? next : favorites;
+}
+
 function isWithin(path: string | null, dir: string): boolean {
   return Boolean(path) && (path === dir || path!.startsWith(`${dir}/`));
 }
@@ -270,6 +327,7 @@ function openTrail(
 
 export const useStore = create<State>((set, get) => ({
   places: [],
+  favorites: readFavorites(),
   collapsedPlaces: new Set<string>(),
   home: null,
   tree: [],
@@ -446,6 +504,15 @@ export const useStore = create<State>((set, get) => ({
       places,
       tree: places.map((p) => tree.find((n) => n.path === p)!).filter(Boolean),
     });
+  },
+
+  toggleFavorite: (path, kind) => {
+    const { favorites } = get();
+    const next = favorites.some((f) => f.path === path)
+      ? favorites.filter((f) => f.path !== path)
+      : [...favorites, { path, kind }];
+    storeFavorites(next);
+    set({ favorites: next });
   },
 
   refresh: async (silent = false) => {
@@ -660,7 +727,9 @@ export const useStore = create<State>((set, get) => ({
       // ever sees the old path gone and the new one not yet there.
       const state = get();
       const tree = renameFileNode(state.tree, path, newPath);
+      const favorites = rebaseFavorites(state.favorites, path, newPath);
       set({
+        favorites,
         tree,
         notes: fs.listNotes(tree),
         activePath: state.activePath === path ? newPath : state.activePath,
@@ -698,6 +767,7 @@ export const useStore = create<State>((set, get) => ({
       set({
         places,
         expanded,
+        favorites: rebaseFavorites(state.favorites, path, to),
         activePath: rebase(state.activePath, path, to),
         folderPage: rebase(state.folderPage, path, to),
         selectedDir: rebase(state.selectedDir, path, to),
@@ -736,7 +806,9 @@ export const useStore = create<State>((set, get) => ({
       const changes = Object.fromEntries(
         Object.entries(state.changes).filter(([p]) => !isWithin(p, path)),
       );
-      set({ expanded, changes });
+      const favorites = state.favorites.filter((f) => !isWithin(f.path, path));
+      if (favorites.length !== state.favorites.length) storeFavorites(favorites);
+      set({ expanded, changes, favorites });
       // If what was open went with it, show the parent folder's page.
       const gone = isWithin(state.activePath, path) || isWithin(state.folderPage, path);
       await get().refreshDirs([parentDir(path)]);
