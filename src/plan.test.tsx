@@ -1021,6 +1021,88 @@ describe("search box", () => {
   });
 });
 
+describe("favorites in ⌘P", () => {
+  const ARCH = `${ROOT}/docs/architecture.md`;
+  const README = `${ROOT}/README.md`;
+  const typeInSearch = async (value: string) => {
+    const input = q<HTMLInputElement>("input[data-search]")!;
+    await act(async () => {
+      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      set.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await tick();
+  };
+  const note = (path: string) => ({ path, kind: "note" as const });
+  const favPaths = () => qa("[data-search-favorite]").map((r) => r.dataset.searchFavorite);
+  const searchKey = (k: string) => {
+    act(() => {
+      q("input[data-search]")!.dispatchEvent(
+        new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true }),
+      );
+    });
+  };
+
+  it("lists the starred notes, in order, when the search opens empty, in place of the tree", async () => {
+    await boot({ favorites: [note(ARCH), note(README)] });
+    expect(q("[data-search-favorites]")).toBeNull();
+    key({ key: "p", metaKey: true });
+    await tick();
+    expect(favPaths()).toEqual([ARCH, README]);
+    expect(q("[data-search-favorites-label]")!.textContent).toBe("Favorites");
+    expect(q("[data-places-label]")).toBeNull();
+    expect(rowPaths()).toEqual([]);
+    // The sidebar's own Favorites section steps aside, so they aren't listed twice.
+    expect(q("[data-favorites]")).toBeNull();
+    expect(q(`[data-search-favorite="${ARCH}"]`)!.getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("typing a query swaps the stars for the matches, and clearing it brings them back", async () => {
+    await boot({ favorites: [note(ARCH)] });
+    await openSearch();
+    await typeInSearch("release");
+    expect(q("[data-search-favorites]")).toBeNull();
+    expect(row(`${ROOT}/docs/release.md`)).not.toBeNull();
+    await typeInSearch("");
+    expect(favPaths()).toEqual([ARCH]);
+  });
+
+  it("arrows move through the stars and Enter opens the highlighted one", async () => {
+    await boot({ favorites: [note(ARCH), note(README)] });
+    await openSearch();
+    searchKey("ArrowDown");
+    await tick();
+    expect(q(`[data-search-favorite="${README}"]`)!.getAttribute("aria-selected")).toBe("true");
+    searchKey("Enter");
+    await tick(30);
+    expect(useStore.getState().activePath).toBe(README);
+  });
+
+  it("clicking a star opens it", async () => {
+    await boot({ favorites: [note(ARCH)] });
+    await openSearch();
+    click(q(`[data-search-favorite="${ARCH}"]`));
+    await tick(30);
+    expect(useStore.getState().activePath).toBe(ARCH);
+  });
+
+  it("lists a starred folder too, and Enter opens its page", async () => {
+    await boot({ favorites: [{ path: `${ROOT}/docs`, kind: "folder" }] });
+    await openSearch();
+    expect(q(`[data-search-favorite="${ROOT}/docs"]`)!.dataset.kind).toBe("dir");
+    searchKey("Enter");
+    await tick(30);
+    expect(useStore.getState().folderPage).toBe(`${ROOT}/docs`);
+  });
+
+  it("leaves out stars whose file is gone, and shows the tree when none are left", async () => {
+    await boot({ favorites: [note(`${ROOT}/gone.md`)] });
+    await openSearch();
+    expect(q("[data-search-favorites]")).toBeNull();
+    expect(row(README)).not.toBeNull();
+  });
+});
+
 describe("search button", () => {
   it("becomes the input when clicked, and Close puts the button back and clears the text", async () => {
     await boot();

@@ -12,7 +12,7 @@ import { SEARCH_LIMIT, SEARCH_MIN, searchTree } from "../lib/fs";
 import { SIDEBAR, clampWidth, readWidth, storeWidth } from "../lib/layout";
 import { scrollDelta } from "../lib/scroll";
 import { stepRow, visibleRows, type TreeRow } from "../lib/treeNav";
-import { baseName, findNode, foldTree, placeOf } from "../lib/treeView";
+import { baseName, findNode, foldTree, parentDir, placeOf } from "../lib/treeView";
 import { copyPathReference } from "../lib/agentActions";
 import type { TreeNode } from "../types";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
@@ -253,13 +253,31 @@ export function Sidebar() {
     () => rows.filter((row) => row.kind === "file"),
     [rows],
   );
+  // ⌘P with nothing typed lists the starred notes, so the ones you go back to
+  // are an arrow and Enter away. Stars whose file is gone are left out.
+  const starred = useMemo(
+    () =>
+      favorites
+        .map((favorite) => findNode(tree, favorite.path))
+        .filter((node): node is TreeNode => node !== null),
+    [favorites, tree],
+  );
+  const showStarred = searchOpen && query.trim().length === 0 && starred.length > 0;
+  // What the arrows and Enter move through: the stars, or the matches.
+  const picks = useMemo<TreeRow[]>(
+    () =>
+      showStarred
+        ? starred.map((node) => ({ path: node.path, kind: node.kind, depth: 0, open: false, parent: null }))
+        : files,
+    [showStarred, starred, files],
+  );
   // A value to depend on: the results, as one string.
-  const fileKey = files.map((row) => row.path).join("\n");
+  const pickKey = picks.map((row) => row.path).join("\n");
 
   useEffect(() => {
     // A new set of results starts on its first note.
-    setHighlight(searching ? (files[0]?.path ?? null) : null);
-  }, [searching, fileKey]);
+    setHighlight(searching || showStarred ? (picks[0]?.path ?? null) : null);
+  }, [searching, showStarred, pickKey]);
 
   useEffect(() => {
     if (highlight) revealRow(navRef.current, highlight);
@@ -468,9 +486,16 @@ export function Sidebar() {
       return;
     }
     if (event.key === "Enter") {
-      const target = highlight ?? files[0]?.path;
+      const target = highlight ?? picks[0]?.path;
       if (!target) return;
       event.preventDefault();
+      if (showStarred) {
+        const node = starred.find((n) => n.path === target);
+        if (node?.kind === "dir") {
+          void openFolder(node.path, false);
+          return;
+        }
+      }
       void openNote(target).then(() => {
         // Only take the caret if the note actually opened.
         if (useStore.getState().activePath === target) requestEditorFocus();
@@ -478,11 +503,11 @@ export function Sidebar() {
       return;
     }
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-    const index = files.findIndex((row) => row.path === highlight);
-    const step = stepRow(files, index, event.key, { canToggle: false });
+    const index = picks.findIndex((row) => row.path === highlight);
+    const step = stepRow(picks, index, event.key, { canToggle: false });
     if (!step) return;
     event.preventDefault();
-    const row = files[step.index];
+    const row = picks[step.index];
     if (row) setHighlight(row.path);
   }
 
@@ -519,7 +544,7 @@ export function Sidebar() {
           {places.length > 0 && (
             <div className="px-2 pb-2 pt-2">
               {/* Searching shows only the search and its results. */}
-              {!searching && (
+              {!searching && !showStarred && (
                 <button
                   type="button"
                   data-new-note
@@ -591,7 +616,7 @@ export function Sidebar() {
           )}
 
           {/* Starred notes, above Places; only shown once something is starred. */}
-          {favorites.length > 0 && !loading && !searching && (
+          {favorites.length > 0 && !loading && !searching && !showStarred && (
             <div data-favorites className="shrink-0 px-2 pb-2">
               <div className="px-2 pb-1 pt-1 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]">
                 Favorites
@@ -646,7 +671,15 @@ export function Sidebar() {
 
           {/* The label heads the full list and stays put while it scrolls;
               while searching, the results stand alone. */}
-          {places.length > 0 && !loading && !searching && (
+          {showStarred && (
+            <div
+              data-search-favorites-label
+              className="shrink-0 px-4 pb-1 pt-1 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]"
+            >
+              Favorites
+            </div>
+          )}
+          {places.length > 0 && !loading && !searching && !showStarred && (
             <div
               data-places-label
               className="shrink-0 px-4 pb-1 pt-1 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]"
@@ -703,6 +736,43 @@ export function Sidebar() {
               </div>
             )}
 
+            {showStarred && (
+              <ul data-search-favorites role="listbox" aria-label="Favorites">
+                {starred.map((node) => (
+                  <li
+                    key={node.path}
+                    role="option"
+                    aria-selected={node.path === highlight}
+                    data-search-favorite={node.path}
+                    data-kind={node.kind}
+                    // The search box keeps the focus, so a click mustn't take it.
+                    onMouseDown={(event) => event.preventDefault()}
+                    onMouseEnter={() => setHighlight(node.path)}
+                    onClick={() => {
+                      if (node.kind === "dir") void openFolder(node.path, false);
+                      else void openNote(node.path);
+                    }}
+                    className={`flex h-8 cursor-default items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] ${
+                      node.path === highlight
+                        ? "bg-[var(--bg-hover)] text-[var(--text)]"
+                        : "text-[var(--text-muted)]"
+                    }${node.path === activePath ? " font-medium" : ""}`}
+                  >
+                    {node.kind === "dir" ? (
+                      <FolderIcon className="size-3.5 shrink-0" />
+                    ) : (
+                      <FileTextIcon className="size-4 shrink-0 text-[var(--text-faint)]" />
+                    )}
+                    <span className="min-w-0 shrink truncate">{node.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-[12px] text-[var(--text-faint)]">
+                      {baseName(parentDir(node.path))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {!showStarred && (
             <FileTree
               nodes={shown}
               activePath={activePath}
@@ -732,6 +802,7 @@ export function Sidebar() {
               onFocusRow={setFocusedPath}
               onNewNote={(dir) => void createNote(dir)}
             />
+            )}
             {searching && search.capped && (
               <p data-search-capped className="px-2 py-3 text-center text-[12px] text-[var(--text-faint)]">
                 Showing the first {SEARCH_LIMIT} matches. Type more to narrow it down.
@@ -740,7 +811,7 @@ export function Sidebar() {
           </nav>
 
           {/* Searching is about finding what is here: the foot bar steps aside. */}
-          {!searching && <PlacesBar />}
+          {!searching && !showStarred && <PlacesBar />}
 
           {rowMenu && (
             <ContextMenu
