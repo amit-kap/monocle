@@ -2,7 +2,10 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export type Theme = "system" | "light" | "dark";
 
-const THEME_KEY = "monocle:theme";
+// v2: earlier builds saved a Light/Dark pick that pinned the app away from the
+// OS. Dropping that key puts everyone back on System, the default.
+const THEME_KEY = "monocle:theme-v2";
+localStorage.removeItem("monocle:theme");
 
 export function getStoredTheme(): Theme {
   const value = localStorage.getItem(THEME_KEY);
