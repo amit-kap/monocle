@@ -550,7 +550,7 @@ export function Sidebar() {
                   data-new-note
                   title="New note (⌘N)"
                   onClick={() => void createNote()}
-                  className="flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--accent)]"
+                  className="mb-0.5 flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--accent)]"
                 >
                   <SquarePenIcon className="size-4 shrink-0" />
                   <span className="min-w-0 flex-1 truncate">New note</span>
@@ -621,7 +621,7 @@ export function Sidebar() {
               <div className="px-2 pb-2 pt-3 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]">
                 Favorites
               </div>
-              <div className="flex max-h-[30vh] flex-col overflow-y-auto">
+              <div className="flex max-h-[30vh] flex-col gap-0.5 overflow-y-auto">
                 {favorites.map(({ path, kind }) => {
                   const isFolder = kind === "folder";
                   const active = isFolder ? path === folderPage && !activePath : path === activePath;
@@ -633,11 +633,12 @@ export function Sidebar() {
                     ? (findNode(tree, path) ?? { name: baseName(path), path, kind: "dir", children: [] })
                     : { name: baseName(path), path, kind: "file" };
                   return (
-                    <div key={path} className="group/row relative">
+                    <div key={path} data-favorite-row className="group/row relative">
                       <button
                         type="button"
                         data-favorite={path}
                         data-favorite-kind={kind}
+                        data-active={active}
                         title={missing ? `${path} (not in any place)` : path}
                         disabled={missing}
                         onClick={() => void (isFolder ? openFolder(path, false) : openNote(path))}
@@ -749,7 +750,7 @@ export function Sidebar() {
             )}
 
             {showStarred && (
-              <ul data-search-favorites role="listbox" aria-label="Favorites">
+              <ul data-search-favorites role="listbox" aria-label="Favorites" className="flex flex-col gap-0.5">
                 {starred.map((node) => (
                   <li
                     key={node.path}
@@ -757,6 +758,7 @@ export function Sidebar() {
                     aria-selected={node.path === highlight}
                     data-search-favorite={node.path}
                     data-kind={node.kind}
+                    data-active={node.path === activePath}
                     // The search box keeps the focus, so a click mustn't take it.
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setHighlight(node.path)}

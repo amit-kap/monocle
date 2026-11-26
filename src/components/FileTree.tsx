@@ -360,7 +360,7 @@ export function FileTree({
   ...handlers
 }: { nodes: TreeNode[]; depth?: number } & Handlers) {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-0.5">
       {nodes.map((node) => {
         const focused = node.path === handlers.tabbablePath;
         const highlighted = node.path === handlers.highlightPath;
@@ -387,7 +387,7 @@ export function FileTree({
                 />
                 {open && node.children && (
                   <div
-                    className="tree-children"
+                    className="tree-children mt-0.5"
                     style={{ "--depth": depth + 1 } as React.CSSProperties}
                   >
                     <FileTree nodes={node.children} depth={depth + 1} {...handlers} />
@@ -409,7 +409,7 @@ export function FileTree({
               />
               {open && node.children && (
                 <div
-                  className="tree-children"
+                  className="tree-children mt-0.5"
                   style={{ "--depth": depth + 1 } as React.CSSProperties}
                 >
                   <FileTree nodes={node.children} depth={depth + 1} {...handlers} />
