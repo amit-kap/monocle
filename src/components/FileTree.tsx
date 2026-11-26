@@ -360,7 +360,7 @@ export function FileTree({
   ...handlers
 }: { nodes: TreeNode[]; depth?: number } & Handlers) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col">
       {nodes.map((node) => {
         const focused = node.path === handlers.tabbablePath;
         const highlighted = node.path === handlers.highlightPath;
@@ -376,7 +376,7 @@ export function FileTree({
             // guide line a folder's contents have, so the Place reads as the
             // root of what is below it.
             return (
-              <div key={node.path} data-place-group className="mb-2">
+              <div key={node.path} data-place-group>
                 <PlaceRow
                   node={node}
                   open={open}
