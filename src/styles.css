@@ -981,8 +981,8 @@ body {
    rows it owns. The group carries the indent and the thread, so its place is the
    same at every level: 14px in — the row's 8px gutter plus half of the 12px
    chevron — which is 4px left of the rows themselves, so a hover or a selected
-   row never crosses it. It starts 10px above the group: a folder row and the
-   rows it owns have no gap, and the open chevron's lowest ink sits 18px down a
+   row never crosses it. It starts 12px above the group: the rows a folder
+   owns sit 2px below it, and the open chevron's lowest ink sits 18px down a
    32px row (rotated, the glyph's tip lands 8px into its 12px box, which the row
    centres), so the thread clears the chevron's tip by 4px. */
 .tree-children {
@@ -993,7 +993,7 @@ body {
 .tree-children::before {
   content: "";
   position: absolute;
-  top: -10px;
+  top: -12px;
   bottom: 0;
   left: calc(-4.5px + var(--depth, 1) * 18px);
   width: 1px;
@@ -1606,6 +1606,15 @@ kbd {
 :is([data-tree-row]:hover, [data-tree-row][data-active="true"]) > svg,
 :is([data-tree-row]:hover, [data-tree-row][data-active="true"]) > span:not([data-changed-dot]),
 :is([data-tree-row]:hover, [data-tree-row][data-active="true"]) > span > span:first-child {
+  color: var(--accent);
+}
+
+/* A favorite is the same row as in the tree, so it answers the same way, in
+   the sidebar and in ⌘P. One whose folder is gone stays faint. */
+:is([data-favorite-row]:hover > [data-favorite]:enabled, [data-favorite][data-active="true"]),
+:is([data-favorite-row]:hover > [data-favorite]:enabled, [data-favorite][data-active="true"]) > svg,
+:is([data-search-favorite]:hover, [data-search-favorite][data-active="true"]) > svg,
+:is([data-search-favorite]:hover, [data-search-favorite][data-active="true"]) > span:first-of-type {
   color: var(--accent);
 }
 

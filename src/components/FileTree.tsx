@@ -376,7 +376,7 @@ export function FileTree({
             // guide line a folder's contents have, so the Place reads as the
             // root of what is below it.
             return (
-              <div key={node.path} data-place-group className="mb-2">
+              <div key={node.path} data-place-group>
                 <PlaceRow
                   node={node}
                   open={open}
@@ -387,7 +387,7 @@ export function FileTree({
                 />
                 {open && node.children && (
                   <div
-                    className="tree-children"
+                    className="tree-children mt-0.5"
                     style={{ "--depth": depth + 1 } as React.CSSProperties}
                   >
                     <FileTree nodes={node.children} depth={depth + 1} {...handlers} />
@@ -409,7 +409,7 @@ export function FileTree({
               />
               {open && node.children && (
                 <div
-                  className="tree-children"
+                  className="tree-children mt-0.5"
                   style={{ "--depth": depth + 1 } as React.CSSProperties}
                 >
                   <FileTree nodes={node.children} depth={depth + 1} {...handlers} />

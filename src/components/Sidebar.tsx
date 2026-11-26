@@ -542,7 +542,7 @@ export function Sidebar() {
           </div>
 
           {places.length > 0 && (
-            <div className="px-2 pb-2 pt-2">
+            <div className="px-2 pb-3 pt-2">
               {/* Searching shows only the search and its results. */}
               {!searching && !showStarred && (
                 <button
@@ -617,8 +617,8 @@ export function Sidebar() {
 
           {/* Starred notes, above Places; only shown once something is starred. */}
           {favorites.length > 0 && !loading && !searching && !showStarred && (
-            <div data-favorites className="shrink-0 px-2 pb-2">
-              <div className="px-2 pb-1 pt-1 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]">
+            <div data-favorites className="shrink-0 px-2 pb-3">
+              <div className="px-2 pb-2 pt-3 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]">
                 Favorites
               </div>
               <div className="flex max-h-[30vh] flex-col gap-0.5 overflow-y-auto">
@@ -633,36 +633,49 @@ export function Sidebar() {
                     ? (findNode(tree, path) ?? { name: baseName(path), path, kind: "dir", children: [] })
                     : { name: baseName(path), path, kind: "file" };
                   return (
-                    <button
-                      key={path}
-                      type="button"
-                      data-favorite={path}
-                      data-favorite-kind={kind}
-                      title={missing ? `${path} (not in any place)` : path}
-                      disabled={missing}
-                      onClick={() => void (isFolder ? openFolder(path, false) : openNote(path))}
-                      onContextMenu={(event) => {
-                        event.preventDefault();
-                        if (missing) {
-                          // Only unstarring makes sense for a folder that is gone.
-                          toggleFavorite(path, kind);
-                          return;
-                        }
-                        setRowMenu({ node, x: event.clientX, y: event.clientY });
-                      }}
-                      className={`flex h-8 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-left text-[13px] disabled:text-[var(--text-faint)] ${
-                        active
-                          ? "bg-[var(--bg-active)] font-medium text-[var(--text)]"
-                          : "text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]"
-                      }`}
-                    >
-                      {isFolder ? (
-                        <FolderIcon className="size-3.5 shrink-0 text-[var(--text-faint)]" />
-                      ) : (
-                        <FileTextIcon className="size-4 shrink-0 text-[var(--text-faint)]" />
-                      )}
-                      <span className="min-w-0 flex-1 truncate">{baseName(path)}</span>
-                    </button>
+                    <div key={path} data-favorite-row className="group/row relative">
+                      <button
+                        type="button"
+                        data-favorite={path}
+                        data-favorite-kind={kind}
+                        data-active={active}
+                        title={missing ? `${path} (not in any place)` : path}
+                        disabled={missing}
+                        onClick={() => void (isFolder ? openFolder(path, false) : openNote(path))}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          if (missing) {
+                            // Only unstarring makes sense for a folder that is gone.
+                            toggleFavorite(path, kind);
+                            return;
+                          }
+                          setRowMenu({ node, x: event.clientX, y: event.clientY });
+                        }}
+                        className={`flex h-8 w-full items-center gap-2 rounded-[var(--radius)] pl-2 pr-8 text-left text-[13px] disabled:text-[var(--text-faint)] ${
+                          active
+                            ? "bg-[var(--bg-active)] font-medium text-[var(--text)]"
+                            : "text-[var(--text-muted)] group-hover/row:bg-[var(--bg-hover)] group-hover/row:text-[var(--text)]"
+                        }`}
+                      >
+                        {isFolder ? (
+                          <FolderIcon className="size-3.5 shrink-0 text-[var(--text-faint)]" />
+                        ) : (
+                          <FileTextIcon className="size-4 shrink-0 text-[var(--text-faint)]" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate">{baseName(path)}</span>
+                      </button>
+                      {/* The star shows on hover, like a tree row's buttons; clicking it unstars. */}
+                      <button
+                        type="button"
+                        data-favorite-remove={path}
+                        title="Remove from favorites"
+                        aria-label={`Remove ${baseName(path)} from favorites`}
+                        onClick={() => toggleFavorite(path, kind)}
+                        className="absolute right-1 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-[var(--accent)] opacity-0 hover:bg-[var(--bg-active)] focus-visible:opacity-100 group-hover/row:opacity-100"
+                      >
+                        <StarIcon className="size-3.5 fill-current" />
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -674,7 +687,7 @@ export function Sidebar() {
           {showStarred && (
             <div
               data-search-favorites-label
-              className="shrink-0 px-4 pb-1 pt-1 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]"
+              className="shrink-0 px-4 pb-2 pt-3 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]"
             >
               Favorites
             </div>
@@ -682,7 +695,7 @@ export function Sidebar() {
           {places.length > 0 && !loading && !searching && !showStarred && (
             <div
               data-places-label
-              className="shrink-0 px-4 pb-1 pt-1 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]"
+              className="shrink-0 px-4 pb-2 pt-3 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[var(--text-muted)]"
             >
               Places
             </div>
@@ -737,7 +750,7 @@ export function Sidebar() {
             )}
 
             {showStarred && (
-              <ul data-search-favorites role="listbox" aria-label="Favorites">
+              <ul data-search-favorites role="listbox" aria-label="Favorites" className="flex flex-col gap-0.5">
                 {starred.map((node) => (
                   <li
                     key={node.path}
@@ -745,6 +758,7 @@ export function Sidebar() {
                     aria-selected={node.path === highlight}
                     data-search-favorite={node.path}
                     data-kind={node.kind}
+                    data-active={node.path === activePath}
                     // The search box keeps the focus, so a click mustn't take it.
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setHighlight(node.path)}

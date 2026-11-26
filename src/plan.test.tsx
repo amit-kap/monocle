@@ -434,6 +434,29 @@ describe("G2 root and tree", () => {
     expect(section.querySelectorAll("[data-favorite]").length).toBe(1);
   });
 
+  it("a favorite row shows a star that removes it from Favorites", async () => {
+    await boot({
+      favorites: [
+        { path: `${ROOT}/README.md`, kind: "note" },
+        { path: `${ROOT}/docs`, kind: "folder" },
+      ],
+    });
+    const rows = qa("[data-favorite]");
+    expect(rows.map((r) => r.textContent)).toEqual(["README.md", "docs"]);
+    for (const r of rows) {
+      const star = r.parentElement!.querySelector("[data-favorite-remove]");
+      expect(star).not.toBeNull();
+      expect(r.contains(star)).toBe(false);
+    }
+
+    click(q(`[data-favorite-remove="${ROOT}/README.md"]`));
+    expect(useStore.getState().favorites).toEqual([{ path: `${ROOT}/docs`, kind: "folder" }]);
+    expect(qa("[data-favorite]").length).toBe(1);
+
+    click(q(`[data-favorite-remove="${ROOT}/docs"]`));
+    expect(q("[data-favorites]")).toBeNull();
+  });
+
   it("right-clicking a folder offers New file here, New folder here, Rename, Add as place, Move to Trash", async () => {
     await boot();
     act(() => {
